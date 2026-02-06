@@ -1684,7 +1684,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v1.12
+                  v1.13
                 </div>
                 
                 {/* Progress Bar */}
@@ -1727,35 +1727,60 @@
                               fontSize: '1.5rem',
                               fontWeight: '700',
                               color: '#64748b',
-                              marginBottom: '0.5rem',
+                              marginBottom: '0.75rem',
                               textTransform: 'uppercase',
                               letterSpacing: '0.05em'
                             }}>
                               Remaining
                             </div>
+                            
+                            {/* Cases and Items side by side */}
                             <div style={{
-                              fontSize: '3.5rem',
-                              fontWeight: '900',
-                              color: '#0f766e',
-                              lineHeight: '1',
-                              marginBottom: '0.5rem'
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              gap: '3rem',
+                              flexWrap: 'wrap'
                             }}>
-                              {remainingCases}
-                            </div>
-                            <div style={{
-                              fontSize: '1.8rem',
-                              fontWeight: '700',
-                              color: '#64748b',
-                              marginBottom: '0.75rem'
-                            }}>
-                              cases
-                            </div>
-                            <div style={{
-                              fontSize: '2rem',
-                              fontWeight: '700',
-                              color: '#94a3b8'
-                            }}>
-                              {remainingItems} {remainingItems === 1 ? 'item' : 'items'}
+                              {/* Cases */}
+                              <div>
+                                <div style={{
+                                  fontSize: '3.5rem',
+                                  fontWeight: '900',
+                                  color: '#0f766e',
+                                  lineHeight: '1',
+                                  marginBottom: '0.25rem'
+                                }}>
+                                  {remainingCases}
+                                </div>
+                                <div style={{
+                                  fontSize: '1.5rem',
+                                  fontWeight: '700',
+                                  color: '#64748b'
+                                }}>
+                                  cases
+                                </div>
+                              </div>
+                              
+                              {/* Items */}
+                              <div>
+                                <div style={{
+                                  fontSize: '3.5rem',
+                                  fontWeight: '900',
+                                  color: '#0f766e',
+                                  lineHeight: '1',
+                                  marginBottom: '0.25rem'
+                                }}>
+                                  {remainingItems}
+                                </div>
+                                <div style={{
+                                  fontSize: '1.5rem',
+                                  fontWeight: '700',
+                                  color: '#64748b'
+                                }}>
+                                  {remainingItems === 1 ? 'item' : 'items'}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
