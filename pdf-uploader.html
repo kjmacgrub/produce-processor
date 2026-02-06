@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Uploader - Produce Processing</title>
+  
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 30px 100px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: #64748b;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .upload-section {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border: 3px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    
+    .date-input {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+    
+    .file-select-btn {
+      width: 100%;
+      padding: 1.25rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .file-select-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .file-name {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: white;
+      border-radius: 8px;
+      color: #0f766e;
+      font-weight: 600;
+    }
+    
+    .upload-btn {
+      width: 100%;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 1rem;
+    }
+    
+    .upload-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+    
+    .upload-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .status {
+      padding: 1rem;
+      border-radius: 12px;
+      margin-top: 1rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .uploaded-list {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 2px solid #e2e8f0;
+    }
+    
+    .uploaded-list h3 {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      color: #1e293b;
+    }
+    
+    .pdf-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+    }
+    
+    .pdf-date {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    
+    .delete-btn {
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    .instructions {
+      background: #fef3c7;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-top: 2rem;
+      border-left: 4px solid #f59e0b;
+    }
+    
+    .instructions h4 {
+      color: #92400e;
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+    }
+    
+    .instructions p {
+      color: #78350f;
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+    
+    .instructions code {
+      background: #fbbf24;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📋 PDF Uploader</h1>
+    <p class="subtitle">Upload daily produce processing PDFs to Firebase Storage</p>
+    <p style="text-align: center; color: #64748b; font-size: 0.9rem; font-weight: 700; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 0.05em;">v1.11</p>
+    
+    <div class="upload-section">
+      <label for="date-input" style="display: block; margin-bottom: 0.5rem; font-weight: 700; color: #1e293b;">Select Date:</label>
+      <input 
+        type="date" 
+        id="date-input" 
+        class="date-input"
+      />
+      
+      <div class="file-input-wrapper">
+        <label for="file-input" class="file-select-btn">
+          📄 Choose PDF File
+        </label>
+        <input type="file" id="file-input" accept=".pdf" />
+      </div>
+      
+      <div id="file-name" class="file-name" style="display: none;"></div>
+    </div>
+    
+    <button id="upload-btn" class="upload-btn" disabled>
+      ☁️ Upload to Storage
+    </button>
+    
+    <div id="status"></div>
+    
+    <div class="uploaded-list">
+      <h3>📅 Uploaded PDFs</h3>
+      <div id="pdf-list"></div>
+    </div>
+    
+    <div class="instructions">
+      <h4>📖 How to Use:</h4>
+      <p><strong>1.</strong> Select the date for the PDF (the day the produce will be processed)</p>
+      <p><strong>2.</strong> Choose the PDF file from your computer</p>
+      <p><strong>3.</strong> Click "Upload to Storage"</p>
+      <p><strong>4.</strong> PDFs are saved as <code>YYYY-MM-DD.pdf</code> in Storage</p>
+      <p><strong>5.</strong> iPads can then load PDFs by date from the app</p>
+    </div>
+  </div>
+  
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAOtKt-nDBvAod23fAX04nXpCxmA7FnWKk",
+      authDomain: "process-6d2dc.firebaseapp.com",
+      databaseURL: "https://process-6d2dc-default-rtdb.firebaseio.com",
+      projectId: "process-6d2dc",
+      storageBucket: "process-6d2dc.firebasestorage.app",
+      messagingSenderId: "955601669952",
+      appId: "1:955601669952:web:871e3dd2c562c8aa6274a5"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    
+    // DOM elements
+    const dateInput = document.getElementById('date-input');
+    const fileInput = document.getElementById('file-input');
+    const fileName = document.getElementById('file-name');
+    const uploadBtn = document.getElementById('upload-btn');
+    const status = document.getElementById('status');
+    const pdfList = document.getElementById('pdf-list');
+    
+    // Set default date to today
+    dateInput.valueAsDate = new Date();
+    
+    let selectedFile = null;
+    
+    // Handle file selection
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0];
+      if (selectedFile) {
+        fileName.textContent = `Selected: ${selectedFile.name}`;
+        fileName.style.display = 'block';
+        uploadBtn.disabled = false;
+      }
+    });
+    
+    // Handle upload
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile || !dateInput.value) {
+        showStatus('Please select both a date and a PDF file', 'error');
+        return;
+      }
+      
+      try {
+        uploadBtn.disabled = true;
+        showStatus('Uploading...', 'info');
+        
+        // Format filename as YYYY-MM-DD.pdf
+        const filename = `${dateInput.value}.pdf`;
+        
+        // Upload to Storage
+        const storageRef = storage.ref(`produce-pdfs/${filename}`);
+        await storageRef.put(selectedFile);
+        
+        showStatus(`✅ Successfully uploaded ${filename}!`, 'success');
+        
+        // Reset form
+        selectedFile = null;
+        fileInput.value = '';
+        fileName.style.display = 'none';
+        uploadBtn.disabled = true;
+        
+        // Refresh list
+        await loadUploadedPDFs();
+      } catch (error) {
+        console.error('Upload error:', error);
+        showStatus(`❌ Upload failed: ${error.message}`, 'error');
+        uploadBtn.disabled = false;
+      }
+    });
+    
+    // Load uploaded PDFs
+    async function loadUploadedPDFs() {
+      try {
+        const storageRef = storage.ref('produce-pdfs');
+        const result = await storageRef.listAll();
+        
+        if (result.items.length === 0) {
+          pdfList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No PDFs uploaded yet</p>';
+          return;
+        }
+        
+        // Sort by date (newest first)
+        const items = result.items.sort((a, b) => b.name.localeCompare(a.name));
+        
+        pdfList.innerHTML = '';
+        for (const item of items) {
+          const date = item.name.replace('.pdf', '');
+          const [year, month, day] = date.split('-');
+          const dateObj = new Date(year, month - 1, day);
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const displayDate = `${dayNames[dateObj.getDay()]}, ${month}/${day}/${year}`;
+          
+          const div = document.createElement('div');
+          div.className = 'pdf-item';
+          div.innerHTML = `
+            <span class="pdf-date">${displayDate}</span>
+            <button class="delete-btn" onclick="deletePDF('${item.name}')">Delete</button>
+          `;
+          pdfList.appendChild(div);
+        }
+      } catch (error) {
+        console.error('Error loading PDFs:', error);
+        pdfList.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 2rem;">Error loading PDFs</p>';
+      }
+    }
+    
+    // Delete PDF
+    window.deletePDF = async (filename) => {
+      if (!confirm(`Delete ${filename}?`)) return;
+      
+      try {
+        showStatus('Deleting...', 'info');
+        const storageRef = storage.ref(`produce-pdfs/${filename}`);
+        await storageRef.delete();
+        showStatus(`✅ Deleted ${filename}`, 'success');
+        await loadUploadedPDFs();
+      } catch (error) {
+        console.error('Delete error:', error);
+        showStatus(`❌ Delete failed: ${error.message}`, 'error');
+      }
+    };
+    
+    // Show status message
+    function showStatus(message, type) {
+      status.textContent = message;
+      status.className = `status ${type}`;
+      status.style.display = 'block';
+      
+      if (type === 'success' || type === 'error') {
+        setTimeout(() => {
+          status.style.display = 'none';
+        }, 5000);
+      }
+    }
+    
+    // Load PDFs on page load
+    loadUploadedPDFs();
+  </script>
+</body>
+</html>
