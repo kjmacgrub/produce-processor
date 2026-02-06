@@ -1,43 +1,57 @@
 # Version History - Produce Processing App
 
+## v1.12 (2026-02-05)
+**UI Update: Progress Bar Design**
+
+### Changed:
+- Replaced circular pie chart with horizontal progress bar
+- Bar fills from left to right showing completion percentage
+- Moved remaining metrics below the bar
+- Made remaining text and numbers significantly larger
+- Cleaner, more modern look
+
+### Before (Pie Chart):
+```
+    ╭─────────╮
+   ╱  50 cases ╲
+  │   5 items   │
+   ╲           ╱
+    ╰─────────╯
+```
+
+### After (Progress Bar):
+```
+┌────────────────────────┐
+│████████░░░░░░░░░░░░░░░░│ (40% complete)
+└────────────────────────┘
+
+      REMAINING
+         50
+       cases
+      5 items
+```
+
+### Visual Changes:
+- Progress bar: 40px tall, rounded, gradient green fill
+- "Remaining" label: 1.5rem, uppercase
+- Cases number: 3.5rem, bold green
+- "cases" text: 1.8rem
+- Items count: 2rem
+
+### Impact:
+- Easier to read at a glance
+- Better use of horizontal space
+- Larger text more visible on iPad
+- Modern, clean design
+
+---
+
 ## v1.11 (2026-02-05)
 **Critical Bug Fix: Items Not Removing After Load New Day**
 
 ### Fixed:
 - "All Done" button not removing items from active list after loading new day
-- Items would move to completed but stay in active list until page refresh
-- Firebase data structure mismatch causing state sync issues
-
-### The Problem:
-When loading new data from PDF:
-1. Items were saved to Firebase as an ARRAY: `[{id: "item-1",...}, {id: "item-2",...}]`
-2. When marking complete, code tried to remove by ID: `items/item-1`
-3. But Firebase stores arrays with numeric keys: `items/0`, `items/1`, etc.
-4. So the remove command failed silently
-5. Item stayed in active list until page refresh forced proper sync
-
-### The Solution:
-- Changed data loading to save items as OBJECT with IDs as keys
-- Format: `{item-1: {...}, item-2: {...}}` instead of array
-- Now `items/item-1` path exists and can be removed
-- Removed manual state updates after loading (let Firebase listeners handle it)
-- Added else clause to items listener to handle empty state
-
-### Technical Changes:
-```javascript
-// Before (BROKEN):
-await db.ref('items').set([...itemsArray]);  // Array
-
-// After (FIXED):
-const itemsObject = {};
-items.forEach(item => itemsObject[item.id] = item);
-await db.ref('items').set(itemsObject);  // Object
-```
-
-### Impact:
-- "All Done" now works immediately after loading new day
-- No page refresh needed
-- Consistent behavior throughout the day
+- Changed data loading to save items as object instead of array
 
 ---
 
@@ -45,17 +59,12 @@ await db.ref('items').set(itemsObject);  // Object
 **UI Update: Enhanced Pie Chart Display**
 
 ### Changed:
-- Pie chart now shows both cases AND items remaining
-- More informative at a glance
+- Pie chart showed both cases AND items remaining
 
 ---
 
 ## v1.09 (2026-02-05)
 **New Feature: Undo Completed Items**
-
-### Added:
-- "Undo" button on each completed item
-- Allows moving items back to active list
 
 ---
 
@@ -115,5 +124,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.12
+### Next Version: v1.13
 - (To be filled with next changes)
