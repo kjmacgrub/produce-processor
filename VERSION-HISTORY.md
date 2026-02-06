@@ -1,46 +1,48 @@
 # Version History - Produce Processing App
 
+## v1.18 (2026-02-05)
+**UX Update: Removed All Done Confirmation**
+
+### Changed:
+- Removed confirmation dialog from "All Done" button
+- Previously clicking "All Done" showed "Mark as completed?" popup
+- Now clicking "All Done" immediately marks item complete
+
+### Before:
+```
+Click [All Done] → Popup: "Mark 'Bananas #1234' as completed?" 
+                  → Click OK → Item marked complete
+```
+
+### After:
+```
+Click [All Done] → Item marked complete immediately
+```
+
+### Why:
+- Faster workflow for completing items
+- Less friction - one click instead of two
+- Consistent with Undo button (v1.17)
+- Action is reversible via Undo button anyway
+
+---
+
 ## v1.17 (2026-02-05)
 **UX Update: Removed Undo Confirmation**
 
 ### Changed:
 - Removed confirmation dialog from Undo button in completed items
-- Previously clicking Undo showed "Are you sure?" popup
 - Now clicking Undo immediately restores the item
-
-### Before:
-```
-Click [↶ Undo] → Popup: "Undo completion for 'Bananas #1234'?" 
-                 → Click OK → Item restored
-```
-
-### After:
-```
-Click [↶ Undo] → Item restored immediately
-```
-
-### Why:
-- Faster workflow
-- Less friction for quick corrections
-- Undo action is reversible anyway (can mark complete again)
-- One-click operation
 
 ---
 
 ## v1.16 (2026-02-05)
 **UI Update: Removed Date Headers in Completed Items**
 
-### Changed:
-- Removed date section headers in completed items list
-- All items from same day, so date headers were redundant
-
 ---
 
 ## v1.15 (2026-02-05)
 **UI Update: Completed Items Summary**
-
-### Changed:
-- Completed items summary now shows cases out of total cases
 
 ---
 
@@ -130,5 +132,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.18
+### Next Version: v1.19
 - (To be filled with next changes)

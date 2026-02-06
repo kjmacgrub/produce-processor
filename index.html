@@ -1697,7 +1697,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v1.17
+                  v1.18
                 </div>
                 
                 {/* Progress Bar */}
@@ -2126,11 +2126,7 @@
                           </button>
                           
                           <button
-                            onClick={() => {
-                              if (confirm(`Mark "${getDisplayName(item.name)}" as completed? This will remove it from the active list.`)) {
-                                markComplete(item);
-                              }
-                            }}
+                            onClick={() => markComplete(item)}
                             style={{
                               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                               color: 'white',
