@@ -1,41 +1,44 @@
 # Version History - Produce Processing App
 
+## v1.14 (2026-02-05)
+**UI Update: Date Positioning**
+
+### Changed:
+- Moved date display above "Produce Processing" title
+- Previously date was below progress bar
+- Cleaner visual hierarchy
+
+### Before:
+```
+    Produce Processing
+         v1.14
+    [Progress Bar]
+      REMAINING
+    Tuesday, Feb 5, 2026  ← Was here
+```
+
+### After:
+```
+  Tuesday, Feb 5, 2026  ← Now here
+    Produce Processing
+         v1.14
+    [Progress Bar]
+      REMAINING
+```
+
+### Impact:
+- Date is first thing you see
+- Clearly shows which day's data is loaded
+- Better visual flow: Date → Title → Progress
+
+---
+
 ## v1.13 (2026-02-05)
 **UI Update: Side-by-Side Metrics**
 
 ### Changed:
 - Cases and items now display side by side instead of stacked
 - Saves vertical space
-- Both numbers same size (3.5rem) for consistency
-- Labels below each number
-
-### Before (Stacked):
-```
-      REMAINING
-         50
-       cases
-      5 items
-```
-
-### After (Side by Side):
-```
-      REMAINING
-   50        5
-  cases    items
-```
-
-### Layout:
-- "REMAINING" label at top (centered)
-- Two columns below:
-  - Left: Cases number + "cases" label
-  - Right: Items number + "items" label
-- 3rem gap between columns
-- Flexbox with wrap for mobile responsiveness
-
-### Impact:
-- Saves ~50px of vertical space
-- More compact, efficient layout
-- Both metrics equally prominent
 
 ---
 
@@ -44,16 +47,11 @@
 
 ### Changed:
 - Replaced circular pie chart with horizontal progress bar
-- Bar fills from left to right showing completion percentage
-- Made remaining text and numbers significantly larger
 
 ---
 
 ## v1.11 (2026-02-05)
 **Critical Bug Fix: Items Not Removing After Load New Day**
-
-### Fixed:
-- "All Done" button not removing items from active list after loading new day
 
 ---
 
@@ -123,5 +121,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.14
+### Next Version: v1.15
 - (To be filled with next changes)
