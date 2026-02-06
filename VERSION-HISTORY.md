@@ -1,30 +1,47 @@
 # Version History - Produce Processing App
 
-## v1.15 (2026-02-05)
-**UI Update: Completed Items Summary**
+## v1.16 (2026-02-05)
+**UI Update: Removed Date Headers in Completed Items**
 
 ### Changed:
-- Completed items summary now shows cases out of total cases
-- Previously showed "cases completed of X items"
-- Now shows "cases completed of Y total cases"
+- Removed date section headers in completed items list
+- Previously items were grouped by date with headers
+- Now just a simple list of completed items
+- All items will be from same day, so date headers were redundant
 
 ### Before:
 ```
 Completed Items
-50 cases completed of 5 items
+50 cases completed of 100 total cases
+
+  2/5/2026          ← Date header
+  ✓ Bananas #1234
+  ✓ Apples #5678
 ```
 
 ### After:
 ```
 Completed Items
 50 cases completed of 100 total cases
+
+  ✓ Bananas #1234   ← No date header
+  ✓ Apples #5678
 ```
 
-### Why:
-- More meaningful comparison
-- Shows completion percentage clearly
-- Example: "50 of 100 total cases" = 50% done
-- Example: "50 of 5 items" = unclear progress
+### Impact:
+- Cleaner look
+- Less clutter
+- Simpler code (removed date grouping logic)
+- Since all processing is same-day, date headers weren't needed
+
+---
+
+## v1.15 (2026-02-05)
+**UI Update: Completed Items Summary**
+
+### Changed:
+- Completed items summary now shows cases out of total cases
+- Previously showed "cases completed of X items"
 
 ---
 
@@ -39,16 +56,10 @@ Completed Items
 ## v1.13 (2026-02-05)
 **UI Update: Side-by-Side Metrics**
 
-### Changed:
-- Cases and items now display side by side instead of stacked
-
 ---
 
 ## v1.12 (2026-02-05)
 **UI Update: Progress Bar Design**
-
-### Changed:
-- Replaced circular pie chart with horizontal progress bar
 
 ---
 
@@ -123,5 +134,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.16
+### Next Version: v1.17
 - (To be filled with next changes)

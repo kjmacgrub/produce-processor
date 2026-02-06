@@ -1697,7 +1697,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v1.15
+                  v1.16
                 </div>
                 
                 {/* Progress Bar */}
@@ -2487,92 +2487,62 @@
                     <p>Items marked as complete will appear here</p>
                   </div>
                 ) : (
-                  (() => {
-                    // Group items by date
-                    const itemsByDate = {};
-                    completedItems.forEach(item => {
-                      const dateKey = new Date(item.completedAt).toLocaleDateString();
-                      if (!itemsByDate[dateKey]) {
-                        itemsByDate[dateKey] = [];
-                      }
-                      itemsByDate[dateKey].push(item);
-                    });
-
-                    // Sort dates (most recent first)
-                    const sortedDates = Object.keys(itemsByDate).sort((a, b) => {
-                      return new Date(b) - new Date(a);
-                    });
-
-                    return (
-                      <div style={{ display: 'grid', gap: '2rem' }}>
-                        {sortedDates.map(dateKey => (
-                          <div key={dateKey}>
-                            <h3 style={{
-                              margin: '0 0 1rem 0',
-                              fontSize: '1.5rem',
-                              fontWeight: '700',
-                              color: '#0f766e',
-                              paddingBottom: '0.5rem',
-                              borderBottom: '2px solid #0f766e'
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {completedItems.map(item => (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: 'white',
+                          borderRadius: '16px',
+                          padding: '1.5rem',
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '1rem'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                            <div style={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              color: 'white',
+                              borderRadius: '8px',
+                              padding: '0.25rem 0.75rem',
+                              fontSize: '0.9rem',
+                              fontWeight: '700'
                             }}>
-                              {dateKey}
+                              ✓
+                            </div>
+                            <h3 style={{
+                              margin: 0,
+                              fontSize: '1.3rem',
+                              fontWeight: '700',
+                              color: '#1e293b'
+                            }}>
+                              {getDisplayName(item.name)}
                             </h3>
-                            <div style={{ display: 'grid', gap: '1rem' }}>
-                              {itemsByDate[dateKey].map(item => (
-                                <div
-                                  key={item.id}
-                                  style={{
-                                    background: 'white',
-                                    borderRadius: '16px',
-                                    padding: '1.5rem',
-                                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    flexWrap: 'wrap',
-                                    gap: '1rem'
-                                  }}
-                                >
-                                  <div style={{ flex: 1, minWidth: '200px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                                      <div style={{
-                                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                        color: 'white',
-                                        borderRadius: '8px',
-                                        padding: '0.25rem 0.75rem',
-                                        fontSize: '0.9rem',
-                                        fontWeight: '700'
-                                      }}>
-                                        ✓
-                                      </div>
-                                      <h3 style={{
-                                        margin: 0,
-                                        fontSize: '1.3rem',
-                                        fontWeight: '700',
-                                        color: '#1e293b'
-                                      }}>
-                                        {getDisplayName(item.name)}
-                                      </h3>
-                                    </div>
-                                    <div style={{ fontSize: '1.52rem', color: '#64748b' }}>
-                                      <strong>{item.cases}</strong> cases • {item.location}
-                                    </div>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                                    <div style={{ fontSize: '0.9rem', color: '#94a3b8', textAlign: 'right' }}>
-                                      {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                    {!readOnlyMode && (
-                                      <button
-                                        onClick={() => {
-                                          if (confirm(`Undo completion for "${getDisplayName(item.name)}"? This will move it back to the active list.`)) {
-                                            undoComplete(item);
-                                          }
-                                        }}
-                                        style={{
-                                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                                          color: 'white',
-                                          border: 'none',
+                          </div>
+                          <div style={{ fontSize: '1.52rem', color: '#64748b' }}>
+                            <strong>{item.cases}</strong> cases • {item.location}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.9rem', color: '#94a3b8', textAlign: 'right' }}>
+                            {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          {!readOnlyMode && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Undo completion for "${getDisplayName(item.name)}"? This will move it back to the active list.`)) {
+                                  undoComplete(item);
+                                }
+                              }}
+                              style={{
+                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                color: 'white',
+                                border: 'none',
                                           borderRadius: '10px',
                                           padding: '0.75rem 1.5rem',
                                           cursor: 'pointer',
@@ -2589,11 +2559,6 @@
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()
                 )}
               </div>
             )}
