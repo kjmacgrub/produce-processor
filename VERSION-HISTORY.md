@@ -1,29 +1,45 @@
 # Version History - Produce Processing App
 
-## v1.18 (2026-02-05)
-**UX Update: Removed All Done Confirmation**
+## v1.19 (2026-02-06)
+**UX Update: Removed Load New Day Confirmation**
 
 ### Changed:
-- Removed confirmation dialog from "All Done" button
-- Previously clicking "All Done" showed "Mark as completed?" popup
-- Now clicking "All Done" immediately marks item complete
+- Removed confirmation dialog from "Load New Day" button
+- Previously clicking "Load New Day" showed warning popup
+- Now clicking "Load New Day" immediately shows date picker
 
 ### Before:
 ```
-Click [All Done] → Popup: "Mark 'Bananas #1234' as completed?" 
-                  → Click OK → Item marked complete
+Click [Load New Day] → Popup: "Load a new day? This will reset 
+                       the day - clearing current items..."
+                     → Click OK → Date picker appears
 ```
 
 ### After:
 ```
-Click [All Done] → Item marked complete immediately
+Click [Load New Day] → Date picker appears immediately
 ```
 
 ### Why:
-- Faster workflow for completing items
-- Less friction - one click instead of two
-- Consistent with Undo button (v1.17)
-- Action is reversible via Undo button anyway
+- Faster workflow - no interruption
+- Consistent with other buttons (v1.17 Undo, v1.18 All Done)
+- User already knows what "Load New Day" does
+- If clicked by mistake, can just close the date picker
+
+### UX Consistency:
+- ✅ v1.17: Undo button = no confirmation
+- ✅ v1.18: All Done button = no confirmation  
+- ✅ v1.19: Load New Day button = no confirmation
+- All major actions now one-click!
+
+---
+
+## v1.18 (2026-02-06)
+**UX Update: Removed All Done Confirmation**
+
+### Changed:
+- Removed confirmation dialog from "All Done" button
+- Now clicking "All Done" immediately marks item complete
 
 ---
 
@@ -32,7 +48,6 @@ Click [All Done] → Item marked complete immediately
 
 ### Changed:
 - Removed confirmation dialog from Undo button in completed items
-- Now clicking Undo immediately restores the item
 
 ---
 
@@ -132,5 +147,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.19
+### Next Version: v1.20
 - (To be filled with next changes)

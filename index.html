@@ -1607,9 +1607,6 @@
                   <button
                     onClick={async () => {
                       if (items.length > 0) {
-                        if (!confirm('Load a new day? This will reset the day - clearing current items and completed items.')) {
-                          return;
-                        }
                         if (db) {
                           await db.ref('items').remove();
                           await db.ref('completedItems').remove();
@@ -1697,7 +1694,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v1.18
+                  v1.19
                 </div>
                 
                 {/* Progress Bar */}
