@@ -1,35 +1,38 @@
 # Version History - Produce Processing App
 
+## v1.15 (2026-02-05)
+**UI Update: Completed Items Summary**
+
+### Changed:
+- Completed items summary now shows cases out of total cases
+- Previously showed "cases completed of X items"
+- Now shows "cases completed of Y total cases"
+
+### Before:
+```
+Completed Items
+50 cases completed of 5 items
+```
+
+### After:
+```
+Completed Items
+50 cases completed of 100 total cases
+```
+
+### Why:
+- More meaningful comparison
+- Shows completion percentage clearly
+- Example: "50 of 100 total cases" = 50% done
+- Example: "50 of 5 items" = unclear progress
+
+---
+
 ## v1.14 (2026-02-05)
 **UI Update: Date Positioning**
 
 ### Changed:
 - Moved date display above "Produce Processing" title
-- Previously date was below progress bar
-- Cleaner visual hierarchy
-
-### Before:
-```
-    Produce Processing
-         v1.14
-    [Progress Bar]
-      REMAINING
-    Tuesday, Feb 5, 2026  ← Was here
-```
-
-### After:
-```
-  Tuesday, Feb 5, 2026  ← Now here
-    Produce Processing
-         v1.14
-    [Progress Bar]
-      REMAINING
-```
-
-### Impact:
-- Date is first thing you see
-- Clearly shows which day's data is loaded
-- Better visual flow: Date → Title → Progress
 
 ---
 
@@ -38,7 +41,6 @@
 
 ### Changed:
 - Cases and items now display side by side instead of stacked
-- Saves vertical space
 
 ---
 
@@ -121,5 +123,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.15
+### Next Version: v1.16
 - (To be filled with next changes)

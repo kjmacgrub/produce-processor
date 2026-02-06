@@ -1697,7 +1697,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v1.14
+                  v1.15
                 </div>
                 
                 {/* Progress Bar */}
@@ -2469,7 +2469,7 @@
                     Completed Items
                   </h2>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '1.1rem' }}>
-                    {completedItems.reduce((sum, item) => sum + item.cases, 0)} cases completed of {completedItems.length} {completedItems.length === 1 ? 'item' : 'items'}
+                    {completedItems.reduce((sum, item) => sum + item.cases, 0)} cases completed of {originalTotalCases} total cases
                   </p>
                 </div>
 
