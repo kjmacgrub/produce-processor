@@ -1,44 +1,73 @@
 # Version History - Produce Processing App
 
+## v1.21 (2026-02-06)
+**Critical Update: Timing History Moved to Firebase (Cloud Backup)**
+
+### Changed:
+- **Timing history now stored in Firebase** instead of IndexedDB
+- Historical timing averages backed up to cloud
+- All timing events backed up to cloud
+- Videos remain stored locally on iPad (no change)
+
+### Problem Solved:
+**Before v1.21:**
+- Timing history stored only on iPad
+- If iPad breaks/lost/reset → **All timing data lost forever** ❌
+- Weeks or months of performance data could disappear
+
+**After v1.21:**
+- Timing history stored in Firebase cloud
+- iPad breaks? → Get new iPad, open app, **all history restored** ✅
+- Multi-device sync (all iPads see same averages)
+- Automatic backup
+
+### What's Backed Up:
+✅ **Historical timing averages** (per SKU/product)
+✅ **All timing events** (complete history)
+✅ **Syncs across devices** in real-time
+
+### What Stays Local:
+📹 **Videos** (too large for Firebase, stay on iPad)
+
+### Migration:
+- **Automatic!** First time you open v1.21:
+  1. App detects existing timing data in IndexedDB
+  2. Copies all data to Firebase
+  3. Marks migration complete
+  4. Future updates save directly to Firebase
+
+### Data Safety:
+- ✅ Timing data backed up forever in cloud
+- ✅ Restore to new device anytime
+- ✅ No cost impact (timing data is tiny)
+- ✅ All iPads stay in sync
+
+### Technical Details:
+**Firebase Structure:**
+```
+/historicalTimes
+  ├── bananas-1234: 33  (avg seconds per case)
+  ├── apples-5678: 45
+  └── ...
+
+/timingEvents
+  ├── bananas-1234: [{date, cases, time}, ...]
+  ├── apples-5678: [{date, cases, time}, ...]
+  └── ...
+```
+
+---
+
 ## v1.20 (2026-02-06)
 **UX Update: Removed Success Alert After Loading**
 
 ### Changed:
 - Removed "Successfully loaded X items from PDF!" alert
-- Data loads silently in the background
-- User can see items appear on screen without popup interruption
-
-### Before:
-```
-Load New Day → Select date → PDF loads → Alert: "Successfully 
-               loaded 25 items from PDF!" → Click OK → See items
-```
-
-### After:
-```
-Load New Day → Select date → PDF loads → See items immediately ✅
-```
-
-### Why:
-- No interruption - cleaner workflow
-- Visual feedback already present (items appear on screen)
-- Alert was redundant - user can see the items loaded
-- Consistent with removing other confirmation dialogs
-
-### What Happens Now:
-- Items load silently
-- Progress bar updates automatically
-- Remaining count shows immediately
-- No popup to dismiss
 
 ---
 
 ## v1.19 (2026-02-06)
 **UX Update: Removed Load New Day Confirmation**
-
-### Changed:
-- Removed confirmation dialog from "Load New Day" button
-- Now clicking "Load New Day" immediately shows date picker
 
 ---
 
@@ -148,5 +177,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.21
+### Next Version: v1.22
 - (To be filled with next changes)

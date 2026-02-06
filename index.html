@@ -369,7 +369,7 @@
         }
       };
 
-      // Load videos from IndexedDB on mount
+      // Load videos from IndexedDB on mount and migrate timing data to Firebase
       useEffect(() => {
         const migrateAndLoad = async () => {
           // Check if there are old videos in localStorage
@@ -385,24 +385,50 @@
             console.error('Error checking old videos:', error);
           }
           
-          // Load all videos from IndexedDB (keyed by SKU)
+          // Load all videos from IndexedDB (keyed by SKU) - KEEP LOCAL
           const loadedVideos = await loadAllVideosFromDB();
           console.log('Loaded videos from IndexedDB (by SKU):', Object.keys(loadedVideos));
           setVideos(loadedVideos);
           
-          // Load all historical times from IndexedDB (keyed by SKU)
-          const loadedTimes = await loadAllHistoricalTimesFromDB();
-          console.log('Loaded historical times from IndexedDB (by SKU):', Object.keys(loadedTimes));
-          setHistoricalTimes(loadedTimes);
+          // MIGRATION: Move timing data from IndexedDB to Firebase (one-time)
+          if (db) {
+            try {
+              // Check if we've already migrated
+              const migrationFlag = localStorage.getItem('timingDataMigrated');
+              
+              if (!migrationFlag) {
+                console.log('Migrating timing data from IndexedDB to Firebase...');
+                
+                // Load timing data from IndexedDB
+                const loadedTimes = await loadAllHistoricalTimesFromDB();
+                const loadedEvents = await loadAllTimingEventsFromDB();
+                
+                // Save to Firebase if data exists
+                if (Object.keys(loadedTimes).length > 0) {
+                  console.log(`Migrating ${Object.keys(loadedTimes).length} historical times to Firebase`);
+                  await db.ref('historicalTimes').set(loadedTimes);
+                }
+                
+                if (Object.keys(loadedEvents).length > 0) {
+                  console.log(`Migrating ${Object.keys(loadedEvents).length} timing event sets to Firebase`);
+                  await db.ref('timingEvents').set(loadedEvents);
+                }
+                
+                // Mark migration as complete
+                localStorage.setItem('timingDataMigrated', 'true');
+                console.log('Timing data migration complete! Data is now backed up to Firebase.');
+              }
+            } catch (error) {
+              console.error('Error during timing data migration:', error);
+            }
+          }
           
-          // Load all timing events from IndexedDB (keyed by SKU)
-          const loadedEvents = await loadAllTimingEventsFromDB();
-          console.log('Loaded timing events from IndexedDB (by SKU):', Object.keys(loadedEvents));
-          setTimingEventsBySKU(loadedEvents);
+          // Note: historicalTimes and timingEventsBySKU will be loaded by Firebase listeners
+          // No need to set state here - Firebase will handle it
         };
         
         migrateAndLoad();
-      }, []);
+      }, [db]);
 
       // Save videos to IndexedDB when they change
       useEffect(() => {
@@ -513,6 +539,42 @@
         });
 
         return () => completedRef.off();
+      }, []);
+
+      // Load historical times from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const timesRef = db.ref('historicalTimes');
+        timesRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setHistoricalTimes(data);
+            console.log('Loaded historical times from Firebase:', Object.keys(data));
+          } else {
+            setHistoricalTimes({});
+          }
+        });
+
+        return () => timesRef.off();
+      }, []);
+
+      // Load timing events from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const eventsRef = db.ref('timingEvents');
+        eventsRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setTimingEventsBySKU(data);
+            console.log('Loaded timing events from Firebase:', Object.keys(data));
+          } else {
+            setTimingEventsBySKU({});
+          }
+        });
+
+        return () => eventsRef.off();
       }, []);
 
       // Cleanup completed items older than 10 days
@@ -1370,28 +1432,20 @@
             timestamp: new Date().toISOString()
           };
           
-          // Save timing event to IndexedDB
-          await saveTimingEventToDB(sku, timingEvent);
-          
-          // Update state - add to events array
-          setTimingEventsBySKU(prev => {
-            const events = prev[sku] || [];
-            return {
-              ...prev,
-              [sku]: [...events, timingEvent]
-            };
-          });
-          
-          // Calculate new average and save
+          // Get current events for this SKU
           const allEvents = timingEventsBySKU[sku] || [];
           const newEvents = [...allEvents, timingEvent];
+          
+          // Save timing event to Firebase
+          await db.ref(`timingEvents/${sku}`).set(newEvents);
+          
+          // Calculate new average
           const avgTimePerCase = newEvents.reduce((sum, e) => sum + e.timePerCase, 0) / newEvents.length;
           
-          await saveHistoricalTimeToDB(sku, avgTimePerCase);
-          setHistoricalTimes(prev => ({
-            ...prev,
-            [sku]: avgTimePerCase
-          }));
+          // Save historical average to Firebase
+          await db.ref(`historicalTimes/${sku}`).set(avgTimePerCase);
+          
+          console.log(`Saved timing to Firebase - SKU: ${sku}, Avg: ${avgTimePerCase}s per case`);
           
           // Clear from in-process
           setItemsInProcess(prev => {
@@ -1692,7 +1746,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v1.20
+                  v1.21
                 </div>
                 
                 {/* Progress Bar */}
