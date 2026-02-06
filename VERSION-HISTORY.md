@@ -1,53 +1,54 @@
 # Version History - Produce Processing App
 
+## v1.20 (2026-02-06)
+**UX Update: Removed Success Alert After Loading**
+
+### Changed:
+- Removed "Successfully loaded X items from PDF!" alert
+- Data loads silently in the background
+- User can see items appear on screen without popup interruption
+
+### Before:
+```
+Load New Day → Select date → PDF loads → Alert: "Successfully 
+               loaded 25 items from PDF!" → Click OK → See items
+```
+
+### After:
+```
+Load New Day → Select date → PDF loads → See items immediately ✅
+```
+
+### Why:
+- No interruption - cleaner workflow
+- Visual feedback already present (items appear on screen)
+- Alert was redundant - user can see the items loaded
+- Consistent with removing other confirmation dialogs
+
+### What Happens Now:
+- Items load silently
+- Progress bar updates automatically
+- Remaining count shows immediately
+- No popup to dismiss
+
+---
+
 ## v1.19 (2026-02-06)
 **UX Update: Removed Load New Day Confirmation**
 
 ### Changed:
 - Removed confirmation dialog from "Load New Day" button
-- Previously clicking "Load New Day" showed warning popup
 - Now clicking "Load New Day" immediately shows date picker
-
-### Before:
-```
-Click [Load New Day] → Popup: "Load a new day? This will reset 
-                       the day - clearing current items..."
-                     → Click OK → Date picker appears
-```
-
-### After:
-```
-Click [Load New Day] → Date picker appears immediately
-```
-
-### Why:
-- Faster workflow - no interruption
-- Consistent with other buttons (v1.17 Undo, v1.18 All Done)
-- User already knows what "Load New Day" does
-- If clicked by mistake, can just close the date picker
-
-### UX Consistency:
-- ✅ v1.17: Undo button = no confirmation
-- ✅ v1.18: All Done button = no confirmation  
-- ✅ v1.19: Load New Day button = no confirmation
-- All major actions now one-click!
 
 ---
 
 ## v1.18 (2026-02-06)
 **UX Update: Removed All Done Confirmation**
 
-### Changed:
-- Removed confirmation dialog from "All Done" button
-- Now clicking "All Done" immediately marks item complete
-
 ---
 
 ## v1.17 (2026-02-05)
 **UX Update: Removed Undo Confirmation**
-
-### Changed:
-- Removed confirmation dialog from Undo button in completed items
 
 ---
 
@@ -147,5 +148,5 @@ Format: `MAJOR.MINOR`
 
 ## Future Versions
 
-### Next Version: v1.20
+### Next Version: v1.21
 - (To be filled with next changes)

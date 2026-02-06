@@ -807,7 +807,6 @@
           // No need to manually update setItems() or setCompletedItems() here
 
           console.log(`Parsed ${parsedItems.length} items, ${totalCases} total cases`);
-          alert(`Loaded ${parsedItems.length} items from PDF!`);
           
         } catch (error) {
           console.error('Error processing PDF:', error);
@@ -1016,7 +1015,6 @@
           // Save original total cases to Firebase
           await db.ref('originalTotalCases').set(totalCases);
           
-          alert(`Successfully loaded ${parsedItems.length} items from PDF!`);
         } catch (error) {
           console.error('PDF parsing error:', error);
           alert('Error reading PDF. Please try again or contact support.');
@@ -1694,7 +1692,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v1.19
+                  v1.20
                 </div>
                 
                 {/* Progress Bar */}
