@@ -1,70 +1,107 @@
 # Version History - Produce Processing App
 
+## v2.06 (2026-02-06)
+**Critical Fix: Firebase Array Conversion Issue**
+
+### Fixed:
+- **Priority dropdown now properly populated** on first PDF load
+- Fixed Firebase Realtime Database array-to-object conversion issue
+- Added helper function to handle Firebase data consistently
+
+### The Root Problem:
+**Firebase Realtime Database doesn't support pure arrays.** When you save an array like `[1, 2, 3]`, Firebase converts it to an object:
+
+```javascript
+// What we save:
+[1, 2, 3]
+
+// What Firebase stores:
+{
+  "0": 1,
+  "1": 2,
+  "2": 3
+}
+
+// What we get back:
+{ 0: 1, 1: 2, 2: 3 }  // NOT an array!
+```
+
+### The Bug:
+```javascript
+// ❌ v2.05 code (broken):
+const data = snapshot.val();
+const priorities = data || [];  // data is an OBJECT, not array!
+// Result: dropdown was empty because object was treated as empty array
+```
+
+### The Fix:
+Created `firebaseToArray()` helper function:
+```javascript
+// ✅ v2.06 code (works):
+const firebaseToArray = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (typeof data === 'object') {
+    return Object.values(data);  // Convert object to array!
+  }
+  return [];
+};
+
+const data = snapshot.val();
+const priorities = firebaseToArray(data);  // Now works!
+```
+
+### Where Fixed:
+1. **Firebase listener** (useEffect) - converts data when loading
+2. **processPDFData** - converts when merging PDF priorities
+3. **updatePriority** - converts when adding new priority
+4. **deletePriority** - converts when removing priority
+
+### Testing:
+```
+✅ Upload PDF with priorities 1, 2, 3
+   → Dropdown shows: missing, 0, 1, 2, 3
+
+✅ Upload another PDF with priority 5
+   → Dropdown shows: missing, 0, 1, 2, 3, 5
+
+✅ Manually change to priority 7
+   → Dropdown shows: missing, 0, 1, 2, 3, 5, 7
+
+✅ Delete priority 5
+   → Dropdown shows: missing, 0, 1, 2, 3, 7
+```
+
+**Priorities dropdown now works correctly!** ✅🎯
+
+---
+
+## v2.05 (2026-02-06)
+**Bug Fix: Priority Dropdown Initialization** (incomplete fix - v2.06 completes it)
+
+### Fixed:
+- Changed to read fresh values from Firebase instead of stale state
+- (But didn't handle Firebase's array-to-object conversion - fixed in v2.06)
+
+---
+
+## v2.04 (2026-02-06)
+**New Feature: Priority Dropdown with History Management**
+
+---
+
 ## v2.03 (2026-02-06)
 **UX Update: Inline Timer Display**
-
-### Changed:
-- Timer now displays **inline** immediately to the right of "# cases" text
-- Removed standalone timer section below
-- Slightly smaller, more compact timer design
-
-### New Layout:
-```
-┌────────────────────────────────────────────────────────────┐
-│ Item Name                              Priority 1          │
-│ 📦 10 cases ⏱️ 02:15  ┌──────┐  [Pause] [All Done]        │
-│                       │Avg:30s│                            │
-│                       │[edit] │                            │
-│                       └──────┘                             │
-│ 📋 organic twistie              [🎥 Watch]                 │
-└────────────────────────────────────────────────────────────┘
-```
-
-### Benefits:
-- **Immediate visibility** - timer right where you're looking
-- **More compact** - no separate timer section taking vertical space
-- **Better flow** - all info on one line
-- **Cleaner layout** - less visual clutter
-
-### Before (v2.02):
-```
-📦 10 cases  ┌──────┐  [Pause] [All Done]
-             │Avg:30s│
-             │[edit] │
-             └──────┘
-📋 organic twistie    [🎥 Watch]
-
-⏱️ 02:15  ← Separate section below
-```
-
-### After (v2.03):
-```
-📦 10 cases ⏱️ 02:15  ┌──────┐  [Pause] [All Done]
-                      │Avg:30s│
-                      │[edit] │
-                      └──────┘
-📋 organic twistie              [🎥 Watch]
-```
-
-**Timer is now inline and immediate!** ⏱️✨
 
 ---
 
 ## v2.02 (2026-02-06)
 **UI Refinement: Tighter Timing Metrics Box**
 
-### Changed:
-- Reduced padding inside timing metrics box from `0.75rem 1rem` to `0.5rem 0.75rem`
-- Reduced gap between time display and edit link from `1.5rem` to `1rem`
-
 ---
 
 ## v2.01 (2026-02-06)
 **UI Update: Reorganized Layout for Better Efficiency**
-
-### Changed:
-- **Timing metrics moved to Line 2** - now appears between cases and action buttons
-- **Video button moved to right side of Line 3** - aligned with other action buttons
 
 ---
 

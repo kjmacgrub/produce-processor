@@ -134,6 +134,8 @@
       const [elapsedTimes, setElapsedTimes] = useState({}); // Maps item.id to current elapsed seconds
       const [showStoragePicker, setShowStoragePicker] = useState(false); // Show date picker for Storage PDFs
       const [availableDates, setAvailableDates] = useState([]); // List of dates with PDFs in Storage
+      const [historicalPriorities, setHistoricalPriorities] = useState([]); // List of all priorities ever used
+      const [showPriorityEditor, setShowPriorityEditor] = useState(false); // Show priority management modal
       
       const fileInputRef = useRef(null);
       const videoInputRef = useRef(null);
@@ -577,6 +579,31 @@
         return () => eventsRef.off();
       }, []);
 
+      // Load historical priorities from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const prioritiesRef = db.ref('historicalPriorities');
+        prioritiesRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          // Firebase converts arrays to objects, so convert back to array
+          const priorities = firebaseToArray(data);
+          
+          const sorted = [...new Set(priorities)].sort((a, b) => {
+            // Sort: 'missing' first, then 0, then numeric ascending
+            if (a === 'missing') return -1;
+            if (b === 'missing') return 1;
+            if (a === 0) return -1;
+            if (b === 0) return 1;
+            return a - b;
+          });
+          setHistoricalPriorities(sorted);
+          console.log('Loaded historical priorities from Firebase:', sorted);
+        });
+
+        return () => prioritiesRef.off();
+      }, []);
+
       // Cleanup completed items older than 10 days
       useEffect(() => {
         if (!db) return;
@@ -864,6 +891,25 @@
           await db.ref('items').set(itemsObject);
           await db.ref('completedItems').set({});
           await db.ref('originalTotalCases').set(totalCases);
+
+          // Extract and save new priorities to historical list
+          const newPriorities = [...new Set(parsedItems.map(item => item.priority))];
+          
+          // Get current historical priorities from Firebase (not state, which might be stale)
+          const currentPrioritiesSnapshot = await db.ref('historicalPriorities').once('value');
+          const currentPriorities = firebaseToArray(currentPrioritiesSnapshot.val());
+          
+          const combinedPriorities = [...new Set([...currentPriorities, ...newPriorities])];
+          const sortedPriorities = combinedPriorities.sort((a, b) => {
+            if (a === 'missing') return -1;
+            if (b === 'missing') return 1;
+            if (a === 0) return -1;
+            if (b === 0) return 1;
+            return a - b;
+          });
+          await db.ref('historicalPriorities').set(sortedPriorities);
+
+          console.log('Saved priorities to Firebase:', sortedPriorities);
 
           // Note: Local state will be updated automatically by Firebase listeners
           // No need to manually update setItems() or setCompletedItems() here
@@ -1343,11 +1389,44 @@
       const updatePriority = async (itemId, newPriority) => {
         if (readOnlyMode || !db) return;
         
-        const priority = parseInt(newPriority);
-        if (isNaN(priority)) return;
+        // Handle 'missing', numeric, or 0
+        let priority;
+        if (newPriority === 'missing' || newPriority === 'missing') {
+          priority = 'missing';
+        } else {
+          priority = parseInt(newPriority);
+          if (isNaN(priority)) return;
+        }
         
         // Update in Firebase
         await db.ref(`items/${itemId}/priority`).set(priority);
+        
+        // Get current historical priorities from Firebase (not state, which might be stale)
+        const currentPrioritiesSnapshot = await db.ref('historicalPriorities').once('value');
+        const currentPriorities = firebaseToArray(currentPrioritiesSnapshot.val());
+        
+        // Add to historical priorities if not already there
+        if (!currentPriorities.includes(priority)) {
+          const updated = [...currentPriorities, priority].sort((a, b) => {
+            if (a === 'missing') return -1;
+            if (b === 'missing') return 1;
+            if (a === 0) return -1;
+            if (b === 0) return 1;
+            return a - b;
+          });
+          await db.ref('historicalPriorities').set(updated);
+        }
+      };
+
+      const deletePriority = async (priorityToDelete) => {
+        if (readOnlyMode || !db) return;
+        
+        // Get current historical priorities from Firebase (not state)
+        const currentPrioritiesSnapshot = await db.ref('historicalPriorities').once('value');
+        const currentPriorities = firebaseToArray(currentPrioritiesSnapshot.val());
+        
+        const updated = currentPriorities.filter(p => p !== priorityToDelete);
+        await db.ref('historicalPriorities').set(updated);
       };
 
       const handleBeginProcessing = (itemId) => {
@@ -1597,6 +1676,18 @@
         }
       };
 
+      // Helper function to convert Firebase data to array
+      // Firebase converts arrays to objects, so we need to convert back
+      const firebaseToArray = (data) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'object') {
+          // Firebase stores arrays as objects with numeric keys
+          return Object.values(data);
+        }
+        return [];
+      };
+
       const getPriorityColor = (priority) => {
         // Handle missing priority
         if (priority === 'missing') {
@@ -1746,7 +1837,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.03
+                  v2.06
                 </div>
                 
                 {/* Progress Bar */}
@@ -2056,7 +2147,7 @@
                         
                         {/* Priority on right */}
                         {!readOnlyMode ? (
-                          // Editable priority in Edit mode
+                          // Editable priority dropdown in Edit mode
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <label style={{ 
                               fontSize: '0.9rem', 
@@ -2065,52 +2156,46 @@
                             }}>
                               Priority:
                             </label>
-                            {item.priority === 'missing' ? (
-                              <div style={{
+                            <select
+                              value={item.priority}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === 'EDIT') {
+                                  setShowPriorityEditor(true);
+                                } else {
+                                  updatePriority(item.id, val);
+                                }
+                              }}
+                              style={{
                                 background: getPriorityColor(item.priority),
-                                color: 'white',
+                                color: item.priority === 0 ? '#64748b' : 'white',
+                                border: 'none',
                                 borderRadius: '10px',
                                 padding: '0.5rem 1rem',
                                 fontSize: '1rem',
                                 fontWeight: '700',
-                                width: '80px',
-                                textAlign: 'center'
-                              }}>
-                                missing
-                              </div>
-                            ) : item.priority === 0 ? (
-                              <div style={{
-                                background: getPriorityColor(item.priority),
-                                color: '#64748b', // Dark gray text for light gray background
-                                borderRadius: '10px',
-                                padding: '0.5rem 1rem',
-                                fontSize: '0.85rem',
-                                fontWeight: '700',
-                                minWidth: '120px',
-                                textAlign: 'center'
-                              }}>
-                                Shopping floor
-                              </div>
-                            ) : (
-                              <input
-                                type="number"
-                                min="0"
-                                max="999"
-                                value={item.priority}
-                                onChange={(e) => updatePriority(item.id, e.target.value)}
-                                style={{
-                                  background: getPriorityColor(item.priority),
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '10px',
-                                  padding: '0.5rem 1rem',
-                                  fontSize: '1rem',
-                                  fontWeight: '700',
-                                  width: '80px',
-                                  textAlign: 'center'
-                                }}
-                              />
-                            )}
+                                minWidth: '140px',
+                                textAlign: 'center',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {/* Current priority */}
+                              <option value={item.priority}>
+                                {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
+                              </option>
+                              
+                              {/* Historical priorities (excluding current) */}
+                              {historicalPriorities.filter(p => p !== item.priority).map(p => (
+                                <option key={p} value={p}>
+                                  {p === 'missing' ? 'Priority missing' : p === 0 ? 'Shopping floor' : `Priority ${p}`}
+                                </option>
+                              ))}
+                              
+                              {/* Edit option */}
+                              <option value="EDIT" style={{ fontStyle: 'italic', borderTop: '1px solid #ccc' }}>
+                                ✏️ Edit priorities...
+                              </option>
+                            </select>
                           </div>
                         ) : (
                           // Read-only priority badge in View mode
@@ -2979,6 +3064,123 @@
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Priority Editor Modal */}
+            {showPriorityEditor && (
+              <div
+                onClick={() => setShowPriorityEditor(false)}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 1000,
+                  padding: '2rem'
+                }}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    maxWidth: '600px',
+                    width: '100%',
+                    maxHeight: '80vh',
+                    background: 'white',
+                    borderRadius: '16px',
+                    padding: '2rem',
+                    overflowY: 'auto'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' }}>
+                      Manage Priorities
+                    </h2>
+                    <button
+                      onClick={() => setShowPriorityEditor(false)}
+                      style={{
+                        background: '#dc2626',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        fontSize: '1.5rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <p style={{ color: '#64748b', marginBottom: '2rem', fontSize: '1rem' }}>
+                    These are all the priorities that have been used. You can delete priorities that are no longer needed.
+                  </p>
+
+                  {historicalPriorities.length === 0 ? (
+                    <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>No priorities recorded yet.</p>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                      {historicalPriorities.map(priority => (
+                        <div
+                          key={priority}
+                          style={{
+                            background: '#f8fafc',
+                            borderRadius: '12px',
+                            padding: '1.5rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '1rem'
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{
+                              display: 'inline-block',
+                              background: getPriorityColor(priority),
+                              color: priority === 0 ? '#64748b' : 'white',
+                              borderRadius: '10px',
+                              padding: '0.5rem 1rem',
+                              fontSize: '1.1rem',
+                              fontWeight: '700'
+                            }}>
+                              {priority === 'missing' ? 'Priority missing' : priority === 0 ? 'Shopping floor' : `Priority ${priority}`}
+                            </div>
+                          </div>
+                          {!readOnlyMode && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete priority "${priority === 'missing' ? 'missing' : priority === 0 ? 'Shopping floor' : priority}"? This won't affect existing items.`)) {
+                                  deletePriority(priority);
+                                }
+                              }}
+                              style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '0.5rem 1rem',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '0.9rem'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
