@@ -1,61 +1,128 @@
 # Version History - Produce Processing App
 
+## v2.32 (2026-02-07)
+**Visual Cleanup: Remove Pencil Emoji from Process Mode**
+
+### Changed:
+- **Removed ✏️ pencil emoji** from Process Mode button
+- Text now reads just "Process Mode"
+- View Mode keeps 👁 eye emoji
+
+### Button Labels Now:
+- **👁 View Mode** - Read-only mode (emoji kept)
+- **Process Mode** - Editing mode (emoji removed)
+
+### Why:
+- **Cleaner look** - Less visual clutter
+- **Text speaks for itself** - "Process Mode" is clear
+- **Consistent with other buttons** - Timer, Video, All Done have no emojis
+
+**Process Mode button now has cleaner text!** ✨
+
+---
+
+## v2.31 (2026-02-07)
+**UX Enhancements: Process Mode Label + Smart Device Detection**
+
+---
+
+## v2.30 (2026-02-07)
+**Label Update: Watch Button → Video Button**
+
+---
+
+## v2.29 (2026-02-07)
+**UX Improvement: Remove Skip Photo Confirmation**
+
+---
+
+## v2.28 (2026-02-07)
+**UX Enhancement: Items Now Sort by Priority**
+
+---
+
+## v2.27 (2026-02-07)
+**Parser Enhancement: Support Instructions Without Dash Separator**
+
+---
+
+## v2.26 (2026-02-07)
+**Critical Fix: PDF Parser Including Section Headers in Instructions**
+
+---
+
+## v2.25 (2026-02-07)
+**Label Update: Begin Button → Timer Button**
+
+---
+
+## v2.24 (2026-02-07)
+**Layout Optimization: More Efficient Button Placement**
+
+---
+
+## v2.23 (2026-02-06)
+**Critical Fix: React Hooks Error in Completion Camera**
+
+---
+
+## v2.22 (2026-02-06)
+**Major Feature: Completion Photos**
+
+---
+
+## v2.21 (2026-02-06)
+**Visual Enhancement: Highlighted Instructions Section**
+
+---
+
+## v2.20 (2026-02-06)
+**UI Reorganization: Button Layout Improvement**
+
+---
+
+## v2.19 (2026-02-06)
+**Label Update: Clearer Timing Metric**
+
+---
+
+## v2.18 (2026-02-06)
+**UX Fix: Disable Video Looping**
+
+---
+
+## v2.17 (2026-02-06)
+**🎯 ROOT CAUSE FIX: Store Videos as Binary Instead of Base64**
+
+---
+
+## v2.16 (2026-02-06)
+**Better Error Handling + Clear Warning for Corrupted Videos**
+
+---
+
+## v2.15 (2026-02-06)
+**Critical Fix: Combining Both Video Fixes**
+
+---
+
+## v2.14 (2026-02-06)
+**Critical Fix: MediaRecorder Timeslice Causing Corrupt Videos**
+
+---
+
+## v2.13 (2026-02-06)
+**Critical Fix: Use Blob URLs Instead of Data URLs for Video Playback**
+
+---
+
+## v2.12 (2026-02-06)
+**Critical Fix: Video Recording Codec and Data Collection**
+
+---
+
 ## v2.11 (2026-02-06)
 **Critical Fix: Video Playback Now Works**
-
-### Fixed:
-- **Video element now properly remounts** when switching between videos
-- Added `key` prop to force video element to recreate when video changes
-- Added error handling and success logging for video playback
-
-### The Problem:
-Video data was loading correctly (confirmed by v2.10 debug logs), but the video element wasn't re-rendering when the `src` changed. React was reusing the same video element and just updating the `src` attribute, which doesn't always trigger playback.
-
-### The Solution:
-```javascript
-// Before (v2.10):
-<video
-  src={videos[playingVideo].data}
-/>
-// Video element reused, src updated but doesn't reload
-
-// After (v2.11):
-<video
-  key={playingVideo}  // ← Forces remount!
-  src={videos[playingVideo].data}
-  onLoadedData={() => console.log('Video loaded successfully!')}
-  onError={(e) => console.error('Video error:', e.target.error)}
-/>
-// New video element created each time, guaranteed fresh load
-```
-
-### Why `key` Matters:
-- React reuses DOM elements for performance
-- Changing `src` on an existing video element doesn't always work
-- Adding `key={playingVideo}` tells React: "This is a different video, create a new element"
-- New element = guaranteed clean state and proper loading
-
-### Additional Improvements:
-**Success Handler:**
-```javascript
-onLoadedData={() => console.log('Video loaded successfully!')}
-```
-Shows in console when video successfully loads
-
-**Error Handler:**
-```javascript
-onError={(e) => console.error('Video error:', e.target.error)}
-```
-Shows any playback errors in console
-
-### Testing:
-1. Record or upload a video
-2. Click "Watch"
-3. Video should play automatically
-4. Console shows: "Video loaded successfully!"
-5. If error, console shows detailed error message
-
-**Videos now play correctly!** 🎥✨
 
 ---
 
