@@ -1746,7 +1746,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.02
+                  v2.03
                 </div>
                 
                 {/* Progress Bar */}
@@ -2129,10 +2129,39 @@
                       
                       {/* Line 2: Cases, Timing metrics, and action buttons */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                        {/* Cases on left */}
+                        {/* Cases on left with inline timer */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b' }}>
                           <Package size={26} />
                           <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
+                          
+                          {/* Inline timer when processing */}
+                          {!readOnlyMode && (itemsInProcess[item.id] || itemsPaused[item.id]) && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem 1rem',
+                              background: itemsPaused[item.id]
+                                ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
+                                : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                              borderRadius: '12px',
+                              boxShadow: itemsPaused[item.id]
+                                ? '0 4px 15px rgba(99, 102, 241, 0.3)'
+                                : '0 4px 15px rgba(245, 158, 11, 0.3)',
+                              marginLeft: '0.5rem'
+                            }}>
+                              <Timer size={20} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
+                              <div style={{
+                                fontSize: '1.3rem',
+                                fontWeight: '800',
+                                color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
+                                fontVariantNumeric: 'tabular-nums',
+                                minWidth: '70px'
+                              }}>
+                                {formatTime(elapsedTimes[item.id] || 0)}
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Timing metrics in middle-right (if exists) */}
@@ -2308,37 +2337,6 @@
                         )}
                       </div>
                     </div>
-
-                    {/* Live Timer Section */}
-                    {!readOnlyMode && (itemsInProcess[item.id] || itemsPaused[item.id]) && (
-                      <div style={{ marginBottom: '1rem' }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '1rem 1.5rem',
-                          background: itemsPaused[item.id]
-                            ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)' // Blue-ish for paused
-                            : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', // Yellow for running
-                          borderRadius: '12px',
-                          boxShadow: itemsPaused[item.id]
-                            ? '0 4px 15px rgba(99, 102, 241, 0.3)'
-                            : '0 4px 15px rgba(245, 158, 11, 0.3)',
-                          width: 'fit-content'
-                        }}>
-                          <Timer size={24} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
-                          <div style={{
-                            fontSize: '1.5rem',
-                            fontWeight: '800',
-                            color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
-                            fontVariantNumeric: 'tabular-nums',
-                            minWidth: '80px'
-                          }}>
-                            {formatTime(elapsedTimes[item.id] || 0)}
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Video Upload/Recording Section */}
                     {!readOnlyMode && showVideoUpload === item.id && (

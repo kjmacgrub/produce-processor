@@ -1,35 +1,61 @@
 # Version History - Produce Processing App
 
+## v2.03 (2026-02-06)
+**UX Update: Inline Timer Display**
+
+### Changed:
+- Timer now displays **inline** immediately to the right of "# cases" text
+- Removed standalone timer section below
+- Slightly smaller, more compact timer design
+
+### New Layout:
+```
+┌────────────────────────────────────────────────────────────┐
+│ Item Name                              Priority 1          │
+│ 📦 10 cases ⏱️ 02:15  ┌──────┐  [Pause] [All Done]        │
+│                       │Avg:30s│                            │
+│                       │[edit] │                            │
+│                       └──────┘                             │
+│ 📋 organic twistie              [🎥 Watch]                 │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Benefits:
+- **Immediate visibility** - timer right where you're looking
+- **More compact** - no separate timer section taking vertical space
+- **Better flow** - all info on one line
+- **Cleaner layout** - less visual clutter
+
+### Before (v2.02):
+```
+📦 10 cases  ┌──────┐  [Pause] [All Done]
+             │Avg:30s│
+             │[edit] │
+             └──────┘
+📋 organic twistie    [🎥 Watch]
+
+⏱️ 02:15  ← Separate section below
+```
+
+### After (v2.03):
+```
+📦 10 cases ⏱️ 02:15  ┌──────┐  [Pause] [All Done]
+                      │Avg:30s│
+                      │[edit] │
+                      └──────┘
+📋 organic twistie              [🎥 Watch]
+```
+
+**Timer is now inline and immediate!** ⏱️✨
+
+---
+
 ## v2.02 (2026-02-06)
 **UI Refinement: Tighter Timing Metrics Box**
 
 ### Changed:
 - Reduced padding inside timing metrics box from `0.75rem 1rem` to `0.5rem 0.75rem`
 - Reduced gap between time display and edit link from `1.5rem` to `1rem`
-
-### Result:
-- **More compact** timing metrics box
-- **Less visual bulk** on the line
-- Still clear and readable
-
-### Visual Comparison:
-**Before (v2.01):**
-```
-┌─────────────────┐
-│  Avg: 30s       │  ← More padding
-│  [edit]         │
-└─────────────────┘
-```
-
-**After (v2.02):**
-```
-┌──────────────┐
-│ Avg: 30s     │  ← Tighter!
-│ [edit]       │
-└──────────────┘
-```
-
-**Cleaner, more compact!** 📦✨
 
 ---
 
