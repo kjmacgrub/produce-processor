@@ -590,12 +590,23 @@
           const priorities = firebaseToArray(data);
           
           const sorted = [...new Set(priorities)].sort((a, b) => {
-            // Sort: 'missing' first, then 0, then numeric ascending
+            // Sort: numbered priorities first (1, 2, 3...), then 'missing', then 0
+            const aIsNumber = typeof a === 'number' && a > 0;
+            const bIsNumber = typeof b === 'number' && b > 0;
+            
+            // Both are numbered priorities - sort ascending
+            if (aIsNumber && bIsNumber) return a - b;
+            
+            // One is numbered, one isn't - numbered comes first
+            if (aIsNumber) return -1;
+            if (bIsNumber) return 1;
+            
+            // Neither is numbered - 'missing' before 0
             if (a === 'missing') return -1;
             if (b === 'missing') return 1;
-            if (a === 0) return -1;
-            if (b === 0) return 1;
-            return a - b;
+            
+            // Both are 0 or other
+            return 0;
           });
           setHistoricalPriorities(sorted);
           console.log('Loaded historical priorities from Firebase:', sorted);
@@ -901,11 +912,16 @@
           
           const combinedPriorities = [...new Set([...currentPriorities, ...newPriorities])];
           const sortedPriorities = combinedPriorities.sort((a, b) => {
+            // Sort: numbered priorities first (1, 2, 3...), then 'missing', then 0
+            const aIsNumber = typeof a === 'number' && a > 0;
+            const bIsNumber = typeof b === 'number' && b > 0;
+            
+            if (aIsNumber && bIsNumber) return a - b;
+            if (aIsNumber) return -1;
+            if (bIsNumber) return 1;
             if (a === 'missing') return -1;
             if (b === 'missing') return 1;
-            if (a === 0) return -1;
-            if (b === 0) return 1;
-            return a - b;
+            return 0;
           });
           await db.ref('historicalPriorities').set(sortedPriorities);
 
@@ -1408,11 +1424,16 @@
         // Add to historical priorities if not already there
         if (!currentPriorities.includes(priority)) {
           const updated = [...currentPriorities, priority].sort((a, b) => {
+            // Sort: numbered priorities first (1, 2, 3...), then 'missing', then 0
+            const aIsNumber = typeof a === 'number' && a > 0;
+            const bIsNumber = typeof b === 'number' && b > 0;
+            
+            if (aIsNumber && bIsNumber) return a - b;
+            if (aIsNumber) return -1;
+            if (bIsNumber) return 1;
             if (a === 'missing') return -1;
             if (b === 'missing') return 1;
-            if (a === 0) return -1;
-            if (b === 0) return 1;
-            return a - b;
+            return 0;
           });
           await db.ref('historicalPriorities').set(updated);
         }
@@ -1837,7 +1858,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.06
+                  v2.11
                 </div>
                 
                 {/* Progress Bar */}
@@ -2373,7 +2394,12 @@
                           <div>
                             {hasVideo ? (
                               <button
-                                onClick={() => setPlayingVideo(sku)}
+                                onClick={() => {
+                                  console.log('Watch button clicked. SKU:', sku);
+                                  console.log('Video data exists:', !!videos[sku]);
+                                  console.log('Video data:', videos[sku]);
+                                  setPlayingVideo(sku);
+                                }}
                                 style={{
                                   background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                                   color: 'white',
@@ -2423,160 +2449,7 @@
                       </div>
                     </div>
 
-                    {/* Video Upload/Recording Section */}
-                    {!readOnlyMode && showVideoUpload === item.id && (
-                      <div style={{
-                        marginTop: '1.5rem',
-                        padding: '2rem',
-                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                        borderRadius: '16px',
-                        border: '3px dashed #cbd5e1'
-                      }}>
-                        <input
-                          ref={videoInputRef}
-                          type="file"
-                          accept="video/*"
-                          onChange={(e) => handleVideoUpload(e, item)}
-                          style={{ display: 'none' }}
-                        />
-                        
-                        {recordingItemId === item.id && isRecording ? (
-                          // Recording interface
-                          <div>
-                            <div style={{ marginBottom: '1rem' }}>
-                              <video
-                                ref={videoPreviewRef}
-                                autoPlay
-                                playsInline
-                                webkit-playsinline="true"
-                                muted
-                                style={{
-                                  width: '100%',
-                                  maxHeight: '400px',
-                                  borderRadius: '12px',
-                                  background: '#000',
-                                  objectFit: 'cover'
-                                }}
-                              />
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                              <button
-                                onClick={stopRecording}
-                                style={{
-                                  background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '10px',
-                                  padding: '1rem 2rem',
-                                  cursor: 'pointer',
-                                  fontWeight: '700',
-                                  fontSize: '1.05rem',
-                                  boxShadow: '0 4px 15px rgba(220, 38, 38, 0.3)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.5rem'
-                                }}
-                              >
-                                <span style={{ fontSize: '1.5rem' }}>⏹</span>
-                                Stop & Save
-                              </button>
-                              <button
-                                onClick={cancelRecording}
-                                style={{
-                                  background: 'white',
-                                  color: '#64748b',
-                                  border: '2px solid #e2e8f0',
-                                  borderRadius: '10px',
-                                  padding: '1rem 2rem',
-                                  cursor: 'pointer',
-                                  fontWeight: '700',
-                                  fontSize: '1.05rem'
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                            <div style={{ textAlign: 'center', marginTop: '1rem', color: '#dc2626', fontWeight: '600', fontSize: '1.1rem' }}>
-                              🔴 Recording...
-                            </div>
-                          </div>
-                        ) : (
-                          // Upload/record choice
-                          <div>
-                            <div style={{ marginBottom: '1.5rem' }}>
-                              <div style={{ fontWeight: '700', marginBottom: '0.5rem', color: '#1e293b', fontSize: '1.15rem' }}>
-                                Add Processing Video
-                              </div>
-                              <div style={{ fontSize: '1rem', color: '#64748b', fontWeight: '500' }}>
-                                Record with camera or choose an existing file
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                              <button
-                                onClick={() => startRecording(item)}
-                                style={{
-                                  background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '10px',
-                                  padding: '1rem 2rem',
-                                  cursor: 'pointer',
-                                  fontWeight: '700',
-                                  fontSize: '1.05rem',
-                                  boxShadow: '0 4px 15px rgba(220, 38, 38, 0.3)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.5rem',
-                                  minWidth: '180px',
-                                  justifyContent: 'center'
-                                }}
-                              >
-                                <span style={{ fontSize: '1.5rem' }}>📹</span>
-                                Record Video
-                              </button>
-                              <button
-                                onClick={() => videoInputRef.current?.click()}
-                                style={{
-                                  background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '10px',
-                                  padding: '1rem 2rem',
-                                  cursor: 'pointer',
-                                  fontWeight: '700',
-                                  fontSize: '1.05rem',
-                                  boxShadow: '0 4px 15px rgba(15, 118, 110, 0.3)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.5rem',
-                                  minWidth: '180px',
-                                  justifyContent: 'center'
-                                }}
-                              >
-                                <span style={{ fontSize: '1.5rem' }}>📁</span>
-                                Choose File
-                              </button>
-                              <button
-                                onClick={() => setShowVideoUpload(null)}
-                                style={{
-                                  background: 'white',
-                                  color: '#64748b',
-                                  border: '2px solid #e2e8f0',
-                                  borderRadius: '10px',
-                                  padding: '1rem 2rem',
-                                  cursor: 'pointer',
-                                  fontWeight: '700',
-                                  fontSize: '1.05rem',
-                                  minWidth: '180px'
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+
                   </div>
                 );
               })}
@@ -2821,6 +2694,7 @@
                 }}
                 onClick={() => setPlayingVideo(null)}
               >
+                {console.log('Video modal rendering. playingVideo:', playingVideo, 'Video data:', videos[playingVideo])}
                 <div
                   style={{
                     background: 'white',
@@ -2843,10 +2717,6 @@
                         <button
                           onClick={async () => {
                             const sku = playingVideo;
-                            if (!confirm('Delete this video? This cannot be undone.')) {
-                              return;
-                            }
-                            
                             console.log('Deleting video for SKU:', sku);
                             
                             // Close modal immediately
@@ -2894,9 +2764,12 @@
                     </div>
                   </div>
                   <video
+                    key={playingVideo}
                     controls
                     autoPlay
                     playsInline
+                    onLoadedData={() => console.log('Video loaded successfully!')}
+                    onError={(e) => console.error('Video error:', e.target.error)}
                     style={{
                       width: '100%',
                       borderRadius: '16px',
@@ -2908,6 +2781,255 @@
                 </div>
               </div>
             )}
+
+            {/* Video Upload/Recording Section - Full Screen Modal */}
+            {!readOnlyMode && showVideoUpload && (() => {
+              const item = items.find(i => i.id === showVideoUpload);
+              if (!item) return null;
+              
+              return (
+                <div
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget && !isRecording) {
+                      setShowVideoUpload(null);
+                    }
+                  }}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.95)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1000,
+                    padding: '2rem'
+                  }}
+                >
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      width: '100%',
+                      maxWidth: '1200px',
+                      maxHeight: '90vh',
+                      background: 'white',
+                      borderRadius: '24px',
+                      padding: '3rem',
+                      overflowY: 'auto',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Close button */}
+                    {!isRecording && (
+                      <button
+                        onClick={() => setShowVideoUpload(null)}
+                        style={{
+                          position: 'absolute',
+                          top: '2rem',
+                          right: '2rem',
+                          background: '#dc2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '50px',
+                          height: '50px',
+                          fontSize: '2rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '300',
+                          lineHeight: '1'
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+
+                    {/* Item name header */}
+                    <h2 style={{ 
+                      fontSize: '2rem', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      marginBottom: '2rem',
+                      paddingRight: '60px'
+                    }}>
+                      {getDisplayName(item.name)}
+                    </h2>
+
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => handleVideoUpload(e, item)}
+                      style={{ display: 'none' }}
+                    />
+                    
+                    {recordingItemId === item.id && isRecording ? (
+                      // Recording interface - Full screen
+                      <div>
+                        <div style={{ marginBottom: '2rem' }}>
+                          <video
+                            ref={videoPreviewRef}
+                            autoPlay
+                            playsInline
+                            webkit-playsinline="true"
+                            muted
+                            style={{
+                              width: '100%',
+                              maxHeight: '60vh',
+                              borderRadius: '16px',
+                              background: '#000',
+                              objectFit: 'contain'
+                            }}
+                          />
+                        </div>
+                        
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          gap: '1.5rem', 
+                          flexWrap: 'wrap',
+                          marginBottom: '1.5rem'
+                        }}>
+                          <button
+                            onClick={stopRecording}
+                            style={{
+                              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '1.5rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem',
+                              boxShadow: '0 6px 20px rgba(220, 38, 38, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem'
+                            }}
+                          >
+                            <span style={{ fontSize: '2rem' }}>⏹</span>
+                            Stop & Save
+                          </button>
+                          <button
+                            onClick={cancelRecording}
+                            style={{
+                              background: 'white',
+                              color: '#64748b',
+                              border: '3px solid #e2e8f0',
+                              borderRadius: '12px',
+                              padding: '1.5rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        
+                        <div style={{ 
+                          textAlign: 'center', 
+                          color: '#dc2626', 
+                          fontWeight: '700', 
+                          fontSize: '1.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
+                        }}>
+                          <span style={{ fontSize: '2rem' }}>🔴</span>
+                          Recording...
+                        </div>
+                      </div>
+                    ) : (
+                      // Upload/record choice - Full screen
+                      <div>
+                        <div style={{ 
+                          marginBottom: '3rem', 
+                          textAlign: 'center',
+                          padding: '3rem',
+                          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                          borderRadius: '16px'
+                        }}>
+                          <div style={{ 
+                            fontWeight: '700', 
+                            marginBottom: '1rem', 
+                            color: '#1e293b', 
+                            fontSize: '1.5rem' 
+                          }}>
+                            Add Processing Video
+                          </div>
+                          <div style={{ 
+                            fontSize: '1.2rem', 
+                            color: '#64748b', 
+                            fontWeight: '500' 
+                          }}>
+                            Record with camera or choose an existing file
+                          </div>
+                        </div>
+                        
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '2rem', 
+                          flexWrap: 'wrap', 
+                          justifyContent: 'center' 
+                        }}>
+                          <button
+                            onClick={() => startRecording(item)}
+                            style={{
+                              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '16px',
+                              padding: '2rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem',
+                              boxShadow: '0 6px 20px rgba(220, 38, 38, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1rem',
+                              minWidth: '250px',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <span style={{ fontSize: '2rem' }}>📹</span>
+                            Record Video
+                          </button>
+                          
+                          <button
+                            onClick={() => videoInputRef.current?.click()}
+                            style={{
+                              background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '16px',
+                              padding: '2rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem',
+                              boxShadow: '0 6px 20px rgba(15, 118, 110, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1rem',
+                              minWidth: '250px',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <span style={{ fontSize: '2rem' }}>📁</span>
+                            Choose File
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Timing Events Modal */}
             {showTimingEvents && timingEventsBySKU[showTimingEvents] && (

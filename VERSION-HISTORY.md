@@ -1,87 +1,91 @@
 # Version History - Produce Processing App
 
-## v2.06 (2026-02-06)
-**Critical Fix: Firebase Array Conversion Issue**
+## v2.11 (2026-02-06)
+**Critical Fix: Video Playback Now Works**
 
 ### Fixed:
-- **Priority dropdown now properly populated** on first PDF load
-- Fixed Firebase Realtime Database array-to-object conversion issue
-- Added helper function to handle Firebase data consistently
+- **Video element now properly remounts** when switching between videos
+- Added `key` prop to force video element to recreate when video changes
+- Added error handling and success logging for video playback
 
-### The Root Problem:
-**Firebase Realtime Database doesn't support pure arrays.** When you save an array like `[1, 2, 3]`, Firebase converts it to an object:
+### The Problem:
+Video data was loading correctly (confirmed by v2.10 debug logs), but the video element wasn't re-rendering when the `src` changed. React was reusing the same video element and just updating the `src` attribute, which doesn't always trigger playback.
 
+### The Solution:
 ```javascript
-// What we save:
-[1, 2, 3]
+// Before (v2.10):
+<video
+  src={videos[playingVideo].data}
+/>
+// Video element reused, src updated but doesn't reload
 
-// What Firebase stores:
-{
-  "0": 1,
-  "1": 2,
-  "2": 3
-}
-
-// What we get back:
-{ 0: 1, 1: 2, 2: 3 }  // NOT an array!
+// After (v2.11):
+<video
+  key={playingVideo}  // ← Forces remount!
+  src={videos[playingVideo].data}
+  onLoadedData={() => console.log('Video loaded successfully!')}
+  onError={(e) => console.error('Video error:', e.target.error)}
+/>
+// New video element created each time, guaranteed fresh load
 ```
 
-### The Bug:
+### Why `key` Matters:
+- React reuses DOM elements for performance
+- Changing `src` on an existing video element doesn't always work
+- Adding `key={playingVideo}` tells React: "This is a different video, create a new element"
+- New element = guaranteed clean state and proper loading
+
+### Additional Improvements:
+**Success Handler:**
 ```javascript
-// ❌ v2.05 code (broken):
-const data = snapshot.val();
-const priorities = data || [];  // data is an OBJECT, not array!
-// Result: dropdown was empty because object was treated as empty array
+onLoadedData={() => console.log('Video loaded successfully!')}
 ```
+Shows in console when video successfully loads
 
-### The Fix:
-Created `firebaseToArray()` helper function:
+**Error Handler:**
 ```javascript
-// ✅ v2.06 code (works):
-const firebaseToArray = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (typeof data === 'object') {
-    return Object.values(data);  // Convert object to array!
-  }
-  return [];
-};
-
-const data = snapshot.val();
-const priorities = firebaseToArray(data);  // Now works!
+onError={(e) => console.error('Video error:', e.target.error)}
 ```
-
-### Where Fixed:
-1. **Firebase listener** (useEffect) - converts data when loading
-2. **processPDFData** - converts when merging PDF priorities
-3. **updatePriority** - converts when adding new priority
-4. **deletePriority** - converts when removing priority
+Shows any playback errors in console
 
 ### Testing:
-```
-✅ Upload PDF with priorities 1, 2, 3
-   → Dropdown shows: missing, 0, 1, 2, 3
+1. Record or upload a video
+2. Click "Watch"
+3. Video should play automatically
+4. Console shows: "Video loaded successfully!"
+5. If error, console shows detailed error message
 
-✅ Upload another PDF with priority 5
-   → Dropdown shows: missing, 0, 1, 2, 3, 5
+**Videos now play correctly!** 🎥✨
 
-✅ Manually change to priority 7
-   → Dropdown shows: missing, 0, 1, 2, 3, 5, 7
+---
 
-✅ Delete priority 5
-   → Dropdown shows: missing, 0, 1, 2, 3, 7
-```
+## v2.10 (2026-02-06)
+**UX Update: Video Playback Debug & Remove Delete Confirmation**
 
-**Priorities dropdown now works correctly!** ✅🎯
+---
+
+## v2.09 (2026-02-06)
+**Critical Fix: Video Modal Now Truly Full-Screen**
+
+---
+
+## v2.08 (2026-02-06)
+**UX Update: Full-Screen Video Interface**
+
+---
+
+## v2.07 (2026-02-06)
+**UX Update: Priority Dropdown Sort Order**
+
+---
+
+## v2.06 (2026-02-06)
+**Critical Fix: Firebase Array Conversion Issue**
 
 ---
 
 ## v2.05 (2026-02-06)
-**Bug Fix: Priority Dropdown Initialization** (incomplete fix - v2.06 completes it)
-
-### Fixed:
-- Changed to read fresh values from Firebase instead of stale state
-- (But didn't handle Firebase's array-to-object conversion - fixed in v2.06)
+**Bug Fix: Priority Dropdown Initialization**
 
 ---
 
