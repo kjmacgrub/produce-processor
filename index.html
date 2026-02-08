@@ -308,6 +308,7 @@
 
       const saveCompletionPhotoToDB = async (sku, photoData) => {
         try {
+          // Save to IndexedDB (local)
           const db = await openDB();
           const transaction = db.transaction(['completionPhotos'], 'readwrite');
           const store = transaction.objectStore('completionPhotos');
@@ -319,8 +320,17 @@
           });
           
           console.log('Completion photo saved to IndexedDB for SKU:', sku);
+          
+          // Also save to Firebase (for cross-device sync)
+          if (window.db) {
+            await window.db.ref(`completionPhotos/${sku}`).set({
+              data: photoData.data,
+              timestamp: photoData.timestamp
+            });
+            console.log('Completion photo saved to Firebase for SKU:', sku);
+          }
         } catch (error) {
-          console.error('Error saving completion photo to IndexedDB:', error);
+          console.error('Error saving completion photo:', error);
           alert('Error saving photo. Storage may be full.');
         }
       };
@@ -694,6 +704,24 @@
         });
 
         return () => completedRef.off();
+      }, []);
+
+      // Load completion photos from Firebase (for cross-device sync)
+      useEffect(() => {
+        if (!db) return;
+
+        const photosRef = db.ref('completionPhotos');
+        photosRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setCompletionPhotos(data);
+            console.log('Loaded completion photos from Firebase:', Object.keys(data));
+          } else {
+            setCompletionPhotos({});
+          }
+        });
+
+        return () => photosRef.off();
       }, []);
 
       // Load historical times from Firebase
@@ -2068,22 +2096,33 @@
       };
 
       const formatDateWithDay = (dateString) => {
-        // dateString format: "M/D/YYYY" (e.g., "2/5/2026")
+        // dateString format: "YYYY-MM-DD" (e.g., "2026-02-09")
         if (!dateString) return '';
         
         try {
-          const parts = dateString.split('/');
+          const parts = dateString.split('-');
           if (parts.length !== 3) return dateString;
           
-          const month = parseInt(parts[0]) - 1; // JS months are 0-indexed
-          const day = parseInt(parts[1]);
-          const year = parseInt(parts[2]);
+          const year = parseInt(parts[0]);
+          const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
+          const day = parseInt(parts[2]);
           
           const date = new Date(year, month, day);
           const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-          const dayOfWeek = dayNames[date.getDay()];
+          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                             'July', 'August', 'September', 'October', 'November', 'December'];
           
-          return `${dayOfWeek}, ${dateString}`;
+          const dayOfWeek = dayNames[date.getDay()];
+          const monthName = monthNames[date.getMonth()];
+          
+          // Add ordinal suffix (st, nd, rd, th)
+          const getOrdinal = (n) => {
+            const s = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+          };
+          
+          return `${dayOfWeek}, ${monthName} ${getOrdinal(day)}, ${year}`;
         } catch (error) {
           return dateString;
         }
@@ -2168,6 +2207,7 @@
                           await db.ref('completedItems').remove();
                           await db.ref('pdfDate').remove();
                           await db.ref('totalCases').remove();
+                          await db.ref('completionPhotos').remove(); // Clear photos from Firebase
                         }
                         // Clear all state variables
                         setItems([]);
@@ -2177,6 +2217,7 @@
                         setStartTime(null);
                         setPdfDate('');
                         setOriginalTotalCases(0);
+                        setCompletionPhotos({}); // Clear photos from state
                         console.log('✅ All data cleared');
                       }
                     }}
@@ -2257,7 +2298,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.71
+                  v2.74
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
