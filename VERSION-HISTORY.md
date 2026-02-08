@@ -1,5 +1,425 @@
 # Version History - Produce Processing App
 
+## v2.76 (2026-02-08)
+**Feature: Show Existing Photo with Keep/Retake/Delete Options**
+
+### Added:
+- **Shows existing photo** when clicking "All Done" if one exists
+- **Three options** for existing photos: Keep, Retake, or Delete
+- **Smarter workflow** - avoids redundant photo capture
+
+### The Enhancement:
+
+**Scenario:** User completes the same item type multiple times (e.g., Strawberries cases 1-10, then cases 11-20)
+
+**Before v2.76:**
+```
+Click "All Done" 
+  → Dialog: "Take photo or Skip?"
+  → (Even if photo already exists from first batch)
+  → Must retake or skip
+```
+
+**After v2.76:**
+```
+Click "All Done"
+  → Dialog checks: Does photo exist for this SKU?
+  
+  IF NO PHOTO:
+    → "Take photo or Skip?" (same as before)
+  
+  IF PHOTO EXISTS:
+    → Shows the existing photo
+    → Options: "Keep", "Retake", or "Delete"
+```
+
+### UI Design:
+
+**When existing photo found:**
+```
+┌─────────────────────────────────┐
+│      Task Complete!             │
+│                                 │
+│  Previous completion photo      │
+│  found:                         │
+│                                 │
+│  ┌─────────────────────────┐   │
+│  │                         │   │
+│  │   [Photo Preview]       │   │
+│  │                         │   │
+│  └─────────────────────────┘   │
+│                                 │
+│  What would you like to do?     │
+│                                 │
+│  [✓ Keep]  [📸 Retake]  [🗑️ Delete] │
+└─────────────────────────────────┘
+```
+
+**When no existing photo:**
+```
+┌─────────────────────────────────┐
+│      Task Complete!             │
+│                                 │
+│  Would you like to take a       │
+│  photo of the completed work?   │
+│                                 │
+│  [📸 Take Photo]    [Skip]      │
+└─────────────────────────────────┘
+```
+
+### Button Functions:
+
+**✓ Keep (Green):**
+- Completes task with existing photo
+- No camera activation
+- Photo remains unchanged
+
+**📸 Retake (Blue):**
+- Opens camera to capture new photo
+- Replaces existing photo
+- Same flow as taking first photo
+
+**🗑️ Delete (Red):**
+- Removes photo from Firebase and state
+- Completes task with no photo
+- Clears photo permanently for this SKU
+
+### Technical Implementation:
+
+**Photo check logic:**
+```javascript
+const sku = getSKU(showPhotoChoice.name);
+const existingPhoto = completionPhotos[sku];
+
+if (existingPhoto) {
+  // Show photo with Keep/Retake/Delete
+} else {
+  // Show Take/Skip dialog
+}
+```
+
+**Delete action:**
+```javascript
+// Remove from Firebase
+await db.ref(`completionPhotos/${sku}`).remove();
+
+// Remove from state
+setCompletionPhotos(prev => {
+  const updated = {...prev};
+  delete updated[sku];
+  return updated;
+});
+```
+
+### Use Cases:
+
+**Use Case 1: Same item, multiple batches**
+- Complete Strawberries cases 1-5 → Take photo
+- Complete Strawberries cases 6-10 → Keep existing photo ✅
+
+**Use Case 2: Photo needs update**
+- First batch photo unclear
+- Complete next batch → Retake with better angle ✅
+
+**Use Case 3: Wrong SKU photo**
+- Photo taken for wrong item
+- Complete correct item → Delete old, take new ✅
+
+### Benefits:
+
+✅ **Saves time** - Keep existing good photos  
+✅ **Flexibility** - Retake if needed  
+✅ **Photo management** - Delete incorrect photos  
+✅ **Smarter workflow** - Adapts to existing data  
+
+**Photo dialog now context-aware with existing photo management!** 📸✨
+
+---
+
+## v2.75 (2026-02-08)
+**UI Polish: Subtle View Mode Indicator**
+
+### Changed:
+- **Text shortened** from "You are in View Mode" to "View Mode"
+- **Layout changed** to vertical - eye icon above text
+- **Background much more transparent** - doesn't block content
+- **Overall less intrusive** appearance
+
+### The Change:
+
+**Before:**
+```
+┌──────────────────────────┐
+│ 👁️ You are in View Mode  │  ← Solid blue, horizontal
+└──────────────────────────┘
+```
+
+**After:**
+```
+┌──────────┐
+│    👁️    │  ← Transparent, vertical
+│ View Mode│
+└──────────┘
+```
+
+### Visual Details:
+
+**Text:**
+- Before: "You are in View Mode"
+- After: "View Mode" ✅
+
+**Layout:**
+- Before: Horizontal (icon and text side-by-side)
+- After: Vertical (icon above text) ✅
+
+**Background:**
+- Before: Solid blue gradient `linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)`
+- After: Very transparent `rgba(59, 130, 246, 0.15)` - 85% transparent! ✅
+
+**Text Color:**
+- Before: White (on blue background)
+- After: Dark gray `#1e293b` (for contrast on transparent) ✅
+
+**Border:**
+- Before: None
+- After: Light blue border `rgba(59, 130, 246, 0.3)` ✅
+
+### Technical Changes:
+
+```css
+/* Before */
+background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+color: white;
+display: flex;
+gap: 0.5rem;
+
+/* After */
+background: rgba(59, 130, 246, 0.15); /* 15% opacity = 85% transparent */
+color: #1e293b;
+display: flex;
+flexDirection: column; /* Stack vertically */
+gap: 0.25rem;
+border: 2px solid rgba(59, 130, 246, 0.3);
+```
+
+### Benefits:
+
+✅ **Less intrusive** - Doesn't block content behind it  
+✅ **Cleaner** - Shorter text is easier to scan  
+✅ **More elegant** - Vertical layout with larger icon  
+✅ **Still visible** - Border and icon make it noticeable  
+
+**View Mode indicator now subtle and non-blocking!** 👁️✨
+
+---
+
+## v2.74 (2026-02-08)
+**Critical Fix: Completion Photos Now Sync Across Devices**
+
+### Fixed:
+- **Completion photos now visible in View Mode** on all devices
+- **Photos sync via Firebase** instead of only local storage
+- **Cross-device viewing** - iPad captures, phone can see photos
+
+### The Problem:
+
+User reported: "Completed items do not show the captured photo if viewed from a phone in View Mode."
+
+**Root cause:**
+- Completion photos were only stored in IndexedDB (local browser storage)
+- Each device has its own IndexedDB database
+- iPad captures photo → Saved to iPad's IndexedDB
+- Phone tries to view → Phone's IndexedDB has no photos ❌
+
+**Result:** Photos invisible on other devices!
+
+### The Solution:
+
+**Added Firebase synchronization for completion photos:**
+
+1. **When photo is captured:**
+   - Save to IndexedDB (local) ✓
+   - **NEW:** Also save to Firebase ✓
+
+2. **On app startup:**
+   - Load from IndexedDB (local)
+   - **NEW:** Also load from Firebase ✓
+
+3. **When data is cleared:**
+   - Clear IndexedDB
+   - **NEW:** Also clear Firebase ✓
+
+### Technical Implementation:
+
+**Updated `saveCompletionPhotoToDB()`:**
+```javascript
+// Save to IndexedDB (local)
+await store.put({ id: sku, data, timestamp });
+
+// NEW: Also save to Firebase (for sync)
+await db.ref(`completionPhotos/${sku}`).set({
+  data: photoData.data,
+  timestamp: photoData.timestamp
+});
+```
+
+**Added new useEffect:**
+```javascript
+// Load completion photos from Firebase
+const photosRef = db.ref('completionPhotos');
+photosRef.on('value', (snapshot) => {
+  setCompletionPhotos(snapshot.val());
+});
+```
+
+**Updated Clear Data button:**
+```javascript
+await db.ref('completionPhotos').remove(); // Clear from Firebase
+setCompletionPhotos({}); // Clear from state
+```
+
+### How It Works Now:
+
+**Scenario: iPad (Process Mode) + Phone (View Mode)**
+
+1. **Worker on iPad:**
+   - Completes task
+   - Takes completion photo
+   - Photo saved to:
+     - iPad's IndexedDB ✓
+     - Firebase ✓
+
+2. **Manager on Phone:**
+   - Opens app in View Mode
+   - Clicks "Completed" to view finished items
+   - **Photos load from Firebase** ✓
+   - **Can see all completion photos!** ✓
+
+### Benefits:
+
+✅ **Cross-device sync** - Photos visible everywhere  
+✅ **View Mode works** - Managers can see completion photos  
+✅ **Real-time updates** - Firebase listener updates automatically  
+✅ **No extra steps** - Works automatically  
+
+### Storage Strategy:
+
+**Dual storage approach:**
+- **IndexedDB**: Fast local access, no network needed
+- **Firebase**: Cross-device sync, persistent storage
+
+Both are updated when photos are captured, ensuring availability across all devices and scenarios.
+
+**Completion photos now visible on all devices!** 📸✨
+
+---
+
+## v2.73 (2026-02-08)
+**UI Update: Full Descriptive Date Format**
+
+### Changed:
+- **Date format updated** to full descriptive format
+- Now shows: "Monday, February 9th, 2026"
+- More readable and professional
+
+### The Change:
+
+**Before (v2.72):**
+```
+Sunday, 09/02/26
+```
+
+**After (v2.73):**
+```
+Sunday, February 9th, 2026
+```
+
+### Format Details:
+
+- **Day of week**: Full name (Monday, Tuesday, etc.)
+- **Month**: Full name (January, February, etc.)
+- **Day**: Number with ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
+- **Year**: Full 4-digit year (2026)
+- **Format**: `Weekday, Month Day, Year`
+
+### Examples:
+
+```
+2026-02-09  →  Sunday, February 9th, 2026
+2026-02-10  →  Monday, February 10th, 2026
+2026-12-25  →  Friday, December 25th, 2026
+2026-01-01  →  Thursday, January 1st, 2026
+2026-03-22  →  Sunday, March 22nd, 2026
+2026-05-03  →  Sunday, May 3rd, 2026
+```
+
+### Technical Implementation:
+
+Added ordinal suffix function:
+- 1, 21, 31 → "st" (1st, 21st, 31st)
+- 2, 22 → "nd" (2nd, 22nd)
+- 3, 23 → "rd" (3rd, 23rd)
+- All others → "th" (4th, 5th, 11th, 12th, 13th, etc.)
+
+### Benefits:
+
+✅ **Very readable** - Full month and year spelled out  
+✅ **Professional** - Formal date presentation  
+✅ **No ambiguity** - Clear which is day vs month  
+✅ **Polished** - Ordinal suffixes add polish  
+
+**Date now displays in full descriptive format!** 📅✨
+
+---
+
+## v2.72 (2026-02-08)
+**UI Update: Changed Date Format to DD/MM/YY**
+
+### Changed:
+- **Date format updated** from "YYYY-MM-DD" to "Monday, DD/MM/YY"
+- More readable and user-friendly format
+- Shorter two-digit year
+
+### The Change:
+
+**Before:**
+```
+2026-02-09
+```
+
+**After:**
+```
+Sunday, 09/02/26
+```
+
+### Format Details:
+
+- **Day of week**: Full name (Monday, Tuesday, etc.)
+- **Day**: Two digits with leading zero (01, 02, ... 31)
+- **Month**: Two digits with leading zero (01, 02, ... 12)
+- **Year**: Two digits (26 for 2026)
+- **Separator**: Forward slash (/)
+
+### Examples:
+
+```
+2026-02-09  →  Sunday, 09/02/26
+2026-02-10  →  Monday, 10/02/26
+2026-12-25  →  Friday, 25/12/26
+```
+
+### Technical Changes:
+
+Updated `formatDateWithDay()` function:
+- Input: "YYYY-MM-DD" format
+- Output: "Weekday, DD/MM/YY" format
+- Added zero-padding for day and month
+- Extracts last 2 digits of year
+
+**Date format now more compact and readable!** 📅✨
+
+---
+
 ## v2.71 (2026-02-08)
 **UI Cleanup: Removed Duplicate Load Button**
 
