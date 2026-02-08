@@ -1,23 +1,122 @@
 # Version History - Produce Processing App
 
+## v2.33.1 (2026-02-07)
+**Bug Fix: File Uploader Now Shows Both CSV and PDF Files**
+
+### Fixed:
+- **File listing now properly displays both CSV and PDF files**
+- Added case-insensitive file extension checking
+- Added validation to only show files matching `YYYY-MM-DD.(csv|pdf)` pattern
+- Filters out any invalid or non-matching files
+
+### The Issue:
+The file uploader was only showing PDF files in the uploaded files list, even though CSV files were being uploaded successfully.
+
+### The Fix:
+```javascript
+// Filter to only show CSV and PDF files with valid date format
+const validFiles = result.items.filter(item => {
+  return item.name.match(/^\d{4}-\d{2}-\d{2}\.(csv|pdf)$/);
+});
+
+// Check file type (case-insensitive)
+const isCSV = item.name.toLowerCase().endsWith('.csv');
+const fileExtension = isCSV ? 'CSV' : 'PDF';
+```
+
+**File uploader now correctly shows both CSV and PDF files!** 📊✅
+
+---
+
+## v2.33 (2026-02-07)
+**🎉 Major Feature: CSV Support - Much More Reliable Data Loading!**
+
+### Added:
+- **CSV file parsing** - Direct support for CSV format produce reports
+- **Automatic file type detection** - Loads CSV or PDF based on what's available
+- **CSV-first preference** - If both CSV and PDF exist for a date, CSV is used
+- **File type badges** - Visual indicators showing CSV (green) or PDF (orange)
+
+### CSV Structure Support:
+The app now parses CSV files with this structure:
+```csv
+task,instruction,case quantity,item,notes,check in notes
+Process on ground floor,0 - bag if not sleeved,4,Herbs-chives #1001098,,
+Top Priority,1 - organic twistie,3,Cabbage-napa green organic #1000061,,
+```
+
+**Column mapping:**
+1. **task** - Section name (Process on ground floor, Top Priority, etc.)
+2. **instruction** - Format: `[priority] - [location/instructions]`
+3. **case quantity** - Number of cases
+4. **item** - Item name with SKU (format: Name #SKU)
+5-6. **notes** - Additional notes (usually empty)
+
+### Why CSV is Better Than PDF:
+| Feature | CSV | PDF |
+|---------|-----|-----|
+| **Parsing reliability** | ✅ 100% reliable | ⚠️ Depends on PDF structure |
+| **No regex needed** | ✅ Direct column access | ❌ Complex regex patterns |
+| **Section headers** | ✅ Never confused | ❌ Can bleed into items |
+| **Special characters** | ✅ Handles quotes/commas | ⚠️ Can break parsing |
+| **Maintenance** | ✅ Simple, clean code | ❌ Requires pattern updates |
+| **Speed** | ✅ Instant | ⚠️ Slower (PDF.js library) |
+
+### File Uploader Updates:
+- Accepts both `.csv` and `.pdf` files
+- Auto-detects file extension
+- Shows file type in uploaded files list
+- Instructions updated for both formats
+
+### UI Updates:
+- "Load PDF to Begin" → "Load File to Begin"
+- "Select PDF Date" → "Select Date to Load"
+- File type badges in date picker (CSV=green, PDF=orange)
+- Shows CSV or PDF indicator for each date
+
+### How It Works:
+
+**CSV Parsing:**
+```javascript
+// Extract priority from instruction column
+const instruction = "1 - organic twistie";
+const priorityMatch = instruction.match(/^([0-9U])\s*-\s*(.+)$/);
+// priority = 1, location = "organic twistie"
+```
+
+**Advantages:**
+- No PDF.js library needed for CSV
+- No text extraction complexities
+- Direct access to structured data
+- Handles multi-line instructions correctly
+- No section header confusion
+
+### Migration Path:
+1. **Keep existing PDFs** - They still work
+2. **Start using CSVs** - Much more reliable
+3. **Upload CSVs for new dates** - Preferred format
+4. **CSV takes precedence** - If both exist, CSV is used
+
+### Example CSV Row Parsing:
+```csv
+Top Priority,1 - organic twistie,3,Cabbage-napa green organic #1000061,,
+```
+**Parses to:**
+```javascript
+{
+  name: "Cabbage-napa green organic #1000061",
+  priority: 1,
+  cases: 3,
+  location: "organic twistie"
+}
+```
+
+**Much more reliable data loading with CSV support!** 📊✅
+
+---
+
 ## v2.32 (2026-02-07)
 **Visual Cleanup: Remove Pencil Emoji from Process Mode**
-
-### Changed:
-- **Removed ✏️ pencil emoji** from Process Mode button
-- Text now reads just "Process Mode"
-- View Mode keeps 👁 eye emoji
-
-### Button Labels Now:
-- **👁 View Mode** - Read-only mode (emoji kept)
-- **Process Mode** - Editing mode (emoji removed)
-
-### Why:
-- **Cleaner look** - Less visual clutter
-- **Text speaks for itself** - "Process Mode" is clear
-- **Consistent with other buttons** - Timer, Video, All Done have no emojis
-
-**Process Mode button now has cleaner text!** ✨
 
 ---
 

@@ -224,9 +224,9 @@
 </head>
 <body>
   <div class="container">
-    <h1>📋 PDF Uploader</h1>
-    <p class="subtitle">Upload daily produce processing PDFs to Firebase Storage</p>
-    <p style="text-align: center; color: #64748b; font-size: 0.9rem; font-weight: 700; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 0.05em;">v2.32</p>
+    <h1>📋 File Uploader</h1>
+    <p class="subtitle">Upload daily produce processing files to Firebase Storage</p>
+    <p style="text-align: center; color: #64748b; font-size: 0.9rem; font-weight: 700; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 0.05em;">v2.33.1</p>
     
     <div class="upload-section">
       <label for="date-input" style="display: block; margin-bottom: 0.5rem; font-weight: 700; color: #1e293b;">Select Date:</label>
@@ -238,9 +238,9 @@
       
       <div class="file-input-wrapper">
         <label for="file-input" class="file-select-btn">
-          📄 Choose PDF File
+          📄 Choose CSV or PDF File
         </label>
-        <input type="file" id="file-input" accept=".pdf" />
+        <input type="file" id="file-input" accept=".csv,.pdf" />
       </div>
       
       <div id="file-name" class="file-name" style="display: none;"></div>
@@ -253,17 +253,18 @@
     <div id="status"></div>
     
     <div class="uploaded-list">
-      <h3>📅 Uploaded PDFs</h3>
+      <h3>📅 Uploaded Files</h3>
       <div id="pdf-list"></div>
     </div>
     
     <div class="instructions">
       <h4>📖 How to Use:</h4>
-      <p><strong>1.</strong> Select the date for the PDF (the day the produce will be processed)</p>
-      <p><strong>2.</strong> Choose the PDF file from your computer</p>
+      <p><strong>1.</strong> Select the date for the file (the day the produce will be processed)</p>
+      <p><strong>2.</strong> Choose the CSV or PDF file from your computer</p>
       <p><strong>3.</strong> Click "Upload to Storage"</p>
-      <p><strong>4.</strong> PDFs are saved as <code>YYYY-MM-DD.pdf</code> in Storage</p>
-      <p><strong>5.</strong> iPads can then load PDFs by date from the app</p>
+      <p><strong>4.</strong> Files are saved as <code>YYYY-MM-DD.csv</code> or <code>YYYY-MM-DD.pdf</code> in Storage</p>
+      <p><strong>5.</strong> iPads can then load files by date from the app</p>
+      <p><strong>Note:</strong> CSV format is recommended for more reliable parsing</p>
     </div>
   </div>
   
@@ -309,7 +310,7 @@
     // Handle upload
     uploadBtn.addEventListener('click', async () => {
       if (!selectedFile || !dateInput.value) {
-        showStatus('Please select both a date and a PDF file', 'error');
+        showStatus('Please select both a date and a file', 'error');
         return;
       }
       
@@ -317,8 +318,11 @@
         uploadBtn.disabled = true;
         showStatus('Uploading...', 'info');
         
-        // Format filename as YYYY-MM-DD.pdf
-        const filename = `${dateInput.value}.pdf`;
+        // Detect file extension
+        const fileExtension = selectedFile.name.toLowerCase().endsWith('.csv') ? 'csv' : 'pdf';
+        
+        // Format filename as YYYY-MM-DD.csv or YYYY-MM-DD.pdf
+        const filename = `${dateInput.value}.${fileExtension}`;
         
         // Upload to Storage
         const storageRef = storage.ref(`produce-pdfs/${filename}`);
@@ -341,23 +345,37 @@
       }
     });
     
-    // Load uploaded PDFs
+    // Load uploaded files
     async function loadUploadedPDFs() {
       try {
         const storageRef = storage.ref('produce-pdfs');
         const result = await storageRef.listAll();
         
-        if (result.items.length === 0) {
-          pdfList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No PDFs uploaded yet</p>';
+        // Filter to only show CSV and PDF files with valid date format
+        const validFiles = result.items.filter(item => {
+          return item.name.match(/^\d{4}-\d{2}-\d{2}\.(csv|pdf)$/);
+        });
+        
+        if (validFiles.length === 0) {
+          pdfList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No files uploaded yet</p>';
           return;
         }
         
         // Sort by date (newest first)
-        const items = result.items.sort((a, b) => b.name.localeCompare(a.name));
+        const items = validFiles.sort((a, b) => b.name.localeCompare(a.name));
         
         pdfList.innerHTML = '';
         for (const item of items) {
-          const date = item.name.replace('.pdf', '');
+          // Determine file type
+          const isCSV = item.name.toLowerCase().endsWith('.csv');
+          const fileExtension = isCSV ? 'CSV' : 'PDF';
+          
+          // Extract date
+          const date = item.name.replace(/\.(csv|pdf)$/i, '');
+          
+          // Skip if not a valid date format
+          if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+          
           const [year, month, day] = date.split('-');
           const dateObj = new Date(year, month - 1, day);
           const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -366,14 +384,32 @@
           const div = document.createElement('div');
           div.className = 'pdf-item';
           div.innerHTML = `
-            <span class="pdf-date">${displayDate}</span>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span class="pdf-date">${displayDate}</span>
+              <span style="
+                font-size: 0.75rem; 
+                font-weight: 700;
+                padding: 0.25rem 0.5rem;
+                background: ${fileExtension === 'CSV' ? '#10b981' : '#f59e0b'};
+                color: white;
+                border-radius: 4px;
+              ">${fileExtension}</span>
+            </div>
             <button class="delete-btn" onclick="deletePDF('${item.name}')">Delete</button>
           `;
           pdfList.appendChild(div);
         }
       } catch (error) {
-        console.error('Error loading PDFs:', error);
-        pdfList.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 2rem;">Error loading PDFs</p>';
+        console.error('Error loading files:', error);
+        pdfList.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 2rem;">Error loading files</p>';
+      }
+    }
+          `;
+          pdfList.appendChild(div);
+        }
+      } catch (error) {
+        console.error('Error loading files:', error);
+        pdfList.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 2rem;">Error loading files</p>';
       }
     }
     
