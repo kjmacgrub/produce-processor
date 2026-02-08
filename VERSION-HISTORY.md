@@ -1,5 +1,120 @@
 # Version History - Produce Processing App
 
+## v2.79 (2026-02-08)
+**Feature: Clickable Mode Toggle on Non-iPad Devices**
+
+### Added:
+- **Mode toggle button** on non-iPad devices
+- Click to switch between View Mode and Process Mode
+- Visual indicator shows current mode
+
+### The Enhancement:
+
+**Device Behavior:**
+
+**iPad (default Process Mode):**
+- Starts in Process Mode
+- Shows "View Mode" indicator only when in View Mode
+- Must use keyboard shortcut to toggle (Shift + V + M)
+
+**Non-iPad (default View Mode):**
+- Starts in View Mode
+- Shows mode indicator button always (View or Process)
+- **Click button to toggle** between modes ✨
+
+### UI Design:
+
+**Non-iPad - View Mode:**
+```
+┌──────────────┐
+│     👁️       │  ← Blue styling
+│  View Mode   │  ← Click to switch
+└──────────────┘
+```
+
+**Non-iPad - Process Mode:**
+```
+┌──────────────┐
+│     ⚙️       │  ← Green styling
+│ Process Mode │  ← Click to switch
+└──────────────┘
+```
+
+**iPad - Process Mode:**
+```
+(No indicator shown)
+```
+
+**iPad - View Mode:**
+```
+┌──────────────┐
+│     👁️       │  ← Blue styling
+│  View Mode   │  ← Not clickable
+└──────────────┘
+```
+
+### Visual Indicators:
+
+**View Mode:**
+- Icon: 👁️ (eye)
+- Color: Blue border and shadow
+- Background: Blue transparent
+
+**Process Mode:**
+- Icon: ⚙️ (gear)
+- Color: Green border and shadow
+- Background: Green transparent
+
+### Technical Implementation:
+
+**Device detection:**
+```javascript
+const [isIPad] = useState(() => {
+  return /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+});
+```
+
+**Toggle logic (non-iPad only):**
+```javascript
+<button onClick={() => setReadOnlyMode(!readOnlyMode)}>
+  {readOnlyMode ? 'View Mode' : 'Process Mode'}
+</button>
+```
+
+### Use Cases:
+
+**Use Case 1: Manager reviewing on phone**
+- Opens app → Defaults to View Mode (blue, 👁️)
+- Needs to fix item → Click button → Process Mode (green, ⚙️)
+- Done editing → Click button → Back to View Mode
+
+**Use Case 2: Worker on iPad**
+- Opens app → Process Mode (no indicator)
+- Works as normal
+- Uses keyboard shortcut if needs View Mode
+
+**Use Case 3: Testing on laptop**
+- Opens app → View Mode (blue, 👁️)
+- Click to test Process Mode → Green, ⚙️
+- Click to go back → Blue, 👁️
+
+### Benefits:
+
+✅ **Easy mode switching** - Single click on non-iPad  
+✅ **Clear visual feedback** - Icon and color show mode  
+✅ **iPad unchanged** - Worker workflow not disrupted  
+✅ **Flexible** - Managers can switch modes as needed  
+
+### Mode Defaults:
+
+- **iPad**: Process Mode (workers can work immediately)
+- **Non-iPad**: View Mode (safe default for managers/viewers)
+- **Both**: Can toggle as needed
+
+**Non-iPad devices now have easy one-click mode toggle!** 🔄✨
+
+---
+
 ## v2.78 (2026-02-08)
 **Minor Update: Cleaner Date Format**
 

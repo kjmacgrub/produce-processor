@@ -123,6 +123,9 @@
         const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
         return !isIPad; // true (View mode) if not iPad, false (Process mode) if iPad
       });
+      const [isIPad] = useState(() => {
+        return /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+      });
       const [firebaseConnected, setFirebaseConnected] = useState(false);
       const [isRecording, setIsRecording] = useState(false);
       const [recordingItemId, setRecordingItemId] = useState(null);
@@ -2241,28 +2244,64 @@
                   <div /> // Empty spacer for alignment
                 )}
                 
-                {/* View Mode indicator (top-right) - only shown in View Mode */}
-                {readOnlyMode && (
-                  <div 
-                    title="Hold Shift, then press V then M to toggle modes"
+                {/* Mode indicator (top-right) - shows current mode */}
+                {!isIPad ? (
+                  // Non-iPad: Clickable toggle button
+                  <button
+                    onClick={() => setReadOnlyMode(!readOnlyMode)}
+                    title="Click to toggle between View Mode and Process Mode"
                     style={{
-                      background: 'rgba(59, 130, 246, 0.15)',
+                      background: readOnlyMode 
+                        ? 'rgba(59, 130, 246, 0.15)' 
+                        : 'rgba(15, 118, 110, 0.15)',
                       color: '#1e293b',
-                      border: '2px solid rgba(59, 130, 246, 0.3)',
+                      border: readOnlyMode 
+                        ? '2px solid rgba(59, 130, 246, 0.3)' 
+                        : '2px solid rgba(15, 118, 110, 0.3)',
                       borderRadius: '12px',
                       padding: '0.75rem 1rem',
                       fontSize: '0.85rem',
                       fontWeight: '700',
-                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)',
+                      boxShadow: readOnlyMode 
+                        ? '0 4px 15px rgba(59, 130, 246, 0.1)' 
+                        : '0 4px 15px rgba(15, 118, 110, 0.1)',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: '0.25rem',
-                      cursor: 'help'
-                    }}>
-                    <div style={{ fontSize: '1.5rem' }}>👁️</div>
-                    <div>View Mode</div>
-                  </div>
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ fontSize: '1.5rem' }}>
+                      {readOnlyMode ? '👁️' : '⚙️'}
+                    </div>
+                    <div>{readOnlyMode ? 'View Mode' : 'Process Mode'}</div>
+                  </button>
+                ) : (
+                  // iPad: Non-clickable indicator (use keyboard shortcut)
+                  readOnlyMode && (
+                    <div 
+                      title="Hold Shift, then press V then M to toggle modes"
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        color: '#1e293b',
+                        border: '2px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '12px',
+                        padding: '0.75rem 1rem',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        cursor: 'help'
+                      }}>
+                      <div style={{ fontSize: '1.5rem' }}>👁️</div>
+                      <div>View Mode</div>
+                    </div>
+                  )
                 )}
               </div>
               
@@ -2300,7 +2339,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.78
+                  v2.79
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
