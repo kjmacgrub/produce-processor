@@ -1,5 +1,222 @@
 # Version History - Produce Processing App
 
+## v2.34 (2026-02-07)
+**Main App: Case-Insensitive File Extension Matching + Debug Logging**
+
+### Fixed:
+- **Case-insensitive file extension matching** - Now matches .csv/.CSV/.Csv and .pdf/.PDF/.Pdf
+- **Added extensive debug logging** - Console shows exactly which files are found and how they're processed
+
+### The Issue:
+The file listing regex was case-sensitive, so files with uppercase extensions weren't being detected:
+```javascript
+// BEFORE (Case-sensitive):
+const pdfMatch = item.name.match(/^(\d{4}-\d{2}-\d{2})\.pdf$/);
+const csvMatch = item.name.match(/^(\d{4}-\d{2}-\d{2})\.csv$/);
+// Would NOT match: 2026-02-09.CSV ❌
+```
+
+### The Fix:
+```javascript
+// AFTER (Case-insensitive with 'i' flag):
+const pdfMatch = item.name.match(/^(\d{4}-\d{2}-\d{2})\.pdf$/i);
+const csvMatch = item.name.match(/^(\d{4}-\d{2}-\d{2})\.csv$/i);
+// Now matches: 2026-02-09.CSV ✓
+```
+
+### Debug Console Output:
+Open browser console (F12) and click "Load New Day" to see:
+```
+=== Listing Files from Storage ===
+Total files found: 3
+  File: 2026-02-09.csv
+  File: 2026-02-09.pdf
+  Parsed: 2026-02-09.csv → date=2026-02-09, type=csv
+  Parsed: 2026-02-09.pdf → date=2026-02-09, type=pdf
+  Added: 2026-02-09 (csv)
+  Skipped: 2026-02-09 (pdf) - already have csv
+=== Final dates list ===
+  2026-02-09: CSV
+```
+
+**Open console to see what files are being found!** 🔍
+
+---
+
+## v2.33.6 (2026-02-07)
+**PDF Uploader: Added Preview Mode Detection & Instructions**
+
+### Added:
+- **Firebase availability check** - Detects if external scripts can load
+- **Preview mode warning** - Shows prominent notice when viewed in preview/iframe
+- **User instructions** - Clear guidance to download and open file directly
+- **Graceful error handling** - Script stops cleanly without breaking
+
+### The Issue:
+The error `firebase is not defined` occurs when viewing the HTML file in preview mode (like Claude's artifact viewer or as an iframe). External scripts like Firebase cannot load in these restricted contexts for security reasons.
+
+The error shows as:
+```
+about:srcdoc:571 Uncaught ReferenceError: firebase is not defined
+```
+
+### The Solution:
+**Download the file and open it directly in your browser.**
+
+The uploader now:
+1. Checks if Firebase loaded
+2. If not loaded → Shows warning banner
+3. Displays clear instructions to user
+4. Prevents script errors
+
+### Warning Banner:
+```
+⚠️ Important: Download and Open Directly
+
+This file cannot run in preview mode.
+Please download this HTML file and open it directly
+in your browser (Chrome, Firefox, Safari, or Edge).
+Firebase requires direct file access to work properly.
+```
+
+### How to Use:
+1. **Download** the `pdf-uploader.html` file
+2. **Save** it to your computer
+3. **Double-click** to open in your default browser
+4. **Or** right-click → Open with → Choose your browser
+
+**The file will work perfectly when opened directly!** ✅
+
+---
+
+## v2.33.5 (2026-02-07)
+**Critical Fix: Removed Duplicate Code Causing Syntax Error**
+
+### Fixed:
+- **Removed duplicate code block that was causing persistent syntax error**
+- Stray template literal closing `};` was left from previous edit
+- Function was being defined twice with conflicting syntax
+
+### The Issue:
+During the previous fix (v2.33.4), duplicate code was left behind:
+```javascript
+// Line 425-431: Correct code
+pdfList.appendChild(div);
+}
+} catch (error) {
+  // ...
+}
+}
+
+// Line 432-439: DUPLICATE (causing error)
+`;                           ← Stray closing backtick!
+pdfList.appendChild(div);    ← Duplicate
+}                            ← Duplicate
+} catch (error) {            ← Duplicate
+  // ...
+}
+}
+```
+
+The stray `};` on line 432 was being interpreted as part of the template literal, breaking the JavaScript syntax.
+
+### The Fix:
+Removed the entire duplicate block (lines 432-439).
+
+**Syntax error finally resolved!** ✅
+
+---
+
+## v2.33.4 (2026-02-07)
+**Critical Fix: Syntax Error Breaking JavaScript Execution**
+
+### Fixed:
+- **Syntax error in template literal causing entire script to fail**
+- Multi-line style attribute inside template literal was breaking quotes
+- Consolidated inline styles to single line to avoid quote conflicts
+
+### The Issue:
+```javascript
+// BROKEN (Syntax Error):
+div.innerHTML = `
+  <span style="
+    font-size: 0.75rem;  ← Multi-line style inside template literal
+    background: ${value};
+  ">${text}</span>
+`;
+
+// FIXED:
+div.innerHTML = `
+  <span style="font-size: 0.75rem; background: ${value};">
+    ${text}
+  </span>
+`;
+```
+
+The multi-line style attribute with quotes inside a template literal was causing:
+```
+Uncaught SyntaxError: Unexpected identifier 'Delete'
+```
+
+This prevented ALL JavaScript from running, including:
+- File selection handler
+- Upload button logic
+- Everything else
+
+### The Fix:
+Consolidated the style attribute to a single line, eliminating the nested quote conflict.
+
+**JavaScript now executes correctly!** ✅
+
+---
+
+## v2.33.3 (2026-02-07)
+**Debug: Added Extensive Logging**
+(Rolled into v2.33.4)
+
+---
+
+## v2.33.2 (2026-02-07)
+**Bug Fix: Upload Button Now Activates for CSV Files**
+
+### Fixed:
+- **Upload button now properly enables when CSV files are selected**
+- Fixed variable name conflict (fileName was used for both file name and DOM element)
+- Added explicit file type validation in change handler
+- Added MIME types to accept attribute for better browser compatibility
+- Added console logging for debugging
+
+### The Issue:
+When selecting a CSV file, the "Upload to Storage" button remained disabled, even though the file was selected.
+
+### The Fix:
+1. **Variable name conflict resolved:**
+```javascript
+// Before: fileName used for both
+const fileName = selectedFile.name.toLowerCase();
+fileName.textContent = `Selected: ${selectedFile.name}`; // Conflict!
+
+// After: Separate variables
+const selectedFileName = selectedFile.name.toLowerCase();
+fileName.textContent = `Selected: ${selectedFile.name}`; // ✓
+```
+
+2. **Better accept attribute:**
+```html
+<!-- Added MIME types for browser compatibility -->
+<input accept=".csv,.pdf,text/csv,application/pdf" />
+```
+
+3. **Added validation:**
+```javascript
+const validExtensions = ['.csv', '.pdf'];
+const isValid = validExtensions.some(ext => selectedFileName.endsWith(ext));
+```
+
+**CSV file selection now works correctly!** ✅
+
+---
+
 ## v2.33.1 (2026-02-07)
 **Bug Fix: File Uploader Now Shows Both CSV and PDF Files**
 

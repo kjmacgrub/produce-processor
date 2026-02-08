@@ -772,47 +772,209 @@
           const storageRef = storage.ref('produce-pdfs');
           const result = await storageRef.listAll();
           
-          // Extract dates from filenames (format: YYYY-MM-DD.pdf)
+          console.log('=== Listing Files from Storage ===');
+          console.log('Total files found:', result.items.length);
+          result.items.forEach(item => {
+            console.log('  File:', item.name);
+          });
+          
+          // Extract dates from filenames (format: YYYY-MM-DD.pdf or YYYY-MM-DD.csv)
+          // Case-insensitive matching for file extensions
           const dates = result.items
             .map(item => {
-              const match = item.name.match(/^(\d{4}-\d{2}-\d{2})\.pdf$/);
-              return match ? match[1] : null;
+              const pdfMatch = item.name.match(/^(\d{4}-\d{2}-\d{2})\.pdf$/i);
+              const csvMatch = item.name.match(/^(\d{4}-\d{2}-\d{2})\.csv$/i);
+              const date = pdfMatch ? pdfMatch[1] : (csvMatch ? csvMatch[1] : null);
+              const fileType = pdfMatch ? 'pdf' : (csvMatch ? 'csv' : null);
+              
+              if (date) {
+                console.log(`  Parsed: ${item.name} → date=${date}, type=${fileType}`);
+              } else {
+                console.log(`  Skipped: ${item.name} (doesn't match pattern)`);
+              }
+              
+              return date ? { date, fileType } : null;
             })
             .filter(Boolean)
-            .sort()
-            .reverse(); // Most recent first
+            // Group by date (prefer CSV over PDF if both exist)
+            .reduce((acc, item) => {
+              const existing = acc.find(x => x.date === item.date);
+              if (!existing) {
+                acc.push(item);
+                console.log(`  Added: ${item.date} (${item.fileType})`);
+              } else if (item.fileType === 'csv' && existing.fileType === 'pdf') {
+                // Replace PDF with CSV if both exist
+                console.log(`  Replaced: ${item.date} PDF → CSV`);
+                existing.fileType = 'csv';
+              } else {
+                console.log(`  Skipped: ${item.date} (${item.fileType}) - already have ${existing.fileType}`);
+              }
+              return acc;
+            }, [])
+            .sort((a, b) => b.date.localeCompare(a.date)); // Most recent first
           
+          console.log('=== Final dates list ===');
+          dates.forEach(d => console.log(`  ${d.date}: ${d.fileType.toUpperCase()}`));
           return dates;
         } catch (error) {
-          console.error('Error listing PDFs from Storage:', error);
+          console.error('Error listing files from Storage:', error);
           return [];
         }
       };
       
-      // Fetch and parse PDF from Storage
-      const loadPDFFromStorage = async (dateStr) => {
+      // Fetch and parse PDF or CSV from Storage
+      const loadPDFFromStorage = async (dateObj) => {
         if (!storage || !db || readOnlyMode) return;
         
+        const dateStr = typeof dateObj === 'string' ? dateObj : dateObj.date;
+        const fileType = typeof dateObj === 'string' ? 'pdf' : dateObj.fileType;
+        
         try {
-          console.log('Loading PDF from Storage for date:', dateStr);
+          console.log(`Loading ${fileType.toUpperCase()} from Storage for date:`, dateStr);
           
-          // Get reference to PDF in Storage
-          const storageRef = storage.ref(`produce-pdfs/${dateStr}.pdf`);
+          // Get reference to file in Storage
+          const storageRef = storage.ref(`produce-pdfs/${dateStr}.${fileType}`);
           
           // Get download URL
           const url = await storageRef.getDownloadURL();
           
-          // Fetch the PDF
-          const response = await fetch(url);
-          const arrayBuffer = await response.arrayBuffer();
+          if (fileType === 'csv') {
+            // Fetch and parse CSV
+            const response = await fetch(url);
+            const text = await response.text();
+            await processCSVData(text, dateStr);
+          } else {
+            // Fetch and parse PDF
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            await processPDFData(arrayBuffer, dateStr);
+          }
           
-          // Process PDF using same logic as handlePDFUpload
-          await processPDFData(arrayBuffer, dateStr);
-          
-          console.log('PDF loaded successfully from Storage');
+          console.log(`${fileType.toUpperCase()} loaded successfully from Storage`);
         } catch (error) {
-          console.error('Error loading PDF from Storage:', error);
-          alert('Could not load PDF from Storage. Error: ' + error.message);
+          console.error(`Error loading ${fileType.toUpperCase()} from Storage:`, error);
+          alert(`Could not load ${fileType.toUpperCase()} from Storage. Error: ` + error.message);
+        }
+      };
+      
+      // Process CSV data
+      const processCSVData = async (csvText, dateHint = null) => {
+        try {
+          // Split into lines
+          const lines = csvText.split(/\r?\n/);
+          
+          // Find header row (starts with "task,instruction")
+          const headerIndex = lines.findIndex(line => line.startsWith('task,instruction'));
+          if (headerIndex === -1) {
+            throw new Error('Could not find CSV header row');
+          }
+          
+          // Parse data rows (skip header)
+          const parsedItems = [];
+          
+          for (let i = headerIndex + 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            // Simple CSV parsing (handles quoted fields)
+            const fields = [];
+            let currentField = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+              const char = line[j];
+              
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                fields.push(currentField.trim());
+                currentField = '';
+              } else {
+                currentField += char;
+              }
+            }
+            fields.push(currentField.trim()); // Add last field
+            
+            // Extract fields: task, instruction, case_quantity, item, notes, check_in_notes
+            const [task, instruction, caseQty, item, notes, checkInNotes] = fields;
+            
+            // Skip if no item or no cases
+            if (!item || !caseQty || !item.includes('#')) continue;
+            
+            const cases = parseInt(caseQty);
+            if (isNaN(cases) || cases <= 0) continue;
+            
+            // Extract priority and location from instruction
+            // Format: "0 - bag if not sleeved" or "1 - organic twistie" or just "bag if not sleeved"
+            let priority = 'missing';
+            let location = instruction || 'See file';
+            
+            if (instruction) {
+              const priorityMatch = instruction.match(/^([0-9U])\s*-\s*(.+)$/);
+              if (priorityMatch) {
+                const priorityStr = priorityMatch[1];
+                priority = priorityStr === 'U' ? 'missing' : parseInt(priorityStr);
+                location = priorityMatch[2].trim();
+              }
+            }
+            
+            // Item name is already clean with SKU
+            const name = item.trim();
+            
+            parsedItems.push({
+              name,
+              priority,
+              cases,
+              location
+            });
+            
+            console.log('Parsed CSV item:', { name, priority, cases, location });
+          }
+          
+          // Calculate total cases
+          const totalCases = parsedItems.reduce((sum, item) => sum + item.cases, 0);
+          
+          // Add IDs to items
+          const itemsWithIds = parsedItems.map((item, index) => ({
+            id: `item-${Date.now()}-${index}`,
+            ...item
+          }));
+          
+          // Convert items array to object with IDs as keys for Firebase
+          const itemsObject = {};
+          itemsWithIds.forEach(item => {
+            itemsObject[item.id] = item;
+          });
+          
+          // Save to Firebase
+          await db.ref('items').set(itemsObject);
+          await db.ref('completedItems').set({});
+          await db.ref('totalCases').set(totalCases);
+          
+          // Determine date from CSV content or use hint
+          let pdfDate = dateHint;
+          if (!pdfDate) {
+            // Try to extract date from first line (format: "2026-02-09 Produce Processing Report")
+            const firstLine = lines[0];
+            const dateMatch = firstLine.match(/(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) {
+              pdfDate = dateMatch[1];
+            } else {
+              pdfDate = new Date().toISOString().split('T')[0];
+            }
+          }
+          await db.ref('pdfDate').set(pdfDate);
+          
+          console.log('CSV data saved to Firebase:', {
+            itemCount: parsedItems.length,
+            totalCases,
+            date: pdfDate
+          });
+          
+          alert(`✅ CSV loaded successfully!\n\n${parsedItems.length} items\n${totalCases} total cases`);
+        } catch (error) {
+          console.error('Error processing CSV:', error);
+          alert('Error processing CSV: ' + error.message);
         }
       };
       
@@ -2027,7 +2189,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.32
+                  v2.34
                 </div>
                 
                 {/* Progress Bar */}
@@ -2203,10 +2365,10 @@
               }}>
                 <Upload size={72} style={{ color: '#0f766e', marginBottom: '1.5rem' }} />
                 <h2 style={{ marginBottom: '1rem', color: '#1e293b', fontSize: '2rem', fontWeight: '700' }}>
-                  Load PDF to Begin
+                  Load File to Begin
                 </h2>
                 <p style={{ color: '#64748b', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
-                  Select a date to load processing priorities
+                  Select a date to load processing data
                 </p>
                 <button
                   onClick={async () => {
@@ -2245,7 +2407,7 @@
                 <h2 style={{ marginBottom: '1rem', color: '#1e293b' }}>
                   No Items Loaded
                 </h2>
-                <p>Waiting for someone to upload a PDF file...</p>
+                <p>Waiting for someone to load a file...</p>
               </div>
             )}
 
@@ -3062,19 +3224,21 @@
                   }}
                 >
                   <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' }}>
-                    Select PDF Date
+                    Select Date to Load
                   </h3>
                   
                   {availableDates.length === 0 ? (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                      <p style={{ marginBottom: '1rem' }}>No PDFs found in Storage.</p>
-                      <p style={{ fontSize: '0.9rem' }}>Upload PDFs to Firebase Storage in the folder: <code>produce-pdfs/</code></p>
-                      <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Filename format: <code>YYYY-MM-DD.pdf</code></p>
+                      <p style={{ marginBottom: '1rem' }}>No files found in Storage.</p>
+                      <p style={{ fontSize: '0.9rem' }}>Upload files to Firebase Storage in the folder: <code>produce-pdfs/</code></p>
+                      <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Filename format: <code>YYYY-MM-DD.csv</code> or <code>YYYY-MM-DD.pdf</code></p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {availableDates.map(date => {
+                      {availableDates.map(dateInfo => {
                         // Convert YYYY-MM-DD to readable format
+                        const date = dateInfo.date;
+                        const fileType = dateInfo.fileType.toUpperCase();
                         const [year, month, day] = date.split('-');
                         const dateObj = new Date(year, month - 1, day);
                         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -3086,7 +3250,7 @@
                             key={date}
                             onClick={() => {
                               setShowStoragePicker(false);
-                              loadPDFFromStorage(date);
+                              loadPDFFromStorage(dateInfo);
                             }}
                             style={{
                               padding: '1rem 1.5rem',
@@ -3098,7 +3262,10 @@
                               fontWeight: '600',
                               fontSize: '1.05rem',
                               color: '#1e293b',
-                              transition: 'all 0.2s'
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
@@ -3111,7 +3278,17 @@
                               e.currentTarget.style.borderColor = '#e2e8f0';
                             }}
                           >
-                            {displayDate}
+                            <span>{displayDate}</span>
+                            <span style={{ 
+                              fontSize: '0.85rem', 
+                              fontWeight: '700',
+                              padding: '0.25rem 0.75rem',
+                              background: fileType === 'CSV' ? '#10b981' : '#f59e0b',
+                              color: 'white',
+                              borderRadius: '6px'
+                            }}>
+                              {fileType}
+                            </span>
                           </button>
                         );
                       })}
