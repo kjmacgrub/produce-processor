@@ -2122,7 +2122,7 @@
             return n + (s[(v - 20) % 10] || s[v] || s[0]);
           };
           
-          return `${dayOfWeek}, ${monthName} ${getOrdinal(day)}, ${year}`;
+          return `${dayOfWeek}, ${monthName} ${getOrdinal(day)} ${year}`;
         } catch (error) {
           return dateString;
         }
@@ -2181,7 +2181,9 @@
       return (
         <div style={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+          background: readOnlyMode 
+            ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' // Blue for View Mode
+            : 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)', // Green for Process Mode
           padding: '2rem',
           fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         }}>
@@ -2195,10 +2197,10 @@
               marginBottom: '2rem',
               boxShadow: '0 25px 70px rgba(0,0,0,0.25)'
             }}>
-              {/* Top buttons - Clear Data (left) */}
+              {/* Top buttons - Clear Data (left) and View Mode indicator (right) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                {/* Left side - Clear Data button */}
-                {!readOnlyMode && items.length > 0 && (
+                {/* Left side - Clear Data button or empty spacer */}
+                {!readOnlyMode && items.length > 0 ? (
                   <button
                     onClick={async () => {
                       if (confirm('Clear all data? This will remove all items and start fresh.')) {
@@ -2235,17 +2237,16 @@
                   >
                     🗑️ Clear Data
                   </button>
+                ) : (
+                  <div /> // Empty spacer for alignment
                 )}
                 
-                {/* View Mode indicator (top-right fixed) - only shown in View Mode */}
+                {/* View Mode indicator (top-right) - only shown in View Mode */}
                 {readOnlyMode && (
                   <div 
                     title="Hold Shift, then press V then M to toggle modes"
                     style={{
-                      position: 'fixed',
-                      top: '1rem',
-                      right: '1rem',
-                      background: 'rgba(59, 130, 246, 0.15)', // Much more transparent
+                      background: 'rgba(59, 130, 246, 0.15)',
                       color: '#1e293b',
                       border: '2px solid rgba(59, 130, 246, 0.3)',
                       borderRadius: '12px',
@@ -2254,10 +2255,9 @@
                       fontWeight: '700',
                       boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)',
                       display: 'flex',
-                      flexDirection: 'column', // Stack vertically
+                      flexDirection: 'column',
                       alignItems: 'center',
                       gap: '0.25rem',
-                      zIndex: 1000,
                       cursor: 'help'
                     }}>
                     <div style={{ fontSize: '1.5rem' }}>👁️</div>
@@ -2300,7 +2300,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.76
+                  v2.78
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}

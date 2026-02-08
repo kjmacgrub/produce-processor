@@ -1,5 +1,138 @@
 # Version History - Produce Processing App
 
+## v2.78 (2026-02-08)
+**Minor Update: Cleaner Date Format**
+
+### Changed:
+- **Removed comma before year** in date display
+- Cleaner, more natural reading flow
+
+### The Change:
+
+**Before:**
+```
+Sunday, February 9th, 2026
+                     ↑ comma
+```
+
+**After:**
+```
+Sunday, February 9th 2026
+                     ↑ no comma
+```
+
+### Examples:
+
+```
+Before: Monday, February 10th, 2026
+After:  Monday, February 10th 2026
+
+Before: Friday, December 25th, 2026
+After:  Friday, December 25th 2026
+
+Before: Thursday, January 1st, 2026
+After:  Thursday, January 1st 2026
+```
+
+### Rationale:
+
+The comma between day and year is optional in modern usage. Removing it creates a cleaner, more contemporary look while maintaining readability.
+
+**Date format now more streamlined!** 📅✨
+
+---
+
+## v2.77 (2026-02-08)
+**UI Enhancement: Color-Coded Modes + Scrollable View Mode Indicator**
+
+### Changed:
+- **Background color changes by mode** - Blue for View Mode, Green for Process Mode
+- **View Mode indicator now scrolls** - No longer fixed, part of page header
+- **Clear visual distinction** between modes
+
+### The Changes:
+
+**1. Background Colors:**
+
+**Process Mode (default):**
+- Background: Green gradient `#0f766e → #14532d`
+- Indicates active work environment
+
+**View Mode:**
+- Background: Blue gradient `#3b82f6 → #1d4ed8`
+- Clearly different from Process Mode
+
+**2. View Mode Indicator:**
+
+**Before:**
+- Fixed position (stayed visible when scrolling)
+- Always on screen
+
+**After:**
+- Inline with header (top-right)
+- Scrolls off page with header
+- Part of natural page flow
+
+### Visual Comparison:
+
+**Process Mode (Green):**
+```
+┌────────────────────────────────┐
+│ ░░░░░░ Green Background ░░░░░░ │
+│ ┌──────────────────────────┐   │
+│ │ 🗑️ Clear Data          │   │
+│ │                          │   │
+│ │  [Work items here]       │   │
+│ └──────────────────────────┘   │
+└────────────────────────────────┘
+```
+
+**View Mode (Blue):**
+```
+┌────────────────────────────────┐
+│ ▓▓▓▓▓▓ Blue Background ▓▓▓▓▓▓▓ │
+│ ┌──────────────────────────┐   │
+│ │              👁️          │   │
+│ │           View Mode      │   │
+│ │                          │   │
+│ │  [Work items here]       │   │
+│ └──────────────────────────┘   │
+└────────────────────────────────┘
+```
+
+### Technical Implementation:
+
+**Conditional background:**
+```javascript
+background: readOnlyMode 
+  ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' // Blue
+  : 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)' // Green
+```
+
+**View Mode indicator positioning:**
+```javascript
+// Removed: position: 'fixed', top: '1rem', right: '1rem', zIndex: 1000
+// Now: inline in header with flexbox layout
+display: 'flex',
+justifyContent: 'space-between' // Left: Clear Data, Right: View Mode
+```
+
+### Benefits:
+
+✅ **Instant mode recognition** - Color tells you the mode  
+✅ **Less screen clutter** - Indicator scrolls away  
+✅ **Clear distinction** - Blue vs Green impossible to miss  
+✅ **Professional look** - Coordinated color scheme  
+
+### Color Psychology:
+
+- **Green (Process)**: Active, productive, "go" signal
+- **Blue (View)**: Calm, observational, "read-only"
+
+**Modes now instantly recognizable by background color!** 🎨✨
+
+---
+
 ## v2.76 (2026-02-08)
 **Feature: Show Existing Photo with Keep/Retake/Delete Options**
 
