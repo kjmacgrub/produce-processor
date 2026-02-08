@@ -1,0 +1,4183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Produce Processing</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { margin: 0; padding: 0; overflow-x: hidden; }
+    input, select, textarea { font-size: 16px !important; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Firebase SDKs (Database only - no Storage needed) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+  <!-- No longer need PDF.js - CSV only -->
+
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ========================================
+    // FIREBASE CONFIGURATION
+    // ========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyAOtKt-nDBvAod23fAX04nXpCxmA7FnWKk",
+      authDomain: "process-6d2dc.firebaseapp.com",
+      databaseURL: "https://process-6d2dc-default-rtdb.firebaseio.com",
+      projectId: "process-6d2dc",
+      storageBucket: "process-6d2dc.firebasestorage.app",
+      messagingSenderId: "955601669952",
+      appId: "1:955601669952:web:871e3dd2c562c8aa6274a5",
+      measurementId: "G-X5Z5CC3Q44"
+    };
+
+
+    // Initialize Firebase
+    let db;
+    let storage;
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      db = firebase.database();
+      storage = firebase.storage();
+    } catch (error) {
+      console.error("Firebase initialization error:", error);
+    }
+
+    // Icon components
+    const Upload = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="upload" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const Play = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="play" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const Package = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="package" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const ClipboardList = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="clipboard-list" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const Video = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="video" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const Timer = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="timer" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const Eye = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="eye" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const Edit = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="edit" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const Clock = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="clock" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const AlertCircle = ({ size = 24, style, ...props }) => {
+      useEffect(() => { lucide.createIcons(); }, []);
+      return <i data-lucide="alert-circle" style={{ width: size, height: size, ...style }} {...props} />;
+    };
+
+    const ProduceProcessorApp = () => {
+      const [items, setItems] = useState([]);
+      const [timingData, setTimingData] = useState({});
+      const [videos, setVideos] = useState({});
+      const [activeItem, setActiveItem] = useState(null);
+      const [isProcessing, setIsProcessing] = useState(false);
+      const [startTime, setStartTime] = useState(null);
+      const [showVideoUpload, setShowVideoUpload] = useState(null);
+      const [playingVideo, setPlayingVideo] = useState(null);
+      const [readOnlyMode, setReadOnlyMode] = useState(() => {
+        // Default to View mode unless device is iPad
+        const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+        return !isIPad; // true (View mode) if not iPad, false (Process mode) if iPad
+      });
+      const [firebaseConnected, setFirebaseConnected] = useState(false);
+      const [isRecording, setIsRecording] = useState(false);
+      const [recordingItemId, setRecordingItemId] = useState(null);
+      const [mediaStream, setMediaStream] = useState(null);
+      const [mediaRecorder, setMediaRecorder] = useState(null);
+      const [recordedChunks, setRecordedChunks] = useState([]);
+      const [completedItems, setCompletedItems] = useState([]);
+      const [showCompleted, setShowCompleted] = useState(false);
+      const [showTimingEvents, setShowTimingEvents] = useState(null); // null or SKU
+      const [pdfDate, setPdfDate] = useState(''); // Date from loaded data file (stored as 'pdfDate' in Firebase for compatibility)
+      const [originalTotalCases, setOriginalTotalCases] = useState(0); // Total from data file before any completions
+      const [itemsInProcess, setItemsInProcess] = useState({}); // Maps item.id to start timestamp
+      const [itemsPaused, setItemsPaused] = useState({}); // Maps item.id to true if paused
+      const [pausedElapsedTime, setPausedElapsedTime] = useState({}); // Maps item.id to elapsed seconds when paused
+      const [historicalTimes, setHistoricalTimes] = useState({}); // Maps SKU to average processing time per case
+      const [timingEventsBySKU, setTimingEventsBySKU] = useState({}); // Maps SKU to array of timing events
+      const [elapsedTimes, setElapsedTimes] = useState({}); // Maps item.id to current elapsed seconds
+      const [showStoragePicker, setShowStoragePicker] = useState(false); // Show date picker for Storage data files
+      const [availableDates, setAvailableDates] = useState([]); // List of dates with data files in Storage
+      const [historicalPriorities, setHistoricalPriorities] = useState([]); // List of all priorities ever used
+      const [showPriorityEditor, setShowPriorityEditor] = useState(false); // Show priority management modal
+      const [completionPhotos, setCompletionPhotos] = useState({}); // Maps SKU to completion photo
+      const [showCompletionCamera, setShowCompletionCamera] = useState(null); // null or item to complete
+      const [showPhotoChoice, setShowPhotoChoice] = useState(null); // null or item - shows "take photo or skip" dialog
+      const [completionMediaStream, setCompletionMediaStream] = useState(null);
+      const [photoTaken, setPhotoTaken] = useState(false);
+      const [photoData, setPhotoData] = useState(null);
+      
+      const fileInputRef = useRef(null);
+      const videoInputRef = useRef(null);
+      const videoPreviewRef = useRef(null);
+      const completionVideoRef = useRef(null);
+      const completionCanvasRef = useRef(null);
+
+      // Check Firebase connection
+      useEffect(() => {
+        if (!db) return;
+        
+        const connectedRef = db.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+          setFirebaseConnected(snap.val() === true);
+        });
+
+        return () => connectedRef.off();
+      }, []);
+
+      // Load timing data from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const timingRef = db.ref('timingData');
+        timingRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setTimingData(data);
+          }
+        });
+
+        return () => timingRef.off();
+      }, []);
+
+      // Handle completion camera stream
+      useEffect(() => {
+        if (!showCompletionCamera) {
+          // Reset photo states when modal closes
+          setPhotoTaken(false);
+          setPhotoData(null);
+          return;
+        }
+
+        // Start camera when modal opens
+        const startCamera = async () => {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+              video: { facingMode: 'environment' }, 
+              audio: false 
+            });
+            setCompletionMediaStream(stream);
+            if (completionVideoRef.current) {
+              completionVideoRef.current.srcObject = stream;
+            }
+          } catch (error) {
+            console.error('Error accessing camera:', error);
+            alert('Could not access camera. You can still complete without a photo.');
+          }
+        };
+
+        startCamera();
+
+        // Cleanup function
+        return () => {
+          if (completionMediaStream) {
+            completionMediaStream.getTracks().forEach(track => track.stop());
+            setCompletionMediaStream(null);
+          }
+        };
+      }, [showCompletionCamera]);
+
+      // IndexedDB setup for video storage (much larger capacity than localStorage)
+      const openDB = () => {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open('ProduceVideoDB', 4); // Version 4 to add completionPhotos store
+          
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+          
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('videos')) {
+              db.createObjectStore('videos', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('historicalTimes')) {
+              db.createObjectStore('historicalTimes', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('timingEvents')) {
+              db.createObjectStore('timingEvents', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('completionPhotos')) {
+              db.createObjectStore('completionPhotos', { keyPath: 'id' });
+            }
+          };
+        });
+      };
+
+      const saveVideoToDB = async (sku, videoData) => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['videos'], 'readwrite');
+          const store = transaction.objectStore('videos');
+          
+          await store.put({
+            id: sku,
+            data: videoData.data,
+            name: videoData.name,
+            type: videoData.type
+          });
+          
+          console.log('Video saved to IndexedDB for SKU:', sku);
+        } catch (error) {
+          console.error('Error saving video to IndexedDB:', error);
+          alert('Error saving video. Storage may be full.');
+        }
+      };
+
+      const deleteVideoFromDB = async (sku) => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['videos'], 'readwrite');
+          const store = transaction.objectStore('videos');
+          await store.delete(sku);
+          console.log('Video deleted from IndexedDB for SKU:', sku);
+        } catch (error) {
+          console.error('Error deleting video from IndexedDB:', error);
+        }
+      };
+
+      const loadAllVideosFromDB = async () => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['videos'], 'readonly');
+          const store = transaction.objectStore('videos');
+          const request = store.getAll();
+          
+          return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+              const videos = {};
+              request.result.forEach(video => {
+                videos[video.id] = {
+                  data: video.data,
+                  name: video.name,
+                  type: video.type
+                };
+              });
+              resolve(videos);
+            };
+            request.onerror = () => reject(request.error);
+          });
+        } catch (error) {
+          console.error('Error loading videos from IndexedDB:', error);
+          return {};
+        }
+      };
+
+      const saveCompletionPhotoToDB = async (sku, photoData) => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['completionPhotos'], 'readwrite');
+          const store = transaction.objectStore('completionPhotos');
+          
+          await store.put({
+            id: sku,
+            data: photoData.data,
+            timestamp: photoData.timestamp
+          });
+          
+          console.log('Completion photo saved to IndexedDB for SKU:', sku);
+        } catch (error) {
+          console.error('Error saving completion photo to IndexedDB:', error);
+          alert('Error saving photo. Storage may be full.');
+        }
+      };
+
+      const loadAllCompletionPhotosFromDB = async () => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['completionPhotos'], 'readonly');
+          const store = transaction.objectStore('completionPhotos');
+          const request = store.getAll();
+          
+          return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+              const photos = {};
+              request.result.forEach(photo => {
+                photos[photo.id] = {
+                  data: photo.data,
+                  timestamp: photo.timestamp
+                };
+              });
+              resolve(photos);
+            };
+            request.onerror = () => reject(request.error);
+          });
+        } catch (error) {
+          console.error('Error loading completion photos from IndexedDB:', error);
+          return {};
+        }
+      };
+
+      const saveHistoricalTimeToDB = async (sku, timePerCase) => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['historicalTimes'], 'readwrite');
+          const store = transaction.objectStore('historicalTimes');
+          
+          await store.put({
+            id: sku,
+            timePerCase: timePerCase
+          });
+          
+          console.log('Historical time saved to IndexedDB for SKU:', sku, 'Time per case:', timePerCase);
+        } catch (error) {
+          console.error('Error saving historical time to IndexedDB:', error);
+        }
+      };
+
+      const loadAllHistoricalTimesFromDB = async () => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['historicalTimes'], 'readonly');
+          const store = transaction.objectStore('historicalTimes');
+          const request = store.getAll();
+          
+          return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+              const times = {};
+              request.result.forEach(record => {
+                times[record.id] = record.timePerCase;
+              });
+              resolve(times);
+            };
+            request.onerror = () => reject(request.error);
+          });
+        } catch (error) {
+          console.error('Error loading historical times from IndexedDB:', error);
+          return {};
+        }
+      };
+
+      const saveTimingEventToDB = async (sku, event) => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['timingEvents'], 'readwrite');
+          const store = transaction.objectStore('timingEvents');
+          
+          // Get existing events for this SKU
+          const getRequest = store.get(sku);
+          
+          return new Promise((resolve, reject) => {
+            getRequest.onsuccess = async () => {
+              const existing = getRequest.result;
+              const events = existing ? existing.events : [];
+              
+              // Add new event
+              events.push(event);
+              
+              // Save back
+              await store.put({
+                id: sku,
+                events: events
+              });
+              
+              console.log('Timing event saved to IndexedDB for SKU:', sku);
+              resolve();
+            };
+            getRequest.onerror = () => reject(getRequest.error);
+          });
+        } catch (error) {
+          console.error('Error saving timing event to IndexedDB:', error);
+        }
+      };
+
+      const loadAllTimingEventsFromDB = async () => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['timingEvents'], 'readonly');
+          const store = transaction.objectStore('timingEvents');
+          const request = store.getAll();
+          
+          return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+              const timingEvents = {};
+              request.result.forEach(record => {
+                timingEvents[record.id] = record.events || [];
+              });
+              resolve(timingEvents);
+            };
+            request.onerror = () => reject(request.error);
+          });
+        } catch (error) {
+          console.error('Error loading timing events from IndexedDB:', error);
+          return {};
+        }
+      };
+
+      const deleteTimingEventFromDB = async (sku, eventIndex) => {
+        try {
+          const db = await openDB();
+          const transaction = db.transaction(['timingEvents'], 'readwrite');
+          const store = transaction.objectStore('timingEvents');
+          
+          const getRequest = store.get(sku);
+          
+          return new Promise((resolve, reject) => {
+            getRequest.onsuccess = async () => {
+              const existing = getRequest.result;
+              if (existing && existing.events) {
+                existing.events.splice(eventIndex, 1);
+                await store.put(existing);
+                console.log('Deleted timing event', eventIndex, 'for SKU', sku);
+              }
+              resolve();
+            };
+            getRequest.onerror = () => reject(getRequest.error);
+          });
+        } catch (error) {
+          console.error('Error deleting timing event from IndexedDB:', error);
+        }
+      };
+
+      // Load videos from IndexedDB on mount and migrate timing data to Firebase
+      useEffect(() => {
+        const migrateAndLoad = async () => {
+          // Check if there are old videos in localStorage
+          try {
+            const oldVideos = localStorage.getItem('produceVideos');
+            if (oldVideos) {
+              console.log('Found old videos in localStorage (keyed by item ID, not SKU)');
+              console.log('Clearing old videos - they will not work with new SKU-based system');
+              // Clear localStorage - old videos were keyed by item ID which changes weekly
+              localStorage.removeItem('produceVideos');
+            }
+          } catch (error) {
+            console.error('Error checking old videos:', error);
+          }
+          
+          // Load all videos from IndexedDB (keyed by SKU) - KEEP LOCAL
+          const loadedVideos = await loadAllVideosFromDB();
+          console.log('Loaded videos from IndexedDB (by SKU):', Object.keys(loadedVideos));
+          setVideos(loadedVideos);
+          
+          // Load all completion photos from IndexedDB - KEEP LOCAL
+          const loadedPhotos = await loadAllCompletionPhotosFromDB();
+          console.log('Loaded completion photos from IndexedDB (by SKU):', Object.keys(loadedPhotos));
+          setCompletionPhotos(loadedPhotos);
+          
+          // MIGRATION: Move timing data from IndexedDB to Firebase (one-time)
+          if (db) {
+            try {
+              // Check if we've already migrated
+              const migrationFlag = localStorage.getItem('timingDataMigrated');
+              
+              if (!migrationFlag) {
+                console.log('Migrating timing data from IndexedDB to Firebase...');
+                
+                // Load timing data from IndexedDB
+                const loadedTimes = await loadAllHistoricalTimesFromDB();
+                const loadedEvents = await loadAllTimingEventsFromDB();
+                
+                // Save to Firebase if data exists
+                if (Object.keys(loadedTimes).length > 0) {
+                  console.log(`Migrating ${Object.keys(loadedTimes).length} historical times to Firebase`);
+                  await db.ref('historicalTimes').set(loadedTimes);
+                }
+                
+                if (Object.keys(loadedEvents).length > 0) {
+                  console.log(`Migrating ${Object.keys(loadedEvents).length} timing event sets to Firebase`);
+                  await db.ref('timingEvents').set(loadedEvents);
+                }
+                
+                // Mark migration as complete
+                localStorage.setItem('timingDataMigrated', 'true');
+                console.log('Timing data migration complete! Data is now backed up to Firebase.');
+              }
+            } catch (error) {
+              console.error('Error during timing data migration:', error);
+            }
+          }
+          
+          // Note: historicalTimes and timingEventsBySKU will be loaded by Firebase listeners
+          // No need to set state here - Firebase will handle it
+        };
+        
+        migrateAndLoad();
+      }, [db]);
+
+      // Save videos to IndexedDB when they change
+      useEffect(() => {
+        // Save each video individually (keyed by SKU)
+        Object.keys(videos).forEach(sku => {
+          if (videos[sku]) {
+            saveVideoToDB(sku, videos[sku]);
+          }
+        });
+      }, [videos]);
+
+      // Update elapsed time for items in process every second
+      useEffect(() => {
+        const interval = setInterval(() => {
+          const now = Date.now();
+          const updates = {};
+          
+          // Update running timers
+          Object.keys(itemsInProcess).forEach(itemId => {
+            const startTime = itemsInProcess[itemId];
+            const elapsed = Math.floor((now - startTime) / 1000); // seconds
+            updates[itemId] = elapsed;
+          });
+          
+          // Keep paused timers at their paused value
+          Object.keys(itemsPaused).forEach(itemId => {
+            if (itemsPaused[itemId] && pausedElapsedTime[itemId] !== undefined) {
+              updates[itemId] = pausedElapsedTime[itemId];
+            }
+          });
+          
+          setElapsedTimes(updates);
+        }, 1000);
+
+        return () => clearInterval(interval);
+      }, [itemsInProcess, itemsPaused, pausedElapsedTime]);
+
+      // Keyboard shortcut: Hold Shift, then press V, then M in sequence
+      useEffect(() => {
+        let keySequence = [];
+        let shiftHeld = false;
+        
+        const handleKeyDown = (e) => {
+          // Track Shift key
+          if (e.key === 'Shift') {
+            shiftHeld = true;
+            keySequence = []; // Reset sequence when Shift is pressed
+            return;
+          }
+          
+          // Only track V and M if Shift is held
+          if (shiftHeld && (e.key.toLowerCase() === 'v' || e.key.toLowerCase() === 'm')) {
+            keySequence.push(e.key.toLowerCase());
+            
+            // Check if sequence is V then M
+            if (keySequence.length === 2 && keySequence[0] === 'v' && keySequence[1] === 'm') {
+              e.preventDefault();
+              setReadOnlyMode(prev => !prev);
+              console.log('Toggled viewing mode via Shift+V+M sequence');
+              keySequence = []; // Reset sequence after toggle
+            }
+            
+            // Reset if sequence gets too long or wrong
+            if (keySequence.length > 2) {
+              keySequence = [];
+            }
+          }
+        };
+        
+        const handleKeyUp = (e) => {
+          // Reset everything when Shift is released
+          if (e.key === 'Shift') {
+            shiftHeld = false;
+            keySequence = [];
+          }
+        };
+        
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        
+        return () => {
+          window.removeEventListener('keydown', handleKeyDown);
+          window.removeEventListener('keyup', handleKeyUp);
+        };
+      }, []);
+
+      // Load items from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const itemsRef = db.ref('items');
+        itemsRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const itemsArray = Object.keys(data).map(key => ({
+              ...data[key],
+              id: key
+            }));
+            itemsArray.sort((a, b) => a.priority - b.priority);
+            setItems(itemsArray);
+          } else {
+            setItems([]);
+          }
+        });
+
+        return () => itemsRef.off();
+      }, []);
+
+      // Load file date from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const dateRef = db.ref('pdfDate'); // Note: still called 'pdfDate' in Firebase for compatibility
+        dateRef.on('value', (snapshot) => {
+          const date = snapshot.val();
+          if (date) {
+            setPdfDate(date);
+          }
+        });
+
+        return () => dateRef.off();
+      }, []);
+
+      // Load original total cases from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const totalRef = db.ref('totalCases'); // Fixed: was looking at 'originalTotalCases' but we save as 'totalCases'
+        totalRef.on('value', (snapshot) => {
+          const total = snapshot.val();
+          setOriginalTotalCases(total || 0); // Set to 0 if null (cleared)
+        });
+
+        return () => totalRef.off();
+      }, []);
+
+      // Load completed items from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const completedRef = db.ref('completedItems');
+        completedRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const completedArray = Object.keys(data).map(key => ({
+              ...data[key],
+              id: key
+            }));
+            // Sort by completion time (most recent first)
+            completedArray.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+            setCompletedItems(completedArray);
+          } else {
+            setCompletedItems([]);
+          }
+        });
+
+        return () => completedRef.off();
+      }, []);
+
+      // Load historical times from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const timesRef = db.ref('historicalTimes');
+        timesRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setHistoricalTimes(data);
+            console.log('Loaded historical times from Firebase:', Object.keys(data));
+          } else {
+            setHistoricalTimes({});
+          }
+        });
+
+        return () => timesRef.off();
+      }, []);
+
+      // Load timing events from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const eventsRef = db.ref('timingEvents');
+        eventsRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setTimingEventsBySKU(data);
+            console.log('Loaded timing events from Firebase:', Object.keys(data));
+          } else {
+            setTimingEventsBySKU({});
+          }
+        });
+
+        return () => eventsRef.off();
+      }, []);
+
+      // Load historical priorities from Firebase
+      useEffect(() => {
+        if (!db) return;
+
+        const prioritiesRef = db.ref('historicalPriorities');
+        prioritiesRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          // Firebase converts arrays to objects, so convert back to array
+          const priorities = firebaseToArray(data);
+          
+          const sorted = [...new Set(priorities)].sort((a, b) => {
+            // Sort: numbered priorities first (1, 2, 3...), then 'missing', then 0
+            const aIsNumber = typeof a === 'number' && a > 0;
+            const bIsNumber = typeof b === 'number' && b > 0;
+            
+            // Both are numbered priorities - sort ascending
+            if (aIsNumber && bIsNumber) return a - b;
+            
+            // One is numbered, one isn't - numbered comes first
+            if (aIsNumber) return -1;
+            if (bIsNumber) return 1;
+            
+            // Neither is numbered - 'missing' before 0
+            if (a === 'missing') return -1;
+            if (b === 'missing') return 1;
+            
+            // Both are 0 or other
+            return 0;
+          });
+          setHistoricalPriorities(sorted);
+          console.log('Loaded historical priorities from Firebase:', sorted);
+        });
+
+        return () => prioritiesRef.off();
+      }, []);
+
+      // Cleanup completed items older than 10 days
+      useEffect(() => {
+        if (!db) return;
+        
+        const cleanupOldCompletedItems = async () => {
+          try {
+            const completedRef = db.ref('completedItems');
+            const snapshot = await completedRef.once('value');
+            const completedData = snapshot.val();
+            
+            if (!completedData) return;
+            
+            const now = new Date();
+            const tenDaysAgo = new Date(now.getTime() - (10 * 24 * 60 * 60 * 1000));
+            
+            let deletedCount = 0;
+            
+            for (const key in completedData) {
+              const item = completedData[key];
+              const completedDate = new Date(item.completedAt);
+              
+              if (completedDate < tenDaysAgo) {
+                await completedRef.child(key).remove();
+                deletedCount++;
+              }
+            }
+            
+            if (deletedCount > 0) {
+              console.log(`Cleaned up ${deletedCount} completed items older than 10 days`);
+            }
+          } catch (error) {
+            console.error('Error cleaning up old completed items:', error);
+          }
+        };
+        
+        // Run cleanup on mount
+        cleanupOldCompletedItems();
+        
+        // Run cleanup daily
+        const intervalId = setInterval(cleanupOldCompletedItems, 24 * 60 * 60 * 1000);
+        
+        return () => clearInterval(intervalId);
+      }, []);
+
+      // ========================================
+      // FIREBASE STORAGE - DATA FILE FUNCTIONS
+      // ========================================
+      
+      // List available data file dates from Storage
+      const listAvailableCSVs = async () => {
+        if (!storage) return [];
+        
+        try {
+          const storageRef = storage.ref('produce-pdfs'); // Folder name kept as 'produce-pdfs' for compatibility
+          const result = await storageRef.listAll();
+          
+          console.log('=== Listing Files from Storage ===');
+          console.log('Total files found:', result.items.length);
+          
+          // Get all CSV files (regardless of naming format)
+          const csvFiles = result.items.filter(item => {
+            const name = item.name.toLowerCase();
+            const isCSV = name.endsWith('.csv');
+            console.log(`  File: ${item.name} - ${isCSV ? 'CSV ✓' : 'Not CSV ✗'}`);
+            return isCSV;
+          });
+          
+          console.log(`Found ${csvFiles.length} CSV files`);
+          
+          // For each CSV, fetch it and extract the date from content
+          const filesWithDates = await Promise.all(
+            csvFiles.map(async (fileRef) => {
+              try {
+                // Get download URL
+                const url = await fileRef.getDownloadURL();
+                
+                // Fetch the file content
+                const response = await fetch(url);
+                const text = await response.text();
+                
+                // Try to extract date from first line
+                const firstLine = text.split(/\r?\n/)[0];
+                const dateMatch = firstLine.match(/(\d{4}-\d{2}-\d{2})/);
+                
+                if (dateMatch) {
+                  const date = dateMatch[1];
+                  console.log(`  ${fileRef.name} → Date extracted: ${date}`);
+                  return {
+                    filename: fileRef.name,
+                    date: date,
+                    fileType: 'csv'
+                  };
+                } else {
+                  console.log(`  ${fileRef.name} → No date found in first line: "${firstLine}"`);
+                  return null;
+                }
+              } catch (error) {
+                console.error(`  Error processing ${fileRef.name}:`, error);
+                return null;
+              }
+            })
+          );
+          
+          // Filter out files where we couldn't extract a date
+          const validFiles = filesWithDates.filter(Boolean);
+          
+          // Sort by date (most recent first)
+          validFiles.sort((a, b) => b.date.localeCompare(a.date));
+          
+          console.log('=== Files with extracted dates ===');
+          validFiles.forEach(f => console.log(`  ${f.filename} (${f.date})`));
+          
+          return validFiles;
+        } catch (error) {
+          console.error('Error listing files from Storage:', error);
+          return [];
+        }
+      };
+      
+      // Fetch and parse data file from Storage
+      const loadCSVFromStorage = async (fileInfo) => {
+        if (!storage || !db || readOnlyMode) return;
+        
+        const filename = fileInfo.filename;
+        const dateStr = fileInfo.date;
+        
+        try {
+          console.log(`Loading CSV from Storage: ${filename} (date: ${dateStr})`);
+          
+          // Get reference to CSV file in Storage using actual filename
+          const storageRef = storage.ref(`produce-pdfs/${filename}`);
+          
+          // Get download URL
+          const url = await storageRef.getDownloadURL();
+          
+          // Fetch and parse CSV
+          const response = await fetch(url);
+          const text = await response.text();
+          await processCSVData(text, dateStr);
+          
+          console.log(`CSV loaded successfully from Storage`);
+        } catch (error) {
+          console.error(`Error loading CSV from Storage:`, error);
+          alert(`Could not load CSV from Storage. Error: ` + error.message);
+        }
+      };
+      
+      // Process CSV data
+      const processCSVData = async (csvText, dateHint = null) => {
+        try {
+          // Split into lines
+          const lines = csvText.split(/\r?\n/);
+          
+          // Find header row (starts with "task,instruction")
+          const headerIndex = lines.findIndex(line => line.startsWith('task,instruction'));
+          if (headerIndex === -1) {
+            throw new Error('Could not find CSV header row');
+          }
+          
+          // Parse data rows (skip header)
+          const parsedItems = [];
+          
+          for (let i = headerIndex + 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            // Simple CSV parsing (handles quoted fields)
+            const fields = [];
+            let currentField = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+              const char = line[j];
+              
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                fields.push(currentField.trim());
+                currentField = '';
+              } else {
+                currentField += char;
+              }
+            }
+            fields.push(currentField.trim()); // Add last field
+            
+            // Extract fields: task, instruction, case_quantity, item, notes, check_in_notes
+            const [task, instruction, caseQty, item, notes, checkInNotes] = fields;
+            
+            // Skip if no item or no cases
+            if (!item || !caseQty || !item.includes('#')) continue;
+            
+            const cases = parseInt(caseQty);
+            if (isNaN(cases) || cases <= 0) continue;
+            
+            // Extract priority and location from instruction
+            // Format: "0 - bag if not sleeved" or "1 - organic twistie" or just "bag if not sleeved"
+            let priority = 'missing';
+            let location = instruction || 'See file';
+            
+            if (instruction) {
+              const priorityMatch = instruction.match(/^([0-9U])\s*-\s*(.+)$/);
+              if (priorityMatch) {
+                const priorityStr = priorityMatch[1];
+                priority = priorityStr === 'U' ? 'missing' : parseInt(priorityStr);
+                location = priorityMatch[2].trim();
+              }
+            }
+            
+            // Item name is already clean with SKU
+            const name = item.trim();
+            
+            parsedItems.push({
+              name,
+              priority,
+              cases,
+              location
+            });
+            
+            console.log('Parsed CSV item:', { name, priority, cases, location });
+          }
+          
+          // Calculate total cases
+          const totalCases = parsedItems.reduce((sum, item) => sum + item.cases, 0);
+          
+          // Add IDs to items
+          const itemsWithIds = parsedItems.map((item, index) => ({
+            id: `item-${Date.now()}-${index}`,
+            ...item
+          }));
+          
+          // Convert items array to object with IDs as keys for Firebase
+          const itemsObject = {};
+          itemsWithIds.forEach(item => {
+            itemsObject[item.id] = item;
+          });
+          
+          // Save to Firebase
+          await db.ref('items').set(itemsObject);
+          await db.ref('completedItems').set({});
+          await db.ref('totalCases').set(totalCases);
+          
+          // Update state with total cases
+          setOriginalTotalCases(totalCases);
+          
+          // Determine date from CSV content or use hint
+          let pdfDate = dateHint;
+          if (!pdfDate) {
+            // Try to extract date from first line (format: "2026-02-09 Produce Processing Report")
+            const firstLine = lines[0];
+            console.log('CSV first line:', firstLine);
+            const dateMatch = firstLine.match(/(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) {
+              pdfDate = dateMatch[1];
+              console.log('Extracted date from CSV first line:', pdfDate);
+            } else {
+              pdfDate = new Date().toISOString().split('T')[0];
+              console.log('No date in CSV, using today:', pdfDate);
+            }
+          } else {
+            console.log('Using dateHint as pdfDate:', pdfDate);
+          }
+          await db.ref('pdfDate').set(pdfDate);
+          
+          console.log('CSV data saved to Firebase:', {
+            itemCount: parsedItems.length,
+            totalCases,
+            date: pdfDate
+          });
+          
+          // CSV loaded successfully - no alert needed
+        } catch (error) {
+          console.error('Error processing CSV:', error);
+          alert('Error processing CSV: ' + error.message);
+        }
+      };
+      
+      // Process PDF data (extracted from handlePDFUpload for reuse)
+      const processPDFData = async (arrayBuffer, dateHint = null) => {
+        try {
+          // Configure PDF.js worker
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+          // Load PDF
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          
+          // Extract text from all pages
+          let fullText = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            
+            // Better text extraction - preserve line structure
+            let lastY = -1;
+            let currentLine = '';
+            
+            for (let item of textContent.items) {
+              const y = item.transform[5];
+              
+              // New line if y position changed significantly
+              if (lastY !== -1 && Math.abs(lastY - y) > 2) {
+                fullText += currentLine + '\n';
+                currentLine = '';
+              }
+              
+              currentLine += item.str + ' ';
+              lastY = y;
+            }
+            
+            if (currentLine) {
+              fullText += currentLine + '\n';
+            }
+          }
+
+          console.log('Extracted text:', fullText); // Debug
+
+          // Extract date before cleanup (format: M/D/YYYY or MM/DD/YYYY)
+          const dateMatch = fullText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+          let extractedDate = null;
+          if (dateMatch) {
+            extractedDate = dateMatch[1];
+          } else if (dateHint) {
+            // Convert YYYY-MM-DD to M/D/YYYY
+            const parts = dateHint.split('-');
+            extractedDate = `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
+          }
+          
+          if (extractedDate) {
+            setPdfDate(extractedDate);
+            console.log('Extracted PDF date:', extractedDate);
+            // Save to Firebase
+            await db.ref('pdfDate').set(extractedDate);
+          }
+
+          // Remove header/footer noise
+          let cleanText = fullText.replace(/First character determines priority.*?area\./gi, '');
+          cleanText = cleanText.replace(/Cases\s+(Process on ground floor|Top Priority|Next Priority|Not Refrigerated|Do by belt|U)\s+Instructions/gi, '');
+          cleanText = cleanText.replace(/Thursday|Wednesday|Monday|Tuesday|Friday|Saturday|Sunday/gi, '');
+          cleanText = cleanText.replace(/\d{1,2}\/\d{1,2}\/\d{4}/g, '');
+          cleanText = cleanText.replace(/Processing Priorities/gi, '');
+          cleanText = cleanText.replace(/Total cases\s+\d+/gi, '');
+          cleanText = cleanText.replace(/Day \d+ Week \d+/gi, '');
+          
+          // Split into lines
+          const itemBlocks = cleanText.split(/\n/).filter(line => line.trim());
+          
+          const parsedItems = [];
+          let i = 0;
+          
+          // Section headers that should stop item parsing
+          const sectionHeaders = [
+            'Cases Process on ground floor',
+            'Cases Top Priority',
+            'Cases Next Priority',
+            'Cases Not Refrigerated',
+            'Cases Do by belt or other area',
+            'Cases U'
+          ];
+          
+          while (i < itemBlocks.length) {
+            const line = itemBlocks[i].trim();
+            
+            // Check if line starts with a number (cases)
+            const casesMatch = line.match(/^(\d+)\s+(.+)$/);
+            if (!casesMatch) {
+              i++;
+              continue;
+            }
+            
+            const cases = parseInt(casesMatch[1]);
+            let itemText = casesMatch[2];
+            
+            // Keep adding lines until we find the priority pattern (digit/letter space dash) or section header
+            i++;
+            while (i < itemBlocks.length && !itemText.match(/[0-9U]\s*-\s*/)) {
+              const nextLine = itemBlocks[i].trim();
+              
+              // Stop if we hit a section header
+              if (sectionHeaders.some(header => nextLine.startsWith(header)) || nextLine.startsWith('Cases')) {
+                break;
+              }
+              
+              itemText += ' ' + nextLine;
+              i++;
+            }
+            
+            // Continue adding lines after priority until next item (line starting with number) or section header
+            while (i < itemBlocks.length && !itemBlocks[i].trim().match(/^\d+\s/)) {
+              const nextLine = itemBlocks[i].trim();
+              
+              // Stop if we hit a section header
+              if (sectionHeaders.some(header => nextLine.startsWith(header)) || nextLine.startsWith('Cases')) {
+                break;
+              }
+              
+              itemText += ' ' + nextLine;
+              i++;
+            }
+            
+            // Now extract priority and split name/location
+            // Match either digit or 'U' as priority with dash
+            const priorityMatch = itemText.match(/^(.+?)\s+([0-9U])\s*-\s*(.+)$/);
+            
+            if (priorityMatch) {
+              const name = priorityMatch[1].trim();
+              const priorityStr = priorityMatch[2];
+              const priority = priorityStr === 'U' ? 'missing' : parseInt(priorityStr);
+              const location = priorityMatch[3].trim();
+              
+              // Must have SKU number (#) to be valid
+              if (name.includes('#') && cases > 0) {
+                parsedItems.push({
+                  name,
+                  priority,
+                  cases,
+                  location
+                });
+                console.log('Parsed item (with dash):', { name, priority, cases, location });
+              }
+            } else {
+              // Try format without dash: "Name #SKU Priority instructions"
+              const noDashMatch = itemText.match(/^(.+?#\d+)\s+([0-9U])\s+(.+)$/);
+              if (noDashMatch) {
+                const name = noDashMatch[1].trim();
+                const priorityStr = noDashMatch[2];
+                const priority = priorityStr === 'U' ? 'missing' : parseInt(priorityStr);
+                const location = noDashMatch[3].trim();
+                
+                if (cases > 0) {
+                  parsedItems.push({
+                    name,
+                    priority,
+                    cases,
+                    location
+                  });
+                  console.log('Parsed item (no dash):', { name, priority, cases, location });
+                }
+              } else {
+                // No priority found - treat as missing priority
+                const name = itemText.trim();
+                if (name.includes('#') && cases > 0) {
+                  // Look for location after a dash at the end
+                  const locationMatch = name.match(/^(.+?)\s+-\s+(.+)$/);
+                  if (locationMatch) {
+                    parsedItems.push({
+                      name: locationMatch[1].trim(),
+                      priority: 'missing',
+                      cases,
+                      location: locationMatch[2].trim()
+                    });
+                  } else {
+                    parsedItems.push({
+                      name,
+                      priority: 'missing',
+                      cases,
+                      location: 'See PDF'
+                    });
+                  }
+                  console.log('Parsed item (missing priority):', { name, priority: 'missing', cases });
+                }
+              }
+            }
+          }
+
+          // Calculate total cases from parsed items
+          const totalCases = parsedItems.reduce((sum, item) => sum + item.cases, 0);
+
+          // Add IDs to items
+          const itemsWithIds = parsedItems.map((item, index) => ({
+            id: `item-${Date.now()}-${index}`,
+            ...item
+          }));
+
+          // Convert items array to object with IDs as keys for Firebase
+          const itemsObject = {};
+          itemsWithIds.forEach(item => {
+            itemsObject[item.id] = item;
+          });
+
+          // Save to Firebase (as object, not array)
+          await db.ref('items').set(itemsObject);
+          await db.ref('completedItems').set({});
+          await db.ref('originalTotalCases').set(totalCases);
+
+          // Extract and save new priorities to historical list
+          const newPriorities = [...new Set(parsedItems.map(item => item.priority))];
+          
+          // Get current historical priorities from Firebase (not state, which might be stale)
+          const currentPrioritiesSnapshot = await db.ref('historicalPriorities').once('value');
+          const currentPriorities = firebaseToArray(currentPrioritiesSnapshot.val());
+          
+          const combinedPriorities = [...new Set([...currentPriorities, ...newPriorities])];
+          const sortedPriorities = combinedPriorities.sort((a, b) => {
+            // Sort: numbered priorities first (1, 2, 3...), then 'missing', then 0
+            const aIsNumber = typeof a === 'number' && a > 0;
+            const bIsNumber = typeof b === 'number' && b > 0;
+            
+            if (aIsNumber && bIsNumber) return a - b;
+            if (aIsNumber) return -1;
+            if (bIsNumber) return 1;
+            if (a === 'missing') return -1;
+            if (b === 'missing') return 1;
+            return 0;
+          });
+          await db.ref('historicalPriorities').set(sortedPriorities);
+
+          console.log('Saved priorities to Firebase:', sortedPriorities);
+
+          // Note: Local state will be updated automatically by Firebase listeners
+          // No need to manually update setItems() or setCompletedItems() here
+
+          console.log(`Parsed ${parsedItems.length} items, ${totalCases} total cases`);
+          
+        } catch (error) {
+          console.error('Error processing PDF:', error);
+          alert('Error processing PDF: ' + error.message);
+        }
+      };
+
+      const handlePDFUpload = async (event) => {
+        if (readOnlyMode || !db) return;
+
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+          // Configure PDF.js worker
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+          // Load PDF
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          
+          // Extract text from all pages
+          let fullText = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            
+            // Better text extraction - preserve line structure
+            let lastY = -1;
+            let currentLine = '';
+            
+            for (let item of textContent.items) {
+              const y = item.transform[5];
+              
+              // New line if y position changed significantly
+              if (lastY !== -1 && Math.abs(lastY - y) > 2) {
+                fullText += currentLine + '\n';
+                currentLine = '';
+              }
+              
+              currentLine += item.str + ' ';
+              lastY = y;
+            }
+            
+            if (currentLine) {
+              fullText += currentLine + '\n';
+            }
+          }
+
+          console.log('Extracted text:', fullText); // Debug
+
+          // Extract date before cleanup (format: M/D/YYYY or MM/DD/YYYY)
+          const dateMatch = fullText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+          if (dateMatch) {
+            setPdfDate(dateMatch[1]);
+            console.log('Extracted PDF date:', dateMatch[1]);
+          }
+
+          // Remove header/footer noise
+          let cleanText = fullText.replace(/First character determines priority.*?area\./gi, '');
+          cleanText = cleanText.replace(/Cases\s+(Process on ground floor|Top Priority|Next Priority|Not Refrigerated|Do by belt|U)\s+Instructions/gi, '');
+          cleanText = cleanText.replace(/Thursday|Wednesday|Monday|Tuesday|Friday|Saturday|Sunday/gi, '');
+          cleanText = cleanText.replace(/\d{1,2}\/\d{1,2}\/\d{4}/g, '');
+          cleanText = cleanText.replace(/Processing Priorities/gi, '');
+          cleanText = cleanText.replace(/Total cases\s+\d+/gi, '');
+          cleanText = cleanText.replace(/Day \d+ Week \d+/gi, '');
+          
+          // Split into lines
+          const itemBlocks = cleanText.split(/\n/).filter(line => line.trim());
+          
+          const parsedItems = [];
+          let i = 0;
+          
+          // Section headers that should stop item parsing
+          const sectionHeaders = [
+            'Cases Process on ground floor',
+            'Cases Top Priority',
+            'Cases Next Priority',
+            'Cases Not Refrigerated',
+            'Cases Do by belt or other area',
+            'Cases U'
+          ];
+          
+          while (i < itemBlocks.length) {
+            const line = itemBlocks[i].trim();
+            
+            // Check if line starts with a number (cases)
+            const casesMatch = line.match(/^(\d+)\s+(.+)$/);
+            if (!casesMatch) {
+              i++;
+              continue;
+            }
+            
+            const cases = parseInt(casesMatch[1]);
+            let itemText = casesMatch[2];
+            
+            // Keep adding lines until we find the priority pattern (digit/letter space dash) or section header
+            i++;
+            while (i < itemBlocks.length && !itemText.match(/[0-9U]\s*-\s*/)) {
+              const nextLine = itemBlocks[i].trim();
+              
+              // Stop if we hit a section header
+              if (sectionHeaders.some(header => nextLine.startsWith(header)) || nextLine.startsWith('Cases')) {
+                break;
+              }
+              
+              itemText += ' ' + nextLine;
+              i++;
+            }
+            
+            // Continue adding lines after priority until next item (line starting with number) or section header
+            while (i < itemBlocks.length && !itemBlocks[i].trim().match(/^\d+\s/)) {
+              const nextLine = itemBlocks[i].trim();
+              
+              // Stop if we hit a section header
+              if (sectionHeaders.some(header => nextLine.startsWith(header)) || nextLine.startsWith('Cases')) {
+                break;
+              }
+              
+              itemText += ' ' + nextLine;
+              i++;
+            }
+            
+            // Now extract priority and split name/location
+            // Match either digit or 'U' as priority with dash
+            const priorityMatch = itemText.match(/^(.+?)\s+([0-9U])\s*-\s*(.+)$/);
+            
+            if (priorityMatch) {
+              const name = priorityMatch[1].trim();
+              const priorityStr = priorityMatch[2];
+              const priority = priorityStr === 'U' ? 'missing' : parseInt(priorityStr);
+              const location = priorityMatch[3].trim();
+              
+              // Must have SKU number (#) to be valid
+              if (name.includes('#') && cases > 0) {
+                parsedItems.push({
+                  name,
+                  priority,
+                  cases,
+                  location
+                });
+                console.log('Parsed item (with dash):', { name, priority, cases, location });
+              }
+            } else {
+              // Try format without dash: "Name #SKU Priority instructions"
+              const noDashMatch = itemText.match(/^(.+?#\d+)\s+([0-9U])\s+(.+)$/);
+              if (noDashMatch) {
+                const name = noDashMatch[1].trim();
+                const priorityStr = noDashMatch[2];
+                const priority = priorityStr === 'U' ? 'missing' : parseInt(priorityStr);
+                const location = noDashMatch[3].trim();
+                
+                if (cases > 0) {
+                  parsedItems.push({
+                    name,
+                    priority,
+                    cases,
+                    location
+                  });
+                  console.log('Parsed item (no dash):', { name, priority, cases, location });
+                }
+              } else {
+                // No priority found - treat as missing priority
+                const name = itemText.trim();
+                if (name.includes('#') && cases > 0) {
+                  // Split at last occurrence of dash to separate name and location
+                  const lastDashIndex = name.lastIndexOf('-');
+                  if (lastDashIndex > 0) {
+                    const itemName = name.substring(0, lastDashIndex).trim();
+                    const location = name.substring(lastDashIndex + 1).trim();
+                    parsedItems.push({
+                      name: itemName,
+                      priority: 'missing',
+                      cases,
+                      location
+                    });
+                    console.log('Parsed item (no priority):', { name: itemName, priority: 'missing', cases, location });
+                  } else {
+                    // No dash found, use whole text as name
+                    parsedItems.push({
+                      name: name,
+                      priority: 'missing',
+                      cases,
+                      location: 'No instructions'
+                    });
+                    console.log('Parsed item (no priority, no location):', { name, priority: 'missing', cases, location: 'No instructions' });
+                  }
+                }
+              }
+            }
+          }
+
+          console.log('Total items parsed:', parsedItems.length);
+
+          if (parsedItems.length === 0) {
+            alert('No items found in PDF. Please check the console for extracted text and try again.');
+            return;
+          }
+
+          // Calculate total cases from PDF
+          const totalCases = parsedItems.reduce((sum, item) => sum + item.cases, 0);
+          console.log('Total cases from PDF:', totalCases);
+
+          // Save to Firebase
+          const itemsRef = db.ref('items');
+          await itemsRef.remove();
+          
+          const newItems = {};
+          parsedItems.forEach(item => {
+            const key = db.ref().child('items').push().key;
+            newItems[key] = item;
+          });
+          
+          await itemsRef.update(newItems);
+          
+          // Clear all completed items (reset for new day)
+          await db.ref('completedItems').remove();
+          console.log('Cleared completed items for new upload');
+          
+          // Save PDF date to Firebase
+          if (dateMatch) {
+            await db.ref('pdfDate').set(dateMatch[1]);
+          }
+          
+          // Save original total cases to Firebase
+          await db.ref('originalTotalCases').set(totalCases);
+          
+        } catch (error) {
+          console.error('PDF parsing error:', error);
+          alert('Error reading PDF. Please try again or contact support.');
+        }
+      };
+
+      const handleVideoUpload = (event, item) => {
+        if (readOnlyMode) return;
+
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const sku = getSKU(item.name);
+        if (!sku) {
+          console.error('No SKU found for item:', item.name);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const videoData = {
+            data: e.target.result,  // ArrayBuffer
+            name: file.name,
+            type: file.type
+          };
+          
+          try {
+            // Save to IndexedDB
+            await saveVideoToDB(sku, videoData);
+            console.log('Uploaded video saved to IndexedDB');
+            
+            // Reload to show the video
+            window.location.reload();
+          } catch (error) {
+            console.error('Error saving uploaded video:', error);
+            alert('Error saving video. Please try again.');
+          }
+        };
+        reader.readAsArrayBuffer(file);  // Changed from readAsDataURL
+      };
+
+      const handleDeleteVideo = async (sku) => {
+        if (readOnlyMode) return false;
+        
+        if (!confirm('Delete this video? This cannot be undone.')) {
+          return false; // Return false if cancelled
+        }
+        
+        console.log('Deleting video for SKU:', sku);
+        
+        // Delete from IndexedDB
+        await deleteVideoFromDB(sku);
+        
+        // Update state - create completely new object to force re-render
+        setVideos(prev => {
+          console.log('Videos before delete:', Object.keys(prev));
+          const entries = Object.entries(prev).filter(([key]) => key !== sku);
+          const updated = Object.fromEntries(entries);
+          console.log('Videos after delete:', Object.keys(updated));
+          return updated;
+        });
+        
+        console.log('Video deletion complete');
+        return true; // Return true if deleted
+      };
+
+      const startRecording = async (item) => {
+        const sku = getSKU(item.name);
+        if (!sku) {
+          console.error('No SKU found for item:', item.name);
+          alert('Cannot record video: item has no SKU number.');
+          return;
+        }
+        
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' }, // Use back camera on mobile
+            audio: true 
+          });
+          
+          setMediaStream(stream);
+          setRecordingItemId(item.id);
+          setIsRecording(true);
+          
+          // Wait for React to render the video element, then set the stream
+          // Safari needs this delay to ensure the video element is in the DOM
+          setTimeout(async () => {
+            if (videoPreviewRef.current) {
+              console.log('Setting video preview stream');
+              videoPreviewRef.current.srcObject = stream;
+              
+              // Safari on iOS requires explicit play() call
+              try {
+                await videoPreviewRef.current.play();
+                console.log('Video preview playing successfully');
+              } catch (playError) {
+                console.warn('Video autoplay warning:', playError);
+                // Try again after a short delay
+                setTimeout(async () => {
+                  try {
+                    await videoPreviewRef.current.play();
+                    console.log('Video preview playing after retry');
+                  } catch (retryError) {
+                    console.error('Video preview failed:', retryError);
+                  }
+                }, 100);
+              }
+            } else {
+              console.error('Video preview ref not available');
+            }
+          }, 100);
+          
+          // Determine best codec for this browser
+          let options = { mimeType: 'video/webm;codecs=vp9,opus' };
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            console.log('vp9,opus not supported, trying vp8,opus');
+            options = { mimeType: 'video/webm;codecs=vp8,opus' };
+          }
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            console.log('webm with opus not supported, trying without audio codecs');
+            options = { mimeType: 'video/webm' };
+          }
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            console.log('webm not supported, using default');
+            options = {};
+          }
+          console.log('Using MediaRecorder with options:', options);
+          
+          const recorder = new MediaRecorder(stream, options);
+          const chunks = [];
+          
+          recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              chunks.push(e.data);
+              console.log('Video chunk collected:', e.data.size, 'bytes', 'Total chunks:', chunks.length);
+            }
+          };
+          
+          recorder.onstop = () => {
+            console.log('Recording stopped, processing', chunks.length, 'chunks');
+            
+            if (chunks.length === 0) {
+              console.error('No video data recorded');
+              alert('No video data was recorded. Please try again.');
+              setIsRecording(false);
+              setRecordingItemId(null);
+              setShowVideoUpload(null);
+              return;
+            }
+            
+            // Use the recorder's actual MIME type for the blob
+            const mimeType = recorder.mimeType || 'video/webm';
+            console.log('Recorder mimeType:', mimeType);
+            const blob = new Blob(chunks, { type: mimeType });
+            console.log('Created blob:', blob.size, 'bytes', 'Type:', blob.type);
+            
+            // Read as ArrayBuffer instead of data URL to avoid base64 corruption
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              console.log('Video data read as ArrayBuffer, saving for SKU:', sku);
+              const videoData = {
+                data: reader.result,  // ArrayBuffer
+                name: `recording-${Date.now()}.webm`,
+                type: blob.type
+              };
+              
+              try {
+                // Save to IndexedDB for persistence
+                await saveVideoToDB(sku, videoData);
+                
+                console.log('Video saved to IndexedDB successfully');
+                
+                // Wait 500ms to ensure IndexedDB transaction completes
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                console.log('Reloading page...');
+                
+                // Reload page to show the new video without React DOM conflicts
+                window.location.reload();
+              } catch (error) {
+                console.error('Error saving video to IndexedDB:', error);
+                alert('Error saving video. Please try again.');
+                setIsRecording(false);
+                setRecordingItemId(null);
+                setShowVideoUpload(null);
+              }
+            };
+            
+            reader.onerror = (error) => {
+              console.error('FileReader error:', error);
+              alert('Error saving video. Please try again.');
+              setIsRecording(false);
+              setRecordingItemId(null);
+            };
+            
+            reader.readAsArrayBuffer(blob);  // Changed from readAsDataURL
+          };
+          
+          recorder.onerror = (error) => {
+            console.error('MediaRecorder error:', error);
+            alert('Recording error occurred. Please try again.');
+            setIsRecording(false);
+            setRecordingItemId(null);
+          };
+          
+          setMediaRecorder(recorder);
+          // Start WITHOUT timeslice - let MediaRecorder handle proper file creation
+          recorder.start();
+          console.log('Recording started for item:', item.id);
+        } catch (error) {
+          console.error('Error accessing camera:', error);
+          if (error.name === 'NotAllowedError') {
+            alert('Camera access denied. Please allow camera access and try again.');
+          } else if (error.name === 'NotFoundError') {
+            alert('No camera found. Please make sure your device has a camera.');
+          } else {
+            alert('Could not access camera: ' + error.message);
+          }
+          setIsRecording(false);
+          setRecordingItemId(null);
+          setShowVideoUpload(null);
+        }
+      };
+
+      const stopRecording = () => {
+        if (mediaRecorder && isRecording) {
+          console.log('Stopping recording...');
+          mediaRecorder.stop();
+          if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            setMediaStream(null);
+          }
+        }
+      };
+
+      const cancelRecording = () => {
+        if (mediaRecorder && isRecording) {
+          mediaRecorder.stop();
+        }
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          setMediaStream(null);
+        }
+        setIsRecording(false);
+        setRecordingItemId(null);
+        setShowVideoUpload(null);
+      };
+
+      const startProcessing = (item) => {
+        if (readOnlyMode) return;
+        setActiveItem(item);
+        setIsProcessing(true);
+        setStartTime(Date.now());
+      };
+
+      const stopProcessing = async () => {
+        if (readOnlyMode || !startTime || !activeItem || !db) return;
+
+        const duration = (Date.now() - startTime) / 1000;
+        const itemTimings = timingData[activeItem.id] || [];
+        
+        const newTiming = {
+          duration,
+          timestamp: new Date().toISOString()
+        };
+
+        // Save to Firebase
+        await db.ref(`timingData/${activeItem.id}`).set([...itemTimings, newTiming]);
+
+        setIsProcessing(false);
+        setStartTime(null);
+        setActiveItem(null);
+      };
+
+      const updatePriority = async (itemId, newPriority) => {
+        if (readOnlyMode || !db) return;
+        
+        // Handle 'missing', numeric, or 0
+        let priority;
+        if (newPriority === 'missing' || newPriority === 'missing') {
+          priority = 'missing';
+        } else {
+          priority = parseInt(newPriority);
+          if (isNaN(priority)) return;
+        }
+        
+        // Update in Firebase
+        await db.ref(`items/${itemId}/priority`).set(priority);
+        
+        // Get current historical priorities from Firebase (not state, which might be stale)
+        const currentPrioritiesSnapshot = await db.ref('historicalPriorities').once('value');
+        const currentPriorities = firebaseToArray(currentPrioritiesSnapshot.val());
+        
+        // Add to historical priorities if not already there
+        if (!currentPriorities.includes(priority)) {
+          const updated = [...currentPriorities, priority].sort((a, b) => {
+            // Sort: numbered priorities first (1, 2, 3...), then 'missing', then 0
+            const aIsNumber = typeof a === 'number' && a > 0;
+            const bIsNumber = typeof b === 'number' && b > 0;
+            
+            if (aIsNumber && bIsNumber) return a - b;
+            if (aIsNumber) return -1;
+            if (bIsNumber) return 1;
+            if (a === 'missing') return -1;
+            if (b === 'missing') return 1;
+            return 0;
+          });
+          await db.ref('historicalPriorities').set(updated);
+        }
+      };
+
+      const deletePriority = async (priorityToDelete) => {
+        if (readOnlyMode || !db) return;
+        
+        // Get current historical priorities from Firebase (not state)
+        const currentPrioritiesSnapshot = await db.ref('historicalPriorities').once('value');
+        const currentPriorities = firebaseToArray(currentPrioritiesSnapshot.val());
+        
+        const updated = currentPriorities.filter(p => p !== priorityToDelete);
+        await db.ref('historicalPriorities').set(updated);
+      };
+
+      const handleBeginProcessing = (itemId) => {
+        if (readOnlyMode) return;
+        
+        // Check if paused - if so, restart from paused time
+        if (itemsPaused[itemId]) {
+          // Restart: set start time adjusted for paused elapsed time
+          const pausedSeconds = pausedElapsedTime[itemId] || 0;
+          setItemsInProcess(prev => ({
+            ...prev,
+            [itemId]: Date.now() - (pausedSeconds * 1000)
+          }));
+          
+          // Clear paused state
+          setItemsPaused(prev => {
+            const updated = { ...prev };
+            delete updated[itemId];
+            return updated;
+          });
+          setPausedElapsedTime(prev => {
+            const updated = { ...prev };
+            delete updated[itemId];
+            return updated;
+          });
+        } else if (itemsInProcess[itemId]) {
+          // Pause: save elapsed time and remove from in-process
+          const elapsed = elapsedTimes[itemId] || 0;
+          setPausedElapsedTime(prev => ({
+            ...prev,
+            [itemId]: elapsed
+          }));
+          setItemsPaused(prev => ({
+            ...prev,
+            [itemId]: true
+          }));
+          
+          // Remove from in-process to stop timer
+          setItemsInProcess(prev => {
+            const updated = { ...prev };
+            delete updated[itemId];
+            return updated;
+          });
+        } else {
+          // Begin: start fresh timer
+          setItemsInProcess(prev => ({
+            ...prev,
+            [itemId]: Date.now()
+          }));
+        }
+      };
+
+      const markComplete = async (item) => {
+        if (readOnlyMode || !db) return;
+        
+        // Show photo choice dialog first
+        setShowPhotoChoice(item);
+      };
+
+      const finalizeCompletion = async (item, photoData) => {
+        if (readOnlyMode || !db) return;
+        
+        const sku = getSKU(item.name);
+        
+        // Save completion photo if provided
+        if (photoData && sku) {
+          await saveCompletionPhotoToDB(sku, photoData);
+          setCompletionPhotos(prev => ({
+            ...prev,
+            [sku]: photoData
+          }));
+        }
+        
+        // Calculate total time - check if item was in process or paused
+        let totalTime = null;
+        
+        if (itemsInProcess[item.id]) {
+          // Item is currently running
+          totalTime = (Date.now() - itemsInProcess[item.id]) / 1000; // seconds
+        } else if (itemsPaused[item.id] && pausedElapsedTime[item.id] !== undefined) {
+          // Item was paused
+          totalTime = pausedElapsedTime[item.id];
+        }
+        
+        // If item was being processed with Begin button, save timing event
+        if (totalTime !== null && sku) {
+          const timePerCase = totalTime / item.cases;
+          
+          console.log(`Item completed: ${item.name}`);
+          console.log(`Total time: ${totalTime}s for ${item.cases} cases`);
+          console.log(`Time per case: ${timePerCase}s`);
+          
+          // Create timing event
+          const timingEvent = {
+            totalTime: totalTime,
+            cases: item.cases,
+            timePerCase: timePerCase,
+            timestamp: new Date().toISOString()
+          };
+          
+          // Get current events for this SKU
+          const allEvents = timingEventsBySKU[sku] || [];
+          const newEvents = [...allEvents, timingEvent];
+          
+          // Save timing event to Firebase
+          await db.ref(`timingEvents/${sku}`).set(newEvents);
+          
+          // Calculate new average
+          const avgTimePerCase = newEvents.reduce((sum, e) => sum + e.timePerCase, 0) / newEvents.length;
+          
+          // Save historical average to Firebase
+          await db.ref(`historicalTimes/${sku}`).set(avgTimePerCase);
+          
+          console.log(`Saved timing to Firebase - SKU: ${sku}, Avg: ${avgTimePerCase}s per case`);
+          
+          // Clear from in-process
+          setItemsInProcess(prev => {
+            const updated = { ...prev };
+            delete updated[item.id];
+            return updated;
+          });
+          
+          // Clear from paused
+          setItemsPaused(prev => {
+            const updated = { ...prev };
+            delete updated[item.id];
+            return updated;
+          });
+          
+          // Clear paused elapsed time
+          setPausedElapsedTime(prev => {
+            const updated = { ...prev };
+            delete updated[item.id];
+            return updated;
+          });
+          
+          // Clear elapsed time display
+          setElapsedTimes(prev => {
+            const updated = { ...prev };
+            delete updated[item.id];
+            return updated;
+          });
+        }
+        
+        // Add to completed items with timestamp
+        const completedItem = {
+          ...item,
+          completedAt: new Date().toISOString()
+        };
+        
+        await db.ref(`completedItems/${item.id}`).set(completedItem);
+        
+        // Remove from active items
+        await db.ref(`items/${item.id}`).remove();
+        
+        // Close completion camera modal
+        setShowCompletionCamera(null);
+        
+        // Note: State updates happen automatically via Firebase listeners
+        // No need to manually update setItems() or setCompletedItems()
+      };
+
+      const undoComplete = async (item) => {
+        if (readOnlyMode || !db) return;
+        
+        // Restore item to active items (remove completedAt timestamp)
+        const { completedAt, ...activeItem } = item;
+        
+        await db.ref(`items/${item.id}`).set(activeItem);
+        
+        // Remove from completed items
+        await db.ref(`completedItems/${item.id}`).remove();
+        
+        // Note: State updates happen automatically via Firebase listeners
+        // Cases will be added back to remaining and removed from completed
+      };
+
+      const deleteTimingEvent = async (sku, eventIndex) => {
+        if (readOnlyMode) return;
+        
+        const events = timingEventsBySKU[sku] || [];
+        
+        // Delete from IndexedDB
+        await deleteTimingEventFromDB(sku, eventIndex);
+        
+        // Update state
+        const updatedEvents = events.filter((_, index) => index !== eventIndex);
+        setTimingEventsBySKU(prev => ({
+          ...prev,
+          [sku]: updatedEvents
+        }));
+        
+        // Recalculate average
+        if (updatedEvents.length > 0) {
+          const avgTimePerCase = updatedEvents.reduce((sum, e) => sum + e.timePerCase, 0) / updatedEvents.length;
+          await saveHistoricalTimeToDB(sku, avgTimePerCase);
+          setHistoricalTimes(prev => ({
+            ...prev,
+            [sku]: avgTimePerCase
+          }));
+        } else {
+          // No events left, remove the average
+          setHistoricalTimes(prev => {
+            const updated = { ...prev };
+            delete updated[sku];
+            return updated;
+          });
+        }
+        
+        console.log('Deleted timing event', eventIndex, 'for SKU', sku);
+      };
+
+      const getStats = (sku) => {
+        const events = timingEventsBySKU[sku] || [];
+        if (events.length === 0) return null;
+
+        const timesPerCase = events.map(e => e.timePerCase);
+        const average = timesPerCase.reduce((a, b) => a + b, 0) / timesPerCase.length;
+        const fastest = Math.min(...timesPerCase);
+        const totalCases = events.reduce((sum, e) => sum + e.cases, 0);
+
+        return { average, fastest, totalCases };
+      };
+
+      const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      };
+
+      const getDisplayName = (fullName) => {
+        // Remove SKU number (e.g., "Herbs-chives #1001098" becomes "Herbs-chives")
+        return fullName.split('#')[0].trim();
+      };
+
+      const getSKU = (fullName) => {
+        // Extract SKU number (e.g., "Herbs-chives #1001098" returns "1001098")
+        const match = fullName.match(/#(\d+)/);
+        return match ? match[1] : null;
+      };
+
+      const formatDateWithDay = (dateString) => {
+        // dateString format: "M/D/YYYY" (e.g., "2/5/2026")
+        if (!dateString) return '';
+        
+        try {
+          const parts = dateString.split('/');
+          if (parts.length !== 3) return dateString;
+          
+          const month = parseInt(parts[0]) - 1; // JS months are 0-indexed
+          const day = parseInt(parts[1]);
+          const year = parseInt(parts[2]);
+          
+          const date = new Date(year, month, day);
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const dayOfWeek = dayNames[date.getDay()];
+          
+          return `${dayOfWeek}, ${dateString}`;
+        } catch (error) {
+          return dateString;
+        }
+      };
+
+      // Helper function to convert Firebase data to array
+      // Firebase converts arrays to objects, so we need to convert back
+      const firebaseToArray = (data) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'object') {
+          // Firebase stores arrays as objects with numeric keys
+          return Object.values(data);
+        }
+        return [];
+      };
+
+      const getPriorityColor = (priority) => {
+        // Handle missing priority
+        if (priority === 'missing') {
+          return 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)'; // Gray
+        }
+        
+        // Priority 0 = Shopping floor (very light gray)
+        // Priority 1 = Orange (top priority)
+        // Priority 2 = Yellow (next priority)
+        // Priority 3 = Green (not refrigerated)
+        // Priority 4+ = Blue (belt/other)
+        if (priority === 0) {
+          return 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'; // Very light gray
+        } else if (priority === 1) {
+          return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'; // Orange
+        } else if (priority === 2) {
+          return 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)'; // Yellow
+        } else if (priority === 3) {
+          return 'linear-gradient(135deg, #10b981 0%, #059669 100%)'; // Green
+        } else {
+          return 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)'; // Blue (4+)
+        }
+      };
+
+      const getCurrentDuration = () => {
+        if (!startTime) return 0;
+        return (Date.now() - startTime) / 1000;
+      };
+
+      const [currentTime, setCurrentTime] = useState(0);
+      useEffect(() => {
+        if (!isProcessing) return;
+        const interval = setInterval(() => {
+          setCurrentTime(getCurrentDuration());
+        }, 100);
+        return () => clearInterval(interval);
+      }, [isProcessing, startTime]);
+
+      return (
+        <div style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+          padding: '2rem',
+          fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            
+            {/* Header */}
+            <div style={{
+              background: 'white',
+              borderRadius: '24px',
+              padding: '2.5rem',
+              marginBottom: '2rem',
+              boxShadow: '0 25px 70px rgba(0,0,0,0.25)'
+            }}>
+              {/* Top buttons - Clear Data (left) */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                {/* Left side - Clear Data button */}
+                {!readOnlyMode && items.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      if (confirm('Clear all data? This will remove all items and start fresh.')) {
+                        if (db) {
+                          await db.ref('items').remove();
+                          await db.ref('completedItems').remove();
+                          await db.ref('pdfDate').remove();
+                          await db.ref('totalCases').remove();
+                        }
+                        // Clear all state variables
+                        setItems([]);
+                        setCompletedItems([]);
+                        setActiveItem(null);
+                        setIsProcessing(false);
+                        setStartTime(null);
+                        setPdfDate('');
+                        setOriginalTotalCases(0);
+                        console.log('✅ All data cleared');
+                      }
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '0.75rem 1.5rem',
+                      fontSize: '0.95rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)'
+                    }}
+                  >
+                    🗑️ Clear Data
+                  </button>
+                )}
+                
+                {/* View Mode indicator (top-right fixed) - only shown in View Mode */}
+                {readOnlyMode && (
+                  <div 
+                    title="Hold Shift, then press V then M to toggle modes"
+                    style={{
+                      position: 'fixed',
+                      top: '1rem',
+                      right: '1rem',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '0.75rem 1.5rem',
+                      fontSize: '0.95rem',
+                      fontWeight: '700',
+                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      zIndex: 1000,
+                      cursor: 'help'
+                    }}>
+                    👁️ You are in View Mode
+                  </div>
+                )}
+              </div>
+              
+              {/* Date above title */}
+              {/* Date display - Always shown */}
+              <div style={{
+                fontSize: '1.5rem',
+                fontWeight: '600',
+                color: '#64748b',
+                textAlign: 'center',
+                marginBottom: '0.5rem'
+              }}>
+                {pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
+              </div>
+              
+              {/* Centered title */}
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <h1 style={{
+                  margin: 0,
+                  fontSize: '3rem',
+                  fontWeight: '900',
+                  background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  letterSpacing: '-0.02em'
+                }}>
+                  Produce Processing
+                </h1>
+                
+                {/* Version Number */}
+                <div style={{
+                  fontSize: '0.9rem',
+                  color: '#64748b',
+                  fontWeight: '700',
+                  marginTop: '0.5rem',
+                  letterSpacing: '0.05em'
+                }}>
+                  v2.71
+                </div>
+                
+                {/* Progress Bar and Metrics - Always shown */}
+                <div style={{ marginTop: '1.5rem', width: '100%', maxWidth: '600px', margin: '1.5rem auto 0' }}>
+                  {(() => {
+                    const completedCases = completedItems.reduce((sum, item) => sum + item.cases, 0);
+                    const remainingCases = originalTotalCases - completedCases;
+                    const remainingItems = items.length;
+                    const completedPercentage = originalTotalCases > 0 ? (completedCases / originalTotalCases) * 100 : 0;
+                      
+                      return (
+                        <div>
+                          {/* Progress bar */}
+                          <div style={{
+                            width: '100%',
+                            height: '40px',
+                            background: '#e2e8f0',
+                            borderRadius: '20px',
+                            overflow: 'hidden',
+                            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                            position: 'relative'
+                          }}>
+                            {/* Completed portion (green) */}
+                            <div style={{
+                              width: `${completedPercentage}%`,
+                              height: '100%',
+                              background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                              transition: 'width 0.5s ease',
+                              borderRadius: '20px'
+                            }} />
+                          </div>
+                          
+                          {/* Remaining info below */}
+                          <div style={{ 
+                            marginTop: '1.5rem', 
+                            textAlign: 'center'
+                          }}>
+                            <div style={{
+                              fontSize: '1.5rem',
+                              fontWeight: '700',
+                              color: '#64748b',
+                              marginBottom: '0.75rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              Remaining
+                            </div>
+                            
+                            {/* Cases and Items side by side */}
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              gap: '3rem',
+                              flexWrap: 'wrap'
+                            }}>
+                              {/* Cases */}
+                              <div>
+                                <div style={{
+                                  fontSize: '3.5rem',
+                                  fontWeight: '900',
+                                  color: '#0f766e',
+                                  lineHeight: '1',
+                                  marginBottom: '0.25rem'
+                                }}>
+                                  {remainingCases}
+                                </div>
+                                <div style={{
+                                  fontSize: '1.5rem',
+                                  fontWeight: '700',
+                                  color: '#64748b'
+                                }}>
+                                  cases
+                                </div>
+                              </div>
+                              
+                              {/* Items */}
+                              <div>
+                                <div style={{
+                                  fontSize: '3.5rem',
+                                  fontWeight: '900',
+                                  color: '#0f766e',
+                                  lineHeight: '1',
+                                  marginBottom: '0.25rem'
+                                }}>
+                                  ({remainingItems})
+                                </div>
+                                <div style={{
+                                  fontSize: '1.5rem',
+                                  fontWeight: '700',
+                                  color: '#64748b'
+                                }}>
+                                  {remainingItems === 1 ? 'item' : 'items'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                
+                {/* Completed items link - show when there are completed items */}
+                {completedItems.length > 0 && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <div 
+                      onClick={() => setShowCompleted(!showCompleted)}
+                      style={{
+                        fontSize: '1rem',
+                        color: '#10b981',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Completed: {completedItems.reduce((sum, item) => sum + item.cases, 0)} cases
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Back to Active button (only shown when viewing completed) */}
+              {showCompleted && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <button
+                    onClick={() => setShowCompleted(false)}
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '1rem 1.5rem',
+                      fontSize: '1rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                    }}
+                  >
+                    ← Back to Active
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Firebase Config Warning */}
+            {!firebaseConnected && (
+              <div style={{
+                background: '#fef3c7',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                marginBottom: '2rem',
+                border: '2px solid #f59e0b',
+                color: '#92400e'
+              }}>
+                <strong style={{ display: 'block', marginBottom: '0.5rem', fontSize: '1.1rem' }}>
+                  ⚠️ Firebase Not Connected
+                </strong>
+                <p style={{ margin: 0 }}>
+                  Please configure Firebase in the HTML file. See setup instructions.
+                </p>
+              </div>
+            )}
+
+            {/* No items message */}
+            {items.length === 0 && !readOnlyMode && !showCompleted && (
+              <div style={{
+                background: 'white',
+                borderRadius: '24px',
+                padding: '5rem 2rem',
+                textAlign: 'center',
+                boxShadow: '0 25px 70px rgba(0,0,0,0.25)'
+              }}>
+                <Upload size={72} style={{ color: '#0f766e', marginBottom: '1.5rem' }} />
+                <h2 style={{ marginBottom: '1rem', color: '#1e293b', fontSize: '2rem', fontWeight: '700' }}>
+                  Load File to Begin
+                </h2>
+                <p style={{ color: '#64748b', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
+                  Select a date to load processing data
+                </p>
+                <button
+                  onClick={async () => {
+                    // Load available dates from Storage
+                    const dates = await listAvailableCSVs();
+                    setAvailableDates(dates);
+                    setShowStoragePicker(true);
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '1.25rem 3.5rem',
+                    fontSize: '1.2rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 25px rgba(15, 118, 110, 0.4)'
+                  }}
+                >
+                  📋 Load New Day
+                </button>
+              </div>
+            )}
+
+            {items.length === 0 && readOnlyMode && !showCompleted && (
+              <div style={{
+                background: 'white',
+                borderRadius: '24px',
+                padding: '5rem 2rem',
+                textAlign: 'center',
+                boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
+                color: '#64748b'
+              }}>
+                <Eye size={72} style={{ marginBottom: '1.5rem', color: '#64748b' }} />
+                <h2 style={{ marginBottom: '1rem', color: '#1e293b' }}>
+                  No Items Loaded
+                </h2>
+                <p>Waiting for someone to load a file...</p>
+              </div>
+            )}
+
+            {/* Active Processing Timer */}
+            {isProcessing && activeItem && !showCompleted && (
+              <div style={{
+                background: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
+                borderRadius: '24px',
+                padding: '2.5rem',
+                marginBottom: '2rem',
+                color: 'white',
+                boxShadow: '0 25px 70px rgba(234, 88, 12, 0.35)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
+                  <div style={{ flex: '1', minWidth: '250px' }}>
+                    <div style={{ fontSize: '1.3rem', opacity: 0.9, marginBottom: '0.5rem', fontWeight: '600' }}>
+                      Processing Now
+                    </div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '900', letterSpacing: '-0.02em' }}>
+                      {getDisplayName(activeItem.name)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '4rem', fontWeight: '900', marginBottom: '1rem', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatTime(currentTime)}
+                    </div>
+                    {!readOnlyMode && (
+                      <button
+                        onClick={stopProcessing}
+                        style={{
+                          background: 'white',
+                          color: '#dc2626',
+                          border: 'none',
+                          borderRadius: '14px',
+                          padding: '1rem 2.5rem',
+                          fontSize: '1.2rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          boxShadow: '0 6px 25px rgba(0,0,0,0.25)'
+                        }}
+                      >
+                        ✓ Complete Case
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Items List */}
+            {!showCompleted && (
+              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                {items.sort((a, b) => {
+                  // Sort by priority: 0 (shopping floor) first, then 1, 2, 3..., then 'missing' last
+                  const priorityA = a.priority === 'missing' ? 9999 : a.priority;
+                  const priorityB = b.priority === 'missing' ? 9999 : b.priority;
+                  return priorityA - priorityB;
+                }).map(item => {
+                const sku = getSKU(item.name);
+                const stats = sku ? getStats(sku) : null;
+                const hasVideo = sku ? videos[sku] : null;
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: 'white',
+                      borderRadius: '20px',
+                      padding: '2rem',
+                      boxShadow: activeItem?.id === item.id 
+                        ? '0 8px 35px rgba(15, 118, 110, 0.3)' 
+                        : '0 4px 20px rgba(0,0,0,0.1)',
+                      transition: 'all 0.3s ease',
+                      border: activeItem?.id === item.id ? '3px solid #0f766e' : '3px solid transparent',
+                      transform: activeItem?.id === item.id ? 'scale(1.02)' : 'scale(1)'
+                    }}
+                  >
+                    {/* Priority dropdown at center top */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                      {!readOnlyMode ? (
+                        // Editable priority dropdown in Edit mode
+                        <select
+                          value={item.priority}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'EDIT') {
+                              setShowPriorityEditor(true);
+                            } else {
+                              updatePriority(item.id, val);
+                            }
+                          }}
+                          style={{
+                            background: getPriorityColor(item.priority),
+                            color: item.priority === 0 ? '#64748b' : 'white',
+                            border: 'none',
+                            borderRadius: '10px',
+                            padding: '0.5rem 1rem',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            minWidth: '140px',
+                            textAlign: 'center',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {/* Current priority */}
+                          <option value={item.priority}>
+                            {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
+                          </option>
+                          
+                          {/* Historical priorities (excluding current) */}
+                          {historicalPriorities.filter(p => p !== item.priority).map(p => (
+                            <option key={p} value={p}>
+                              {p === 'missing' ? 'Priority missing' : p === 0 ? 'Shopping floor' : `Priority ${p}`}
+                            </option>
+                          ))}
+                          
+                          {/* Edit option */}
+                          <option value="EDIT" style={{ fontStyle: 'italic', borderTop: '1px solid #ccc' }}>
+                            ✏️ Edit priorities...
+                          </option>
+                        </select>
+                      ) : (
+                        // Read-only priority badge in View mode
+                        <div style={{
+                          background: getPriorityColor(item.priority),
+                          color: item.priority === 0 ? '#64748b' : 'white',
+                          borderRadius: '10px',
+                          padding: '0.4rem 1rem',
+                          fontSize: '1rem',
+                          fontWeight: '700'
+                        }}>
+                          {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Header Info */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      {/* Item name */}
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <h3 style={{
+                          margin: 0,
+                          fontSize: '1.8rem',
+                          fontWeight: '800',
+                          color: '#1e293b',
+                          letterSpacing: '-0.01em'
+                        }}>
+                          {getDisplayName(item.name)}
+                        </h3>
+                      </div>
+                      
+                      {/* Line 2: Cases, Timing metrics, and action buttons */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                        {/* Cases on left with inline timer */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b' }}>
+                          <Package size={26} />
+                          <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
+                          
+                          {/* Inline timer when processing - visible in both Process and View modes */}
+                          {(itemsInProcess[item.id] || itemsPaused[item.id]) && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem 1rem',
+                              background: itemsPaused[item.id]
+                                ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
+                                : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                              borderRadius: '12px',
+                              boxShadow: itemsPaused[item.id]
+                                ? '0 4px 15px rgba(99, 102, 241, 0.3)'
+                                : '0 4px 15px rgba(245, 158, 11, 0.3)',
+                              marginLeft: '0.5rem'
+                            }}>
+                              <Timer size={20} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
+                              <div style={{
+                                fontSize: '1.3rem',
+                                fontWeight: '800',
+                                color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
+                                fontVariantNumeric: 'tabular-nums',
+                                minWidth: '70px'
+                              }}>
+                                {formatTime(elapsedTimes[item.id] || 0)}
+                              </div>
+                              {/* Show "Paused" text when timer is paused */}
+                              {itemsPaused[item.id] && (
+                                <span style={{
+                                  fontSize: '0.9rem',
+                                  fontWeight: '700',
+                                  color: '#6366f1',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em'
+                                }}>
+                                  Paused
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Timing metrics - matches instructions box width below */}
+                        {!readOnlyMode && stats && (
+                          <div style={{
+                            padding: '0.5rem 0.75rem',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                            flex: '1 1 auto',
+                            minWidth: '200px'
+                          }}>
+                            <div style={{ 
+                              display: 'flex', 
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ 
+                                  fontSize: '0.9rem', 
+                                  color: '#64748b', 
+                                  fontWeight: '600',
+                                  textTransform: 'uppercase',
+                                  marginBottom: '0.25rem'
+                                }}>
+                                  Average processing time per case
+                                </div>
+                                <div 
+                                  onClick={() => setShowTimingEvents(sku)}
+                                  style={{ 
+                                    fontSize: '1.3rem', 
+                                    fontWeight: '700', 
+                                    color: '#0f766e',
+                                    fontVariantNumeric: 'tabular-nums',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    transition: 'color 0.2s'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.color = '#059669'}
+                                  onMouseLeave={(e) => e.currentTarget.style.color = '#0f766e'}
+                                >
+                                  {formatTime(stats.average)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Line 3: Instructions on left, Buttons on right */}
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'stretch' }}>
+                        {/* Instructions panel - narrower, only as wide as needed */}
+                        <div style={{ 
+                          background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                          borderRadius: '12px',
+                          padding: '1rem',
+                          border: '2px solid #fbbf24',
+                          flex: '1 1 auto',
+                          minWidth: '200px',
+                          display: 'flex',
+                          flexDirection: 'column'
+                        }}>
+                          <div style={{ 
+                            textAlign: 'center',
+                            fontSize: '0.9rem',
+                            fontWeight: '700',
+                            color: '#92400e',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '0.75rem'
+                          }}>
+                            Instructions
+                          </div>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            fontSize: '1.8rem', 
+                            color: '#78350f',
+                            flex: '1'
+                          }}>
+                            <span style={{ fontWeight: '600' }}>{item.location}</span>
+                          </div>
+                        </div>
+
+                        {/* Timer/Video and All Done buttons on right */}
+                        {!readOnlyMode && (
+                          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'nowrap', alignItems: 'stretch' }}>
+                            {/* Left column: Timer and Video stacked */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              <button
+                                onClick={() => handleBeginProcessing(item.id)}
+                                style={{
+                                  background: itemsInProcess[item.id]
+                                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' // Orange for Pause
+                                    : itemsPaused[item.id]
+                                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Green for Restart
+                                    : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', // Blue for Begin
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '12px',
+                                  padding: '1.2rem 2rem',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.6rem',
+                                  fontWeight: '700',
+                                  fontSize: '1.1rem',
+                                  boxShadow: itemsInProcess[item.id]
+                                    ? '0 4px 15px rgba(245, 158, 11, 0.3)'
+                                    : itemsPaused[item.id]
+                                    ? '0 4px 15px rgba(16, 185, 129, 0.3)'
+                                    : '0 4px 15px rgba(59, 130, 246, 0.3)',
+                                  minWidth: '140px',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                {itemsInProcess[item.id] ? 'Pause' : itemsPaused[item.id] ? 'Restart' : 'Timer'}
+                              </button>
+                              
+                              {/* Video button */}
+                              {hasVideo ? (
+                                <button
+                                  onClick={() => {
+                                    console.log('Video button clicked. SKU:', sku);
+                                    console.log('Video data exists:', !!videos[sku]);
+                                    console.log('Video data:', videos[sku]);
+                                    setPlayingVideo(sku);
+                                  }}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '1.2rem 1.5rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.6rem',
+                                    fontWeight: '700',
+                                    fontSize: '1.1rem',
+                                    boxShadow: '0 4px 15px rgba(5, 150, 105, 0.3)',
+                                    minWidth: '140px',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <Play size={22} />
+                                  Video
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setShowVideoUpload(item.id)}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '1.2rem 1.5rem',
+                                    cursor: 'default',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.6rem',
+                                    fontWeight: '700',
+                                    fontSize: '1.1rem',
+                                    boxShadow: '0 4px 15px rgba(100, 116, 139, 0.2)',
+                                    minWidth: '140px',
+                                    justifyContent: 'center',
+                                    opacity: 0.7
+                                  }}
+                                >
+                                  <Video size={22} />
+                                  No video available
+                                </button>
+                              )}
+                            </div>
+                            
+                            {/* Right column: All Done button (taller) */}
+                            <button
+                              onClick={() => markComplete(item)}
+                              style={{
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '0',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                fontWeight: '700',
+                                fontSize: '1.2rem',
+                                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                                minWidth: '150px',
+                                justifyContent: 'center',
+                                minHeight: '100%'
+                              }}
+                            >
+                              All Done
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+
+                  </div>
+                );
+              })}
+              </div>
+            )}
+
+            {/* Photo Choice Dialog - Ask user first */}
+            {!readOnlyMode && showPhotoChoice && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.8)',
+                zIndex: 1001,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  background: 'white',
+                  borderRadius: '24px',
+                  padding: '3rem 2rem',
+                  maxWidth: '500px',
+                  width: '100%',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '2rem', fontWeight: '800', color: '#1e293b' }}>
+                    Task Complete!
+                  </h3>
+                  <p style={{ margin: '0 0 2rem 0', fontSize: '1.2rem', color: '#64748b' }}>
+                    Would you like to take a photo of the completed work?
+                  </p>
+                  
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                    {/* Take Photo button */}
+                    <button
+                      onClick={() => {
+                        setShowPhotoChoice(null);
+                        setShowCompletionCamera(showPhotoChoice);
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '16px',
+                        padding: '1.25rem 2.5rem',
+                        fontSize: '1.2rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
+                        minWidth: '150px'
+                      }}
+                    >
+                      📸 Take Photo
+                    </button>
+                    
+                    {/* Skip button */}
+                    <button
+                      onClick={() => {
+                        const item = showPhotoChoice;
+                        setShowPhotoChoice(null);
+                        finalizeCompletion(item, null); // No photo
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '16px',
+                        padding: '1.25rem 2.5rem',
+                        fontSize: '1.2rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: '0 8px 25px rgba(100, 116, 139, 0.4)',
+                        minWidth: '150px'
+                      }}
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Completion Camera Modal */}
+            {!readOnlyMode && showCompletionCamera && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.95)',
+                zIndex: 1001,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  background: 'white',
+                  borderRadius: '24px',
+                  padding: '2rem',
+                  maxWidth: '800px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflow: 'auto'
+                }}>
+                  <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', textAlign: 'center' }}>
+                    Take a picture of the completed case(s)
+                  </h3>
+                  
+                  {!photoTaken ? (
+                    <div>
+                      <video 
+                        ref={completionVideoRef}
+                        autoPlay 
+                        playsInline
+                        style={{
+                          width: '100%',
+                          borderRadius: '16px',
+                          background: '#000',
+                          marginBottom: '1.5rem'
+                        }}
+                      />
+                      
+                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => {
+                            if (completionVideoRef.current && completionCanvasRef.current) {
+                              const video = completionVideoRef.current;
+                              const canvas = completionCanvasRef.current;
+                              canvas.width = video.videoWidth;
+                              canvas.height = video.videoHeight;
+                              const ctx = canvas.getContext('2d');
+                              ctx.drawImage(video, 0, 0);
+                              
+                              canvas.toBlob((blob) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  const photoDataObj = {
+                                    data: reader.result,
+                                    timestamp: new Date().toISOString()
+                                  };
+                                  setPhotoData(photoDataObj);
+                                  setPhotoTaken(true);
+                                  
+                                  // Stop camera
+                                  if (completionMediaStream) {
+                                    completionMediaStream.getTracks().forEach(track => track.stop());
+                                    setCompletionMediaStream(null);
+                                  }
+                                };
+                                reader.readAsDataURL(blob);
+                              }, 'image/jpeg', 0.9);
+                            }
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '1rem 2rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                          }}
+                        >
+                          📸 Take Photo
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            // Stop camera
+                            if (completionMediaStream) {
+                              completionMediaStream.getTracks().forEach(track => track.stop());
+                              setCompletionMediaStream(null);
+                            }
+                            finalizeCompletion(showCompletionCamera, null);
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '1rem 2rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(100, 116, 139, 0.3)'
+                          }}
+                        >
+                          Skip Photo
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (completionMediaStream) {
+                              completionMediaStream.getTracks().forEach(track => track.stop());
+                              setCompletionMediaStream(null);
+                            }
+                            setShowCompletionCamera(null);
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '1rem 2rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)'
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <img 
+                        src={photoData.data}
+                        style={{
+                          width: '100%',
+                          borderRadius: '16px',
+                          marginBottom: '1.5rem'
+                        }}
+                        alt="Completion photo"
+                      />
+                      
+                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => {
+                            finalizeCompletion(showCompletionCamera, photoData);
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '1rem 2rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                          }}
+                        >
+                          ✅ Complete with This Photo
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setPhotoTaken(false);
+                            setPhotoData(null);
+                            
+                            // Restart camera
+                            navigator.mediaDevices.getUserMedia({ 
+                              video: { facingMode: 'environment' }, 
+                              audio: false 
+                            }).then(stream => {
+                              setCompletionMediaStream(stream);
+                              if (completionVideoRef.current) {
+                                completionVideoRef.current.srcObject = stream;
+                              }
+                            }).catch(error => {
+                              console.error('Error restarting camera:', error);
+                            });
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '1rem 2rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)'
+                          }}
+                        >
+                          🔄 Retake
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <canvas ref={completionCanvasRef} style={{ display: 'none' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Completed Items View */}
+            {showCompleted && (
+              <div>
+                <div style={{
+                  background: 'white',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  marginBottom: '2rem',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  textAlign: 'center'
+                }}>
+                  <h2 style={{
+                    margin: 0,
+                    fontSize: '2rem',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Completed Items
+                  </h2>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '1.1rem' }}>
+                    {completedItems.reduce((sum, item) => sum + item.cases, 0)} cases completed of {originalTotalCases} total cases
+                  </p>
+                </div>
+
+                {completedItems.length === 0 ? (
+                  <div style={{
+                    background: 'white',
+                    borderRadius: '20px',
+                    padding: '4rem 2rem',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    color: '#64748b'
+                  }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📦</div>
+                    <h3 style={{ marginBottom: '0.5rem', color: '#1e293b' }}>No Completed Items Yet</h3>
+                    <p>Items marked as complete will appear here</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {completedItems.map(item => (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: 'white',
+                          borderRadius: '16px',
+                          padding: '1.5rem',
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '1rem'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                            <div style={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              color: 'white',
+                              borderRadius: '8px',
+                              padding: '0.25rem 0.75rem',
+                              fontSize: '0.9rem',
+                              fontWeight: '700'
+                            }}>
+                              ✓
+                            </div>
+                            <h3 style={{
+                              margin: 0,
+                              fontSize: '1.3rem',
+                              fontWeight: '700',
+                              color: '#1e293b'
+                            }}>
+                              {getDisplayName(item.name)}
+                            </h3>
+                          </div>
+                          <div style={{ fontSize: '1.52rem', color: '#64748b' }}>
+                            <strong>{item.cases}</strong> cases • {item.location}
+                          </div>
+                        </div>
+                        
+                        {/* Completion Photo */}
+                        {(() => {
+                          const sku = getSKU(item.name);
+                          const photo = completionPhotos[sku];
+                          if (photo) {
+                            return (
+                              <div style={{ 
+                                width: '200px',
+                                flexShrink: 0
+                              }}>
+                                <img 
+                                  src={photo.data}
+                                  style={{
+                                    width: '100%',
+                                    height: '150px',
+                                    objectFit: 'cover',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={(e) => {
+                                    // Show full size photo in modal
+                                    const modal = document.createElement('div');
+                                    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 2rem;';
+                                    modal.onclick = () => modal.remove();
+                                    
+                                    const img = document.createElement('img');
+                                    img.src = photo.data;
+                                    img.style.cssText = 'max-width: 100%; max-height: 100%; border-radius: 16px;';
+                                    modal.appendChild(img);
+                                    
+                                    document.body.appendChild(modal);
+                                  }}
+                                />
+                                <div style={{ 
+                                  fontSize: '0.75rem', 
+                                  color: '#94a3b8', 
+                                  textAlign: 'center',
+                                  marginTop: '0.5rem'
+                                }}>
+                                  📸 Completion photo
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.9rem', color: '#94a3b8', textAlign: 'right' }}>
+                            {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          {!readOnlyMode && (
+                            <button
+                              onClick={() => undoComplete(item)}
+                              style={{
+                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                color: 'white',
+                                border: 'none',
+                                          borderRadius: '10px',
+                                          padding: '0.75rem 1.5rem',
+                                          cursor: 'pointer',
+                                          fontWeight: '700',
+                                          fontSize: '0.95rem',
+                                          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        ↶ Undo
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                )}
+              </div>
+            )}
+
+            {/* Storage Date Picker Modal */}
+            {showStoragePicker && (
+              <div
+                onClick={() => setShowStoragePicker(false)}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    background: 'white',
+                    borderRadius: '20px',
+                    padding: '2rem',
+                    maxWidth: '500px',
+                    width: '90%',
+                    maxHeight: '80vh',
+                    overflow: 'auto',
+                    boxShadow: '0 30px 100px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' }}>
+                    Select Data File to Load
+                  </h3>
+                  
+                  {availableDates.length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                      <p style={{ marginBottom: '1rem' }}>No data files found in Storage.</p>
+                      <p style={{ fontSize: '0.9rem' }}>Upload CSV files to Firebase Storage in folder: <code>produce-pdfs/</code></p>
+                      <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Files can have any name ending in <code>.csv</code></p>
+                      <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', fontStyle: 'italic' }}>The date will be read from the first line of each file</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {availableDates.map(fileInfo => {
+                        // Convert YYYY-MM-DD to readable format
+                        const date = fileInfo.date;
+                        const filename = fileInfo.filename;
+                        const [year, month, day] = date.split('-');
+                        const dateObj = new Date(year, month - 1, day);
+                        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const dayName = dayNames[dateObj.getDay()];
+                        const displayDate = `${dayName}, ${month}/${day}/${year}`;
+                        
+                        return (
+                          <button
+                            key={filename}
+                            onClick={() => {
+                              setShowStoragePicker(false);
+                              loadCSVFromStorage(fileInfo);
+                            }}
+                            style={{
+                              padding: '1rem 1.5rem',
+                              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                              border: '2px solid #e2e8f0',
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              fontSize: '1.05rem',
+                              color: '#1e293b',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+                              e.currentTarget.style.color = 'white';
+                              e.currentTarget.style.borderColor = '#3b82f6';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+                              e.currentTarget.style.color = '#1e293b';
+                              e.currentTarget.style.borderColor = '#e2e8f0';
+                            }}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <div style={{ fontSize: '1.05rem', fontWeight: '700' }}>{displayDate}</div>
+                              <div style={{ fontSize: '0.85rem', opacity: 0.7, fontWeight: '400' }}>{filename}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={() => setShowStoragePicker(false)}
+                    style={{
+                      marginTop: '1.5rem',
+                      width: '100%',
+                      padding: '1rem',
+                      background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Video Player Modal */}
+            {playingVideo && videos[playingVideo] && (() => {
+              // Convert video data to Blob URL for playback
+              const videoData = videos[playingVideo];
+              let videoSrc = null;
+              let conversionError = null;
+              
+              try {
+                // Check if data is ArrayBuffer (new format) or data URL (old format)
+                if (videoData.data instanceof ArrayBuffer) {
+                  console.log('✅ Video stored as ArrayBuffer (new format)');
+                  console.log('ArrayBuffer size:', videoData.data.byteLength, 'bytes');
+                  console.log('MIME type:', videoData.type);
+                  
+                  // Convert ArrayBuffer directly to Blob URL
+                  const blob = new Blob([videoData.data], { type: videoData.type });
+                  videoSrc = URL.createObjectURL(blob);
+                  console.log('✅ Created Blob URL:', videoSrc);
+                  
+                } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
+                  console.log('⚠️ Video stored as data URL (old format)');
+                  console.log('Data URL prefix:', videoData.data.substring(0, 100));
+                  
+                  // Try to convert old base64 data URL format
+                  const parts = videoData.data.split(',');
+                  if (parts.length !== 2) {
+                    throw new Error('Invalid data URL format');
+                  }
+                  
+                  const base64Data = parts[1];
+                  const mimeTypeMatch = parts[0].match(/data:([^;]+)/);
+                  if (!mimeTypeMatch) {
+                    throw new Error('Could not extract MIME type');
+                  }
+                  const mimeType = mimeTypeMatch[1];
+                  
+                  console.log('Base64 data length:', base64Data.length);
+                  console.log('MIME type:', mimeType);
+                  
+                  // Validate base64
+                  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+                  if (!base64Regex.test(base64Data)) {
+                    throw new Error('Base64 string contains invalid characters (corrupted)');
+                  }
+                  
+                  // Convert to binary
+                  const binaryString = atob(base64Data);
+                  const bytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                  }
+                  
+                  // Create Blob and Blob URL
+                  const blob = new Blob([bytes], { type: mimeType });
+                  videoSrc = URL.createObjectURL(blob);
+                  console.log('✅ Created Blob URL from old format:', videoSrc);
+                } else {
+                  throw new Error('Unknown video data format');
+                }
+              } catch (error) {
+                console.error('❌ Error creating video URL:', error);
+                conversionError = error.message;
+              }
+              
+              return (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0,0,0,0.95)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '2rem',
+                  backdropFilter: 'blur(10px)'
+                }}
+                onClick={() => setPlayingVideo(null)}
+              >
+                {console.log('Video modal rendering. playingVideo:', playingVideo, 'Video data:', videoData, 'Video src:', videoSrc)}
+                <div
+                  style={{
+                    background: 'white',
+                    borderRadius: '24px',
+                    padding: '2rem',
+                    maxWidth: '1000px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflow: 'hidden',
+                    boxShadow: '0 30px 100px rgba(0,0,0,0.5)'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' }}>
+                      Processing Instructions
+                    </h3>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      {!readOnlyMode && (
+                        <button
+                          onClick={async () => {
+                            const sku = playingVideo;
+                            console.log('Deleting video for SKU:', sku);
+                            
+                            // Close modal immediately
+                            setPlayingVideo(null);
+                            
+                            // Delete from IndexedDB
+                            await deleteVideoFromDB(sku);
+                            
+                            console.log('Video deleted, reloading page...');
+                            
+                            // Reload page to show updated state without React DOM conflicts
+                            window.location.reload();
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '10px',
+                            padding: '0.75rem 1.5rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.05rem',
+                            boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)'
+                          }}
+                        >
+                          🗑️ Delete
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setPlayingVideo(null)}
+                        style={{
+                          background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '10px',
+                          padding: '0.75rem 1.5rem',
+                          cursor: 'pointer',
+                          fontWeight: '700',
+                          fontSize: '1.05rem',
+                          boxShadow: '0 4px 15px rgba(100, 116, 139, 0.3)'
+                        }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  {conversionError && (
+                    <div style={{
+                      background: '#fef2f2',
+                      border: '2px solid #dc2626',
+                      borderRadius: '12px',
+                      padding: '1.5rem',
+                      marginBottom: '1.5rem'
+                    }}>
+                      <div style={{ fontWeight: '700', color: '#dc2626', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                        ⚠️ Video File Corrupted
+                      </div>
+                      <div style={{ color: '#991b1b', fontSize: '1rem', marginBottom: '1rem' }}>
+                        This video was recorded with an older version and cannot be played. 
+                      </div>
+                      <div style={{ color: '#7f1d1d', fontSize: '0.95rem' }}>
+                        <strong>Solution:</strong> Delete this video (🗑️ button above) and record a new one.
+                      </div>
+                      <div style={{ color: '#7f1d1d', fontSize: '0.9rem', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                        Error: {conversionError}
+                      </div>
+                    </div>
+                  )}
+                  <video
+                    key={playingVideo}
+                    controls
+                    autoPlay
+                    playsInline
+                    loop={false}
+                    onLoadedData={() => console.log('Video loaded successfully!')}
+                    onError={(e) => console.error('Video error:', e.target.error)}
+                    style={{
+                      width: '100%',
+                      borderRadius: '16px',
+                      maxHeight: 'calc(90vh - 150px)',
+                      background: '#000'
+                    }}
+                    src={videoSrc}
+                  />
+                </div>
+              </div>
+              );
+            })()}
+
+            {/* Video Upload/Recording Section - Full Screen Modal */}
+            {!readOnlyMode && showVideoUpload && (() => {
+              const item = items.find(i => i.id === showVideoUpload);
+              if (!item) return null;
+              
+              return (
+                <div
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget && !isRecording) {
+                      setShowVideoUpload(null);
+                    }
+                  }}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.95)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1000,
+                    padding: '2rem'
+                  }}
+                >
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      width: '100%',
+                      maxWidth: '1200px',
+                      maxHeight: '90vh',
+                      background: 'white',
+                      borderRadius: '24px',
+                      padding: '3rem',
+                      overflowY: 'auto',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Close button */}
+                    {!isRecording && (
+                      <button
+                        onClick={() => setShowVideoUpload(null)}
+                        style={{
+                          position: 'absolute',
+                          top: '2rem',
+                          right: '2rem',
+                          background: '#dc2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '50px',
+                          height: '50px',
+                          fontSize: '2rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '300',
+                          lineHeight: '1'
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+
+                    {/* Item name header */}
+                    <h2 style={{ 
+                      fontSize: '2rem', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      marginBottom: '2rem',
+                      paddingRight: '60px'
+                    }}>
+                      {getDisplayName(item.name)}
+                    </h2>
+
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => handleVideoUpload(e, item)}
+                      style={{ display: 'none' }}
+                    />
+                    
+                    {recordingItemId === item.id && isRecording ? (
+                      // Recording interface - Full screen
+                      <div>
+                        <div style={{ marginBottom: '2rem' }}>
+                          <video
+                            ref={videoPreviewRef}
+                            autoPlay
+                            playsInline
+                            webkit-playsinline="true"
+                            muted
+                            style={{
+                              width: '100%',
+                              maxHeight: '60vh',
+                              borderRadius: '16px',
+                              background: '#000',
+                              objectFit: 'contain'
+                            }}
+                          />
+                        </div>
+                        
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          gap: '1.5rem', 
+                          flexWrap: 'wrap',
+                          marginBottom: '1.5rem'
+                        }}>
+                          <button
+                            onClick={stopRecording}
+                            style={{
+                              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '1.5rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem',
+                              boxShadow: '0 6px 20px rgba(220, 38, 38, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem'
+                            }}
+                          >
+                            <span style={{ fontSize: '2rem' }}>⏹</span>
+                            Stop & Save
+                          </button>
+                          <button
+                            onClick={cancelRecording}
+                            style={{
+                              background: 'white',
+                              color: '#64748b',
+                              border: '3px solid #e2e8f0',
+                              borderRadius: '12px',
+                              padding: '1.5rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        
+                        <div style={{ 
+                          textAlign: 'center', 
+                          color: '#dc2626', 
+                          fontWeight: '700', 
+                          fontSize: '1.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
+                        }}>
+                          <span style={{ fontSize: '2rem' }}>🔴</span>
+                          Recording...
+                        </div>
+                      </div>
+                    ) : (
+                      // Upload/record choice - Full screen
+                      <div>
+                        <div style={{ 
+                          marginBottom: '3rem', 
+                          textAlign: 'center',
+                          padding: '3rem',
+                          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                          borderRadius: '16px'
+                        }}>
+                          <div style={{ 
+                            fontWeight: '700', 
+                            marginBottom: '1rem', 
+                            color: '#1e293b', 
+                            fontSize: '1.5rem' 
+                          }}>
+                            Add Processing Video
+                          </div>
+                          <div style={{ 
+                            fontSize: '1.2rem', 
+                            color: '#64748b', 
+                            fontWeight: '500' 
+                          }}>
+                            Record with camera or choose an existing file
+                          </div>
+                        </div>
+                        
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '2rem', 
+                          flexWrap: 'wrap', 
+                          justifyContent: 'center' 
+                        }}>
+                          <button
+                            onClick={() => startRecording(item)}
+                            style={{
+                              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '16px',
+                              padding: '2rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem',
+                              boxShadow: '0 6px 20px rgba(220, 38, 38, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1rem',
+                              minWidth: '250px',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <span style={{ fontSize: '2rem' }}>📹</span>
+                            Record Video
+                          </button>
+                          
+                          <button
+                            onClick={() => videoInputRef.current?.click()}
+                            style={{
+                              background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '16px',
+                              padding: '2rem 3rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '1.3rem',
+                              boxShadow: '0 6px 20px rgba(15, 118, 110, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1rem',
+                              minWidth: '250px',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <span style={{ fontSize: '2rem' }}>📁</span>
+                            Choose File
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Timing Events Modal */}
+            {showTimingEvents && timingEventsBySKU[showTimingEvents] && (
+              <div
+                onClick={() => setShowTimingEvents(null)}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '2rem'
+                }}
+              >
+                <div
+                  style={{
+                    background: 'white',
+                    borderRadius: '24px',
+                    padding: '2rem',
+                    maxWidth: '800px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflow: 'auto',
+                    boxShadow: '0 30px 100px rgba(0,0,0,0.5)'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' }}>
+                        Processing History
+                      </h3>
+                      <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '1rem' }}>
+                        SKU #{showTimingEvents}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowTimingEvents(null)}
+                      style={{
+                        background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '0.75rem 1.5rem',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1.05rem',
+                        boxShadow: '0 4px 15px rgba(220, 38, 38, 0.3)'
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  {/* Timing Events List */}
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {timingEventsBySKU[showTimingEvents].map((event, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                          borderRadius: '12px',
+                          padding: '1.5rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                            <div>
+                              <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600', marginBottom: '0.25rem' }}>
+                                TOTAL TIME
+                              </div>
+                              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f766e', fontVariantNumeric: 'tabular-nums' }}>
+                                {formatTime(event.totalTime)}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600', marginBottom: '0.25rem' }}>
+                                CASES
+                              </div>
+                              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
+                                {event.cases}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600', marginBottom: '0.25rem' }}>
+                                PER CASE
+                              </div>
+                              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#d97706', fontVariantNumeric: 'tabular-nums' }}>
+                                {formatTime(event.timePerCase)}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>
+                              EVENT #{index + 1} - {new Date(event.timestamp).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        {!readOnlyMode && (
+                          <button
+                            onClick={() => deleteTimingEvent(showTimingEvents, index)}
+                            style={{
+                              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '10px',
+                              padding: '0.75rem 1.5rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '0.95rem',
+                              boxShadow: '0 4px 15px rgba(220, 38, 38, 0.3)',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Stats Summary */}
+                  <div style={{
+                    marginTop: '2rem',
+                    padding: '1.5rem',
+                    background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                    borderRadius: '12px'
+                  }}>
+                    <div style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', marginBottom: '1rem' }}>
+                      Average processing time per case
+                    </div>
+                    <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.25rem' }}>Average</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f766e', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatTime(getStats(showTimingEvents)?.average || 0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.25rem' }}>Total Cases Timed</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#d97706', fontVariantNumeric: 'tabular-nums' }}>
+                          {getStats(showTimingEvents)?.totalCases || 0}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Priority Editor Modal */}
+            {showPriorityEditor && (
+              <div
+                onClick={() => setShowPriorityEditor(false)}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 1000,
+                  padding: '2rem'
+                }}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    maxWidth: '600px',
+                    width: '100%',
+                    maxHeight: '80vh',
+                    background: 'white',
+                    borderRadius: '16px',
+                    padding: '2rem',
+                    overflowY: 'auto'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' }}>
+                      Manage Priorities
+                    </h2>
+                    <button
+                      onClick={() => setShowPriorityEditor(false)}
+                      style={{
+                        background: '#dc2626',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        fontSize: '1.5rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <p style={{ color: '#64748b', marginBottom: '2rem', fontSize: '1rem' }}>
+                    These are all the priorities that have been used. You can delete priorities that are no longer needed.
+                  </p>
+
+                  {historicalPriorities.length === 0 ? (
+                    <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>No priorities recorded yet.</p>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                      {historicalPriorities.map(priority => (
+                        <div
+                          key={priority}
+                          style={{
+                            background: '#f8fafc',
+                            borderRadius: '12px',
+                            padding: '1.5rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '1rem'
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{
+                              display: 'inline-block',
+                              background: getPriorityColor(priority),
+                              color: priority === 0 ? '#64748b' : 'white',
+                              borderRadius: '10px',
+                              padding: '0.5rem 1rem',
+                              fontSize: '1.1rem',
+                              fontWeight: '700'
+                            }}>
+                              {priority === 'missing' ? 'Priority missing' : priority === 0 ? 'Shopping floor' : `Priority ${priority}`}
+                            </div>
+                          </div>
+                          {!readOnlyMode && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete priority "${priority === 'missing' ? 'missing' : priority === 0 ? 'Shopping floor' : priority}"? This won't affect existing items.`)) {
+                                  deletePriority(priority);
+                                }
+                              }}
+                              style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '0.5rem 1rem',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '0.9rem'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<ProduceProcessorApp />);
+
+    setTimeout(() => {
+      lucide.createIcons();
+    }, 100);
+  </script>
+</body>
+</html>
