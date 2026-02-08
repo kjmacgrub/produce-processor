@@ -10,6 +10,21 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
   
   <style>
+    .preview-notice {
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1rem auto;
+      max-width: 800px;
+      display: none;
+    }
+    .preview-notice.show {
+      display: block;
+    }
+  </style>
+  
+  <style>
     * {
       margin: 0;
       padding: 0;
@@ -223,10 +238,19 @@
   </style>
 </head>
 <body>
+  <div class="preview-notice" id="preview-notice">
+    <h3 style="margin: 0 0 0.75rem 0; color: #92400e;">⚠️ Important: Download and Open Directly</h3>
+    <p style="margin: 0; color: #78350f; line-height: 1.6;">
+      <strong>This file cannot run in preview mode.</strong><br>
+      Please download this HTML file and open it directly in your browser (Chrome, Firefox, Safari, or Edge).
+      Firebase requires direct file access to work properly.
+    </p>
+  </div>
+  
   <div class="container">
     <h1>📋 File Uploader</h1>
     <p class="subtitle">Upload daily produce processing files to Firebase Storage</p>
-    <p style="text-align: center; color: #64748b; font-size: 0.9rem; font-weight: 700; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 0.05em;">v2.33.1</p>
+    <p style="text-align: center; color: #64748b; font-size: 0.9rem; font-weight: 700; margin-top: -0.5rem; margin-bottom: 1.5rem; letter-spacing: 0.05em;">v2.33.6</p>
     
     <div class="upload-section">
       <label for="date-input" style="display: block; margin-bottom: 0.5rem; font-weight: 700; color: #1e293b;">Select Date:</label>
@@ -240,7 +264,7 @@
         <label for="file-input" class="file-select-btn">
           📄 Choose CSV or PDF File
         </label>
-        <input type="file" id="file-input" accept=".csv,.pdf" />
+        <input type="file" id="file-input" accept=".csv,.pdf,text/csv,application/pdf" />
       </div>
       
       <div id="file-name" class="file-name" style="display: none;"></div>
@@ -269,6 +293,25 @@
   </div>
   
   <script>
+    // Check Firebase availability
+    if (typeof firebase === 'undefined') {
+      console.error('⚠️ Firebase not loaded - likely in preview mode');
+      document.addEventListener('DOMContentLoaded', () => {
+        const notice = document.getElementById('preview-notice');
+        if (notice) {
+          notice.classList.add('show');
+        }
+        const statusDiv = document.getElementById('status');
+        if (statusDiv) {
+          statusDiv.innerHTML = '<div style="padding: 1rem; background: #fef2f2; border: 2px solid #fecaca; border-radius: 8px; color: #991b1b; margin: 1rem 0;"><strong>⚠️ Error: Firebase Not Loaded</strong><br>Please download this file and open it directly in your browser.</div>';
+          statusDiv.style.display = 'block';
+        }
+      });
+      // Don't throw - just stop execution gracefully
+      console.log('Script execution stopped - download file to use');
+    } else {
+      console.log('✅ Firebase loaded successfully');
+      
     // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAOtKt-nDBvAod23fAX04nXpCxmA7FnWKk",
@@ -292,6 +335,20 @@
     const status = document.getElementById('status');
     const pdfList = document.getElementById('pdf-list');
     
+    console.log('=== PDF Uploader Initialized ===');
+    console.log('dateInput:', dateInput);
+    console.log('fileInput:', fileInput);
+    console.log('fileName:', fileName);
+    console.log('uploadBtn:', uploadBtn);
+    console.log('Initial button disabled state:', uploadBtn.disabled);
+    
+    // Test: Try enabling button after 2 seconds
+    setTimeout(() => {
+      console.log('=== Test: Manually enabling button ===');
+      uploadBtn.disabled = false;
+      console.log('Button disabled after test:', uploadBtn.disabled);
+    }, 2000);
+    
     // Set default date to today
     dateInput.valueAsDate = new Date();
     
@@ -299,11 +356,27 @@
     
     // Handle file selection
     fileInput.addEventListener('change', (e) => {
+      console.log('=== File input changed ===');
       selectedFile = e.target.files[0];
+      console.log('1. Selected file:', selectedFile);
+      
       if (selectedFile) {
+        console.log('2. File name:', selectedFile.name);
+        console.log('3. File type:', selectedFile.type);
+        console.log('4. Current button state:', uploadBtn.disabled);
+        
+        // Show file name
         fileName.textContent = `Selected: ${selectedFile.name}`;
         fileName.style.display = 'block';
+        console.log('5. File name display updated');
+        
+        // Enable button
         uploadBtn.disabled = false;
+        console.log('6. Button disabled attribute set to:', uploadBtn.disabled);
+        console.log('7. Button element:', uploadBtn);
+        
+      } else {
+        console.log('No file selected');
       }
     });
     
@@ -386,24 +459,11 @@
           div.innerHTML = `
             <div style="display: flex; align-items: center; gap: 0.75rem;">
               <span class="pdf-date">${displayDate}</span>
-              <span style="
-                font-size: 0.75rem; 
-                font-weight: 700;
-                padding: 0.25rem 0.5rem;
-                background: ${fileExtension === 'CSV' ? '#10b981' : '#f59e0b'};
-                color: white;
-                border-radius: 4px;
-              ">${fileExtension}</span>
+              <span style="font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; background: ${fileExtension === 'CSV' ? '#10b981' : '#f59e0b'}; color: white; border-radius: 4px;">
+                ${fileExtension}
+              </span>
             </div>
             <button class="delete-btn" onclick="deletePDF('${item.name}')">Delete</button>
-          `;
-          pdfList.appendChild(div);
-        }
-      } catch (error) {
-        console.error('Error loading files:', error);
-        pdfList.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 2rem;">Error loading files</p>';
-      }
-    }
           `;
           pdfList.appendChild(div);
         }
@@ -444,6 +504,7 @@
     
     // Load PDFs on page load
     loadUploadedPDFs();
+    }
   </script>
 </body>
 </html>
