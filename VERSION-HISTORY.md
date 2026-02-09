@@ -1,5 +1,75 @@
 # Version History - Produce Processing App
 
+## v2.80 (2026-02-08)
+**UI Polish: Clear Data Button More Orange and Transparent**
+
+### Changed:
+- **Clear Data button now orange** instead of red
+- **15% transparent** for softer appearance
+- Blends better with background
+
+### The Change:
+
+**Before:**
+- Color: Red `#ef4444 → #dc2626`
+- Opacity: 100% (solid)
+- Appearance: Bold, bright red
+
+**After:**
+- Color: Orange `#f97316 → #ea580c`
+- Opacity: 85% (15% transparent)
+- Appearance: Softer, warmer orange
+
+### Visual Comparison:
+
+**Before (Red, Solid):**
+```
+┌──────────────────┐
+│ 🗑️ Clear Data    │  ← Bright red, fully opaque
+└──────────────────┘
+```
+
+**After (Orange, Transparent):**
+```
+┌──────────────────┐
+│ 🗑️ Clear Data    │  ← Warm orange, slightly see-through
+└──────────────────┘
+```
+
+### Technical Details:
+
+**Color changed from red to orange:**
+```css
+/* Before */
+background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+
+/* After */
+background: linear-gradient(135deg, 
+  rgba(249, 115, 22, 0.85) 0%,    /* Orange with 85% opacity */
+  rgba(234, 88, 12, 0.85) 100%     /* Darker orange with 85% opacity */
+);
+```
+
+**Box shadow also updated:**
+```css
+/* Before */
+boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)' /* Red */
+
+/* After */
+boxShadow: '0 4px 15px rgba(249, 115, 22, 0.3)' /* Orange */
+```
+
+### Benefits:
+
+✅ **Softer appearance** - 85% opacity less harsh  
+✅ **Warmer tone** - Orange friendlier than red  
+✅ **Better blending** - Slight transparency integrates with background  
+✅ **Still noticeable** - Clear enough to find when needed  
+
+**Clear Data button now has a softer, warmer appearance!** 🧡✨
+
+---
+
 ## v2.79 (2026-02-08)
 **Feature: Clickable Mode Toggle on Non-iPad Devices**
 
