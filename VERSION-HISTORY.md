@@ -1,5 +1,92 @@
 # Version History - Produce Processing App
 
+## v2.81 (2026-02-08)
+**UI Improvement: Compact Completed Items Link**
+
+### Changed:
+- **Moved "Completed" link** to main heading
+- **Deleted separate link** below numbers
+- **More compact layout** - everything in one title line
+
+### The Change:
+
+**Before:**
+```
+┌─────────────────────────┐
+│      REMAINING          │
+│                         │
+│  25 cases  (5 items)    │
+│                         │
+│  Completed: 10 cases    │  ← Separate link below
+└─────────────────────────┘
+```
+
+**After:**
+```
+┌─────────────────────────┐
+│  REMAINING/COMPLETED    │  ← Combined, "COMPLETED" is clickable
+│                         │
+│  25 cases  (5 items)    │
+└─────────────────────────┘
+```
+
+### Visual Details:
+
+**When no items completed:**
+```
+REMAINING
+```
+
+**When items completed:**
+```
+REMAINING/COMPLETED
+          ↑ This part is green, underlined, clickable
+```
+
+### Technical Implementation:
+
+**Conditional rendering:**
+```javascript
+Remaining
+{completedItems.length > 0 && (
+  <>
+    <span>/</span>
+    <span onClick={() => setShowCompleted(!showCompleted)}>
+      Completed
+    </span>
+  </>
+)}
+```
+
+**Styling for "COMPLETED":**
+- Color: Green `#10b981`
+- Cursor: Pointer (shows it's clickable)
+- Text decoration: Underline
+- Font: Same size as "REMAINING" (1.5rem)
+- Case: Uppercase (matches "REMAINING")
+
+### Benefits:
+
+✅ **More compact** - Uses less vertical space  
+✅ **Cleaner layout** - No extra line below numbers  
+✅ **Still accessible** - Easy to click when needed  
+✅ **Shows status** - "COMPLETED" only appears when relevant  
+
+### User Flow:
+
+**No completed items:**
+- Shows: "REMAINING"
+- No clickable link (nothing completed yet)
+
+**With completed items:**
+- Shows: "REMAINING/COMPLETED"
+- Click "COMPLETED" → View completed items list
+- Click "Back to Active" → Return to remaining items
+
+**Completed items link now integrated into main heading!** 🎯✨
+
+---
+
 ## v2.80 (2026-02-08)
 **UI Polish: Clear Data Button More Orange and Transparent**
 

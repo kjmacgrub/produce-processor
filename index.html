@@ -2339,7 +2339,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.80
+                  v2.81
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2386,6 +2386,21 @@
                               letterSpacing: '0.05em'
                             }}>
                               Remaining
+                              {completedItems.length > 0 && (
+                                <>
+                                  <span>/</span>
+                                  <span 
+                                    onClick={() => setShowCompleted(!showCompleted)}
+                                    style={{
+                                      color: '#10b981',
+                                      cursor: 'pointer',
+                                      textDecoration: 'underline'
+                                    }}
+                                  >
+                                    Completed
+                                  </span>
+                                </>
+                              )}
                             </div>
                             
                             {/* Cases and Items side by side */}
@@ -2441,24 +2456,6 @@
                       );
                     })()}
                   </div>
-                
-                {/* Completed items link - show when there are completed items */}
-                {completedItems.length > 0 && (
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <div 
-                      onClick={() => setShowCompleted(!showCompleted)}
-                      style={{
-                        fontSize: '1rem',
-                        color: '#10b981',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      Completed: {completedItems.reduce((sum, item) => sum + item.cases, 0)} cases
-                    </div>
-                  </div>
-                )}
               </div>
               
               {/* Back to Active button (only shown when viewing completed) */}
