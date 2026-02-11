@@ -1,5 +1,891 @@
 # Version History - Produce Processing App
 
+## v2.97 (2026-02-08)
+**Removed Pause/Restart from Item Cards**
+
+### Changed:
+- **Removed Timer button** from item cards (Line 2)
+- **Pause/Restart now only on floating timers**
+- **Added "Start Timer" button** that only shows when timer is NOT active
+- **Cleaner item cards** - less button clutter
+
+### The Change:
+
+**Before (v2.96):**
+```
+Line 2: [Cases] [Done] [Timer/Pause/Restart] [Avg: 2:30]
+                         ↑ Always visible, changes based on state
+```
+
+**After (v2.97):**
+```
+Line 2: [Cases] [Done] [Start Timer] [Avg: 2:30]
+                        ↑ Only shows when timer NOT active
+
+Floating timer:
+┌─────────┐
+│ Apples  │
+│  5:23   │
+│ [Pause] │  ← Pause/Restart controls here
+└─────────┘
+```
+
+### Behavior:
+
+**When timer is NOT active:**
+- Item card shows **[Start Timer]** button (blue)
+- Click to start timer
+- Floating timer appears
+
+**When timer IS active:**
+- Item card shows **NO timer button**
+- Floating timer shows **[Pause]** button
+- All timer controls on floating timer
+
+**When timer is paused:**
+- Item card shows **NO timer button**
+- Floating timer shows **[Restart]** button
+- All timer controls on floating timer
+
+### Benefits:
+
+✅ **No duplication** - Timer controls only in one place  
+✅ **Cleaner cards** - Less visual clutter  
+✅ **Clear separation** - Start on card, control on floating timer  
+✅ **More space** - Room for other information  
+
+### Line 2 Layout:
+
+**Timer NOT active:**
+```
+[Cases] [Done] [Start Timer] [Avg: 2:30]
+```
+
+**Timer IS active or paused:**
+```
+[Cases] [Done] [Avg: 2:30]
+         ↑ Timer button gone, controlled via floating timer
+```
+
+### Technical Changes:
+
+**Start Timer button:**
+```javascript
+{!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+  <button onClick={() => handleBeginProcessing(item.id)}>
+    Start Timer
+  </button>
+)}
+```
+
+**Condition:**
+- Only shows when item is NOT in process
+- Only shows when item is NOT paused
+- Disappears when timer starts
+
+**Floating timer handles:**
+- Pause (when running)
+- Restart (when paused)
+
+### User Flow:
+
+1. **Click "Start Timer"** on item card
+2. Button disappears from card
+3. Floating timer appears bottom-right
+4. Use floating timer to pause/restart
+5. Complete item → floating timer disappears
+6. "Start Timer" button reappears on card
+
+**Timer controls simplified - start on card, pause/restart on floating timer!** ⏱️✨
+
+---
+
+## v2.96 (2026-02-08)
+**Multiple Timers with Black & Yellow Theme**
+
+### Changed:
+- **Multiple timers supported** - Run timers for multiple items simultaneously
+- **Black and yellow theme** - High-contrast caution/construction aesthetic
+- **Bottom-right positioning** - Timers start in bottom-right corner
+- **Stack left** - New timers appear to the left of existing ones
+- **Smaller footprint** - Reduced from 350px to 280-320px width per timer
+
+### The Feature:
+
+**Single Timer:**
+```
+                                    ┌──────────┐
+                                    │ Apples   │
+                                    │  5:23    │
+                                    │ [Pause]  │
+                                    └──────────┘
+                                              ↑ bottom-right
+```
+
+**Multiple Timers (stacking left):**
+```
+              ┌──────┐  ┌──────┐  ┌──────┐
+              │Banana│  │Orange│  │Apples│
+              │ 2:15 │  │ 8:42 │  │ 5:23 │
+              │[Paus]│  │[Paus]│  │[Paus]│
+              └──────┘  └──────┘  └──────┘
+           3rd timer  2nd timer  1st timer ↑ 
+                                     bottom-right
+```
+
+### Black & Yellow Theme:
+
+**Timer Running:**
+- **Background:** Black gradient (#1e293b → #0f172a)
+- **Border:** 3px solid yellow (#fbbf24)
+- **Text:** Yellow (#fbbf24)
+- **Button:** Transparent with yellow border
+- **Hover:** Yellow fill with black text
+
+**Timer Paused:**
+- **Background:** Same black gradient
+- **Border:** 3px solid gray (#64748b)
+- **Text:** Yellow for time, gray for "PAUSED"
+- **Button:** Yellow fill with black text
+- **Hover:** Darker yellow
+
+### Layout:
+
+**Positioning:**
+```css
+position: fixed;
+bottom: 2rem;
+right: 2rem;
+display: flex;
+flex-direction: row-reverse;  /* Stack right to left */
+gap: 1rem;
+```
+
+**Order:**
+- First timer started → Rightmost position
+- Second timer started → Appears to the left
+- Third timer started → Appears to the left of second
+- And so on...
+
+### Size Changes:
+
+**v2.95 (single timer):**
+- Width: 350px minimum
+- Timer: 4rem font
+
+**v2.96 (multiple timers):**
+- Width: 280-320px per timer
+- Timer: 3.5rem font
+- More compact to fit multiple
+
+### Use Cases:
+
+**Use Case 1: Parallel Processing**
+- Worker 1 starts timing Apples
+- Worker 2 starts timing Oranges
+- Both timers visible simultaneously
+- Each can be paused/restarted independently
+
+**Use Case 2: Multi-tasking**
+- Start timer on item A
+- Pause while waiting
+- Start timer on item B
+- Both timers show progress
+- Resume item A when ready
+
+**Use Case 3: Team Visibility**
+- View Mode users see all active timers
+- Know what multiple workers are timing
+- Monitor progress on multiple items
+
+### Benefits:
+
+✅ **Multi-tasking** - Time multiple items at once  
+✅ **High visibility** - Black & yellow construction theme  
+✅ **Better organization** - See all active work  
+✅ **Team coordination** - Everyone sees who's timing what  
+✅ **Efficient use of space** - Compact, side-by-side layout  
+
+### Technical Implementation:
+
+**Find all active timers:**
+```javascript
+const activeTimerIds = [
+  ...Object.keys(itemsInProcess).filter(id => itemsInProcess[id]),
+  ...Object.keys(itemsPaused).filter(id => itemsPaused[id])
+];
+```
+
+**Render multiple:**
+```javascript
+<div style={{
+  position: 'fixed',
+  bottom: '2rem',
+  right: '2rem',
+  display: 'flex',
+  flexDirection: 'row-reverse',  // Right to left
+  gap: '1rem'
+}}>
+  {activeTimerIds.map(timerId => (
+    <TimerCard key={timerId} ... />
+  ))}
+</div>
+```
+
+**Color scheme:**
+- Background: `#1e293b` → `#0f172a` (dark gray/black)
+- Yellow: `#fbbf24` (text, borders, buttons)
+- Gray: `#64748b` (paused state border)
+
+### Visual Comparison:
+
+**Before (v2.95):** Orange theme, single timer, bottom-center
+**After (v2.96):** Black & yellow theme, multiple timers, bottom-right, stack left
+
+**Multiple simultaneous timers with high-contrast black & yellow theme!** ⏱️✨
+
+---
+
+## v2.95 (2026-02-08)
+**Floating Timer Pop-out**
+
+### Changed:
+- **Removed inline timer** from item cards
+- **Added floating timer** that appears when timer is active
+- **Fixed position** at bottom-center of screen
+- **Large, readable display** optimized for iPad
+- **Always visible** - doesn't scroll away with items
+
+### The Feature:
+
+**Before (v2.94):**
+```
+┌────────────────────────────────┐
+│ 📦 25 cases [⏱️ 5:23] [Paused] │ ← Inline timer
+└────────────────────────────────┘
+```
+
+**After (v2.95):**
+```
+┌────────────────────────────────┐
+│ 📦 25 cases                    │ ← Clean, no inline timer
+│                                │
+│         ┌──────────────┐       │
+│         │ Organic Appl.│       │
+│         │    5:23      │       │ ← Floating timer
+│         │   [Pause]    │       │   (bottom-center)
+│         └──────────────┘       │
+└────────────────────────────────┘
+```
+
+### Floating Timer Design:
+
+**When Running:**
+```
+┌─────────────────────────┐
+│   Organic Apples        │ ← Item name
+│                         │
+│       5:23              │ ← Large timer (4rem)
+│                         │
+│      [Pause]            │ ← Action button
+└─────────────────────────┘
+Orange gradient background
+```
+
+**When Paused:**
+```
+┌─────────────────────────┐
+│   Organic Apples        │
+│                         │
+│       5:23              │
+│                         │
+│  Paused  [Restart]      │ ← Status + button
+└─────────────────────────┘
+Blue/purple gradient background
+```
+
+### Features:
+
+**Always Visible:**
+- Fixed at bottom-center of screen
+- Doesn't scroll with content
+- Always accessible
+
+**Large Display:**
+- Timer: 4rem font size (very large)
+- Item name: 1.2rem
+- High contrast white text
+
+**Color-Coded:**
+- **Orange gradient** - Timer running
+- **Blue/purple gradient** - Timer paused
+
+**Interactive:**
+- **Pause button** - Stop the timer (when running)
+- **Restart button** - Resume the timer (when paused)
+
+### Benefits:
+
+✅ **Highly visible** - Can't miss an active timer  
+✅ **Cleaner item cards** - Less visual clutter  
+✅ **No scroll confusion** - Always in same spot  
+✅ **iPad optimized** - Large touch targets  
+✅ **Focus** - Clear which item is being timed  
+✅ **Easy to read** - Huge numbers, high contrast  
+
+### Position:
+
+- **Fixed position:** Bottom-center of screen
+- **Z-index:** 999 (above everything except modals)
+- **Width:** Min 350px
+- **Padding:** Generous for easy tapping
+
+### Technical Implementation:
+
+**Detection:**
+```javascript
+const activeTimerItemId = 
+  Object.keys(itemsInProcess).find(id => itemsInProcess[id]) || 
+  Object.keys(itemsPaused).find(id => itemsPaused[id]);
+```
+
+**Rendering:**
+```javascript
+{activeTimerItemId && (
+  <div style={{
+    position: 'fixed',
+    bottom: '2rem',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 999
+  }}>
+    {/* Timer content */}
+  </div>
+)}
+```
+
+**State-based styling:**
+- Running: Orange background
+- Paused: Blue background
+- Button text: "Pause" or "Restart"
+
+### User Experience:
+
+**Starting timer:**
+1. Click "Timer" button on item
+2. Floating timer appears at bottom
+3. Timer starts counting
+
+**While timing:**
+- Timer visible at all times
+- Can scroll through items
+- Timer stays in view
+
+**Pausing:**
+1. Click "Pause" on floating timer
+2. Background turns blue
+3. Shows "Paused" status
+4. Button changes to "Restart"
+
+**Restarting:**
+1. Click "Restart" on floating timer
+2. Background turns orange
+3. Timer resumes counting
+
+### Comparison:
+
+**Before:** Inline timer
+- ❌ Hard to find when scrolling
+- ❌ Small display
+- ❌ Clutters item card
+- ✅ Contextual to item
+
+**After:** Floating timer
+- ✅ Always visible
+- ✅ Large, readable display
+- ✅ Clean item cards
+- ✅ No scroll issues
+- ✅ Better iPad UX
+
+**Floating timer with large display and fixed position!** ⏱️✨
+
+---
+
+## v2.94 (2026-02-08)
+**Add Ad-Hoc Items Feature**
+
+### New Feature:
+- **Add custom items** for one-off tasks
+- **Simple dialog** with name, location, cases, and priority
+- **Syncs to Firebase** - visible on all devices
+- **Works with existing features** - timer, completion, photos
+
+### The Feature:
+
+**Add Item Button:**
+```
+┌────────────────────────────────────────┐
+│                       [+ Add Item]  ←  │  Button appears above item list
+└────────────────────────────────────────┘
+```
+
+**Add Item Dialog:**
+```
+┌─────────────────────────────────────┐
+│          Add New Item               │
+│                                     │
+│  Item Name: ________________        │
+│  Instructions: _____________        │
+│  Cases: [1]  Priority: [1]          │
+│                                     │
+│     [Cancel]      [Add Item]        │
+└─────────────────────────────────────┘
+```
+
+### Form Fields:
+
+**Required Fields:**
+1. **Item Name** - Name of the item/task
+2. **Instructions/Location** - Where to put it or what to do
+3. **Cases** - Number (default: 1)
+
+**Optional Field:**
+4. **Priority** - Choose from historical priorities or set new one (default: missing)
+
+### How It Works:
+
+**Step 1: Click "Add Item" button**
+- Button appears above the item list
+- Only visible in Process Mode (not View Mode)
+
+**Step 2: Fill in form**
+- Enter item name (e.g., "Check walk-in temp")
+- Enter instructions (e.g., "Record on clipboard")
+- Set number of cases (default 1)
+- Choose priority (optional)
+
+**Step 3: Add item**
+- Click "Add Item" button
+- Item added to Firebase immediately
+- Appears in item list sorted by priority
+- All devices see the new item
+
+### Use Cases:
+
+**Use Case 1: Special Tasks**
+- Name: "Check cold room temperature"
+- Location: "Record on clipboard by door"
+- Cases: 1
+- Priority: 1
+
+**Use Case 2: Emergency Item**
+- Name: "Extra pallet of bananas"
+- Location: "Floor - urgent delivery"
+- Cases: 5
+- Priority: 1
+
+**Use Case 3: Reminder**
+- Name: "Lock back door at closing"
+- Location: "Security checklist"
+- Cases: 1
+- Priority: missing
+
+**Use Case 4: Equipment Issue**
+- Name: "Report broken shelf in cold room"
+- Location: "Email facilities"
+- Cases: 1
+- Priority: 1
+
+### Technical Implementation:
+
+**State variables:**
+```javascript
+const [showAddItem, setShowAddItem] = useState(false);
+const [newItemName, setNewItemName] = useState('');
+const [newItemLocation, setNewItemLocation] = useState('');
+const [newItemCases, setNewItemCases] = useState('1');
+const [newItemPriority, setNewItemPriority] = useState('missing');
+```
+
+**Add item function:**
+```javascript
+const addNewItem = async () => {
+  const newItem = {
+    id: `adhoc-${Date.now()}`,  // Unique ID
+    name: newItemName.trim(),
+    location: newItemLocation.trim(),
+    cases: parseInt(newItemCases),
+    priority: newItemPriority
+  };
+  
+  await db.ref(`items/${newItem.id}`).set(newItem);
+};
+```
+
+**ID format:**
+- Ad-hoc items: `adhoc-{timestamp}`
+- Regular items: Original ID from CSV
+
+### Integration:
+
+**Works with all existing features:**
+✅ **Timer** - Can time processing
+✅ **Done button** - Can mark complete
+✅ **Photos** - Can add completion photos
+✅ **Videos** - Can add instructional videos
+✅ **Priority** - Sorts with other items
+✅ **Statistics** - Builds timing history
+
+### Benefits:
+
+✅ **Flexible** - Add tasks as needed  
+✅ **One-day items** - No need to edit CSV  
+✅ **Real-time sync** - All devices see it  
+✅ **Full functionality** - Works like regular items  
+✅ **Easy to use** - Simple 4-field form  
+
+### Button Visibility:
+
+**Shows "Add Item" when:**
+- In Process Mode (not View Mode) ✅
+- Items are loaded ✅
+- Not viewing completed items ✅
+
+**Hidden when:**
+- In View Mode ❌
+- No items loaded yet ❌
+- Viewing completed items ❌
+
+**Add ad-hoc items for one-off tasks with full integration!** ➕✨
+
+---
+
+## v2.93 (2026-02-08)
+**Editable Instructions Field**
+
+### Changed:
+- **Instructions field now editable** in Process Mode
+- **Click to edit** - pencil icon shows it's editable
+- **Save on Enter or blur** - updates Firebase automatically
+- **Cancel on Escape** - discard changes
+
+### The Feature:
+
+**Before:**
+```
+┌────────────────────────┐
+│    Instructions        │
+│                        │
+│  Belt at checkout      │  ← Static text only
+└────────────────────────┘
+```
+
+**After:**
+```
+┌────────────────────────┐
+│    Instructions        │
+│                        │
+│  Belt at checkout ✏️   │  ← Click to edit
+└────────────────────────┘
+```
+
+### How It Works:
+
+**Display Mode:**
+- Shows location text with small pencil icon
+- Click to enter edit mode
+- Only editable in Process Mode (not View Mode)
+
+**Edit Mode:**
+- Text becomes input field
+- Auto-focused for immediate typing
+- Save: Press Enter or click outside
+- Cancel: Press Escape
+- Updates Firebase automatically
+
+### User Flow:
+
+1. **Click on instructions text**
+   - Text becomes editable input field
+   - Current text is selected for editing
+
+2. **Edit the text**
+   - Type new location/instructions
+   - See changes immediately
+
+3. **Save changes**
+   - Press **Enter** → Saves and exits edit mode
+   - Click **outside** → Saves and exits edit mode
+   - Press **Escape** → Cancels and exits edit mode (no save)
+
+### Technical Implementation:
+
+**State variables:**
+```javascript
+const [editingLocation, setEditingLocation] = useState(null);
+const [locationEditText, setLocationEditText] = useState('');
+```
+
+**Update function:**
+```javascript
+const updateLocation = async (itemId, newLocation) => {
+  await db.ref(`items/${itemId}/location`).set(newLocation);
+};
+```
+
+**UI logic:**
+```javascript
+{editingLocation === item.id ? (
+  <input
+    value={locationEditText}
+    onBlur={() => { /* save */ }}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter') { /* save */ }
+      if (e.key === 'Escape') { /* cancel */ }
+    }}
+  />
+) : (
+  <div onClick={() => { /* start editing */ }}>
+    {item.location} <EditIcon />
+  </div>
+)}
+```
+
+### Benefits:
+
+✅ **Flexible instructions** - Update locations as needed  
+✅ **Inline editing** - No separate dialog needed  
+✅ **Auto-save** - Changes persist to Firebase  
+✅ **Visual indicator** - Pencil icon shows editability  
+✅ **Easy to use** - Click, type, Enter  
+
+### Use Cases:
+
+**Use Case 1: Location Change**
+- Item normally goes to "Belt"
+- Overflow today → edit to "Floor behind belt"
+- Change saved for all devices
+
+**Use Case 2: Clarification**
+- "Cold room" → edit to "Cold room - top shelf"
+- More specific instructions for workers
+
+**Use Case 3: Temporary Notes**
+- Add "Check with Sarah first"
+- Remove note when done
+
+**Instructions field now editable with click-to-edit functionality!** ✏️✨
+
+---
+
+## v2.92 (2026-02-08)
+**Done Button Moved to Line 2 and Renamed**
+
+### Changed:
+- **Done button moved to Line 2** (before Timer button)
+- **Text changed from "All Done" to "Done"**
+- **Line 3 now only has Video button**
+
+### The Change:
+
+**Before (v2.91):**
+```
+Line 2: [Cases] [Timer] [Avg: 2:30]
+Line 3: [Instructions] [Video] [All Done]
+```
+
+**After (v2.92):**
+```
+Line 2: [Cases] [Done] [Timer] [Avg: 2:30]
+Line 3: [Instructions] [Video]
+```
+
+### New Layout:
+
+**Line 2 - All Action Buttons:**
+1. Cases (fixed width)
+2. **Done** button (180px) - NEW POSITION
+3. Timer button (180px)
+4. Timing metrics (180px, when stats exist)
+
+**Line 3 - Instructions + Video:**
+1. Instructions (grows to fill)
+2. Video button (180px)
+
+### Visual Comparison:
+
+**Before:**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 Cases [Timer] [Avg: 2:30]                 │
+│                                              │
+│ ⚠️ [Instructions] [Video] [All Done]         │
+└──────────────────────────────────────────────┘
+```
+
+**After:**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 Cases [Done] [Timer] [Avg: 2:30]          │
+│                                              │
+│ ⚠️ [Instructions] [Video]                    │
+└──────────────────────────────────────────────┘
+```
+
+### Benefits:
+
+✅ **Shorter text** - "Done" vs "All Done"  
+✅ **Better grouping** - All action buttons on Line 2  
+✅ **Cleaner Line 3** - Only Instructions and Video  
+✅ **Logical flow** - Done → Timer → Metrics sequence  
+✅ **Consistent sizing** - All three buttons 180px  
+
+### Technical Changes:
+
+**Done button:**
+- Moved from Line 3 to Line 2
+- Text: "All Done" → "Done"
+- Width: 150px → 180px (matches Timer)
+- Position: Before Timer button
+
+**Line 2 order:**
+```javascript
+1. Cases
+2. Done button (new)
+3. Timer button
+4. Timing metrics (when stats exist)
+```
+
+**Line 3 simplified:**
+```javascript
+1. Instructions
+2. Video button
+```
+
+**Done button moved to Line 2 and renamed to "Done"!** 🎯✨
+
+---
+
+## v2.91 (2026-02-08)
+**Timing Metrics Box Matched Timer Button Width**
+
+### Changed:
+- **Timing metrics box now 180px wide** (same as Timer button)
+- **No longer grows to fill space** - fixed width
+- **Consistent sizing** between Timer and metrics
+
+### The Change:
+
+**Before (v2.90):**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 Cases [Timer] [Avg time: 2:30 ─────────→]│
+└──────────────────────────────────────────────┘
+                   ↑ Metrics grew to fill space
+```
+
+**After (v2.91):**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 Cases [Timer] [Avg: 2:30] [empty space →]│
+└──────────────────────────────────────────────┘
+              ↑         ↑
+         Same width (180px each)
+```
+
+### Technical Changes:
+
+**Timing metrics box:**
+```javascript
+// Before
+flex: '1 1 auto',  // Grew to fill space
+minWidth: '150px'
+
+// After
+flex: '0 0 auto',  // Fixed size
+minWidth: '180px'  // Same as Timer button
+```
+
+### Benefits:
+
+✅ **Consistent sizing** - Timer and metrics are equal width  
+✅ **Cleaner layout** - Balanced appearance  
+✅ **Predictable spacing** - Fixed widths, no stretching  
+✅ **Visual symmetry** - Matching button sizes  
+
+**Timer button and timing metrics now same width (180px)!** ⚖️✨
+
+---
+
+## v2.90 (2026-02-08)
+**Swapped Timer Button and Timing Metrics Positions**
+
+### Changed:
+- **Timer button moved BEFORE timing metrics** on Line 2
+- **Timer now always fixed width** (180px)
+- **Timing metrics now at end** of Line 2 (grows to fill space)
+
+### The Change:
+
+**Before (v2.89):**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 Cases [Avg: 2:30] [Timer Button ────────→]│
+└──────────────────────────────────────────────┘
+```
+
+**After (v2.90):**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 Cases [Timer Button] [Avg: 2:30 ────────→]│
+└──────────────────────────────────────────────┘
+```
+
+### New Order on Line 2:
+
+1. **Cases** (fixed width)
+2. **Timer button** (fixed 180px width)
+3. **Timing metrics** (grows to fill remaining space, only when stats exist)
+
+### Layout Behavior:
+
+**When NO timing data:**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 25 cases [Timer Button] [empty space ───→]│
+└──────────────────────────────────────────────┘
+```
+
+**When timing data EXISTS:**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 25 cases [Timer] [Avg time: 2:30 ───────→]│
+└──────────────────────────────────────────────┘
+```
+
+### Benefits:
+
+✅ **Timer more accessible** - Closer to cases display  
+✅ **Consistent timer position** - Always in same spot  
+✅ **Metrics expand** - Uses available space when present  
+✅ **Better flow** - Timer → metrics follows logical sequence  
+
+### Technical Changes:
+
+**Timer button:**
+- Position: After cases, before metrics
+- Flex: `flex: '0 0 auto'` (always fixed)
+- Width: `minWidth: '180px'`
+
+**Timing metrics:**
+- Position: After timer button
+- Flex: `flex: '1 1 auto'` (grows to fill)
+- Width: `minWidth: '150px'`
+
+**Timer button and metrics positions swapped!** ↔️✨
+
+---
+
 ## v2.89 (2026-02-08)
 **Smart Timer Button Positioning**
 

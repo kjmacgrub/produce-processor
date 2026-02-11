@@ -153,6 +153,13 @@
       const [completionMediaStream, setCompletionMediaStream] = useState(null);
       const [photoTaken, setPhotoTaken] = useState(false);
       const [photoData, setPhotoData] = useState(null);
+      const [editingLocation, setEditingLocation] = useState(null); // null or item.id being edited
+      const [locationEditText, setLocationEditText] = useState(''); // Temporary text while editing
+      const [showAddItem, setShowAddItem] = useState(false); // Show add item dialog
+      const [newItemName, setNewItemName] = useState('');
+      const [newItemLocation, setNewItemLocation] = useState('');
+      const [newItemCases, setNewItemCases] = useState('1');
+      const [newItemPriority, setNewItemPriority] = useState('missing');
       
       const fileInputRef = useRef(null);
       const videoInputRef = useRef(null);
@@ -1848,6 +1855,77 @@
         }
       };
 
+      const updateLocation = async (itemId, newLocation) => {
+        if (readOnlyMode || !db) return;
+        
+        // Update in Firebase
+        await db.ref(`items/${itemId}/location`).set(newLocation);
+        console.log('✅ Updated location for item', itemId, 'to:', newLocation);
+      };
+
+      const addNewItem = async () => {
+        if (readOnlyMode || !db) return;
+        
+        // Validate inputs
+        if (!newItemName.trim()) {
+          alert('Please enter an item name');
+          return;
+        }
+        if (!newItemLocation.trim()) {
+          alert('Please enter instructions/location');
+          return;
+        }
+        
+        const cases = parseInt(newItemCases);
+        if (isNaN(cases) || cases < 1) {
+          alert('Please enter a valid number of cases (at least 1)');
+          return;
+        }
+        
+        // Create new item
+        const newItem = {
+          id: `adhoc-${Date.now()}`, // Unique ID for ad-hoc items
+          name: newItemName.trim(),
+          location: newItemLocation.trim(),
+          cases: cases,
+          priority: newItemPriority === 'missing' ? 'missing' : parseInt(newItemPriority)
+        };
+        
+        // Add to Firebase
+        await db.ref(`items/${newItem.id}`).set(newItem);
+        
+        // Add priority to historical if not already there
+        if (newItemPriority !== 'missing') {
+          const priority = parseInt(newItemPriority);
+          const currentPrioritiesSnapshot = await db.ref('historicalPriorities').once('value');
+          const currentPriorities = firebaseToArray(currentPrioritiesSnapshot.val());
+          
+          if (!currentPriorities.includes(priority)) {
+            const updated = [...currentPriorities, priority].sort((a, b) => {
+              const aIsNumber = typeof a === 'number' && a > 0;
+              const bIsNumber = typeof b === 'number' && b > 0;
+              
+              if (aIsNumber && bIsNumber) return a - b;
+              if (aIsNumber) return -1;
+              if (bIsNumber) return 1;
+              if (a === 'missing') return -1;
+              if (b === 'missing') return 1;
+              return 0;
+            });
+            await db.ref('historicalPriorities').set(updated);
+          }
+        }
+        
+        // Reset form
+        setNewItemName('');
+        setNewItemLocation('');
+        setNewItemCases('1');
+        setNewItemPriority('missing');
+        setShowAddItem(false);
+        
+        console.log('✅ Added new ad-hoc item:', newItem);
+      };
+
       const deletePriority = async (priorityToDelete) => {
         if (readOnlyMode || !db) return;
         
@@ -2347,7 +2425,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.89
+                  v2.97
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2611,6 +2689,31 @@
               </div>
             )}
 
+            {/* Add Item Button */}
+            {!readOnlyMode && items.length > 0 && !showCompleted && (
+              <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setShowAddItem(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '1rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>+</span> Add Item
+                </button>
+              </div>
+            )}
+
             {/* Items List */}
             {!showCompleted && (
               <div style={{ display: 'grid', gap: '1.5rem' }}>
@@ -2715,64 +2818,75 @@
                         </h3>
                       </div>
                       
-                      {/* Line 2: Cases + Timing metrics (left), Timer button (position depends on stats) */}
+                      {/* Line 2: Cases + Done button + Timing metrics */}
                       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        {/* Cases with inline timer */}
+                        {/* Cases */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b', flexShrink: 0 }}>
                           <Package size={26} />
                           <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
-                          
-                          {/* Inline timer when processing - visible in both Process and View modes */}
-                          {(itemsInProcess[item.id] || itemsPaused[item.id]) && (
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              padding: '0.5rem 1rem',
-                              background: itemsPaused[item.id]
-                                ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
-                                : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                              borderRadius: '12px',
-                              boxShadow: itemsPaused[item.id]
-                                ? '0 4px 15px rgba(99, 102, 241, 0.3)'
-                                : '0 4px 15px rgba(245, 158, 11, 0.3)',
-                              marginLeft: '0.5rem'
-                            }}>
-                              <Timer size={20} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
-                              <div style={{
-                                fontSize: '1.3rem',
-                                fontWeight: '800',
-                                color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
-                                fontVariantNumeric: 'tabular-nums',
-                                minWidth: '70px'
-                              }}>
-                                {formatTime(elapsedTimes[item.id] || 0)}
-                              </div>
-                              {/* Show "Paused" text when timer is paused */}
-                              {itemsPaused[item.id] && (
-                                <span style={{
-                                  fontSize: '0.9rem',
-                                  fontWeight: '700',
-                                  color: '#6366f1',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.05em'
-                                }}>
-                                  Paused
-                                </span>
-                              )}
-                            </div>
-                          )}
                         </div>
 
-                        {/* Timing metrics - only when stats exist */}
+                        {/* Done button */}
+                        {!readOnlyMode && (
+                          <button
+                            onClick={() => markComplete(item)}
+                            style={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '1.2rem 2rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              fontWeight: '700',
+                              fontSize: '1.1rem',
+                              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                              flex: '0 0 auto',
+                              minWidth: '180px',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            Done
+                          </button>
+                        )}
+
+                        {/* Start Timer button - only shows when timer NOT active */}
+                        {!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+                          <button
+                            onClick={() => handleBeginProcessing(item.id)}
+                            style={{
+                              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '1.2rem 2rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              fontWeight: '700',
+                              fontSize: '1.1rem',
+                              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                              flex: '0 0 auto',
+                              minWidth: '180px',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            Start Timer
+                          </button>
+                        )}
+                        
+                        {/* Timing metrics */}
                         {!readOnlyMode && stats && (
                           <div style={{
                             padding: '0.5rem 0.75rem',
                             border: '2px solid #e2e8f0',
                             borderRadius: '12px',
                             background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                            flex: '1 1 auto',
-                            minWidth: '150px'
+                            flex: '0 0 auto',
+                            minWidth: '180px'
                           }}>
                             <div style={{ 
                               display: 'flex', 
@@ -2810,45 +2924,11 @@
                             </div>
                           </div>
                         )}
-                        
-                        {/* Timer button - position changes based on stats */}
-                        {!readOnlyMode && (
-                          <button
-                            onClick={() => handleBeginProcessing(item.id)}
-                            style={{
-                              background: itemsInProcess[item.id]
-                                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' // Orange for Pause
-                                : itemsPaused[item.id]
-                                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Green for Restart
-                                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', // Blue for Begin
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '12px',
-                              padding: '1.2rem 2rem',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.6rem',
-                              fontWeight: '700',
-                              fontSize: '1.1rem',
-                              boxShadow: itemsInProcess[item.id]
-                                ? '0 4px 15px rgba(245, 158, 11, 0.3)'
-                                : itemsPaused[item.id]
-                                ? '0 4px 15px rgba(16, 185, 129, 0.3)'
-                                : '0 4px 15px rgba(59, 130, 246, 0.3)',
-                              flex: stats ? '0 0 auto' : '1 1 auto', // Grow when no stats, fixed when stats exist
-                              minWidth: '180px',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            {itemsInProcess[item.id] ? 'Pause' : itemsPaused[item.id] ? 'Restart' : 'Timer'}
-                          </button>
-                        )}
                       </div>
 
                       {/* Line 3: Instructions on left, Buttons on right */}
                       <div style={{ display: 'flex', gap: '1rem', alignItems: 'stretch' }}>
-                        {/* Instructions panel - narrower, only as wide as needed */}
+                        {/* Instructions panel - editable */}
                         <div style={{ 
                           background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
                           borderRadius: '12px',
@@ -2876,16 +2956,84 @@
                             justifyContent: 'center',
                             fontSize: '1.8rem', 
                             color: '#78350f',
-                            flex: '1'
+                            flex: '1',
+                            position: 'relative'
                           }}>
-                            <span style={{ fontWeight: '600' }}>{item.location}</span>
+                            {editingLocation === item.id ? (
+                              // Editing mode
+                              <input
+                                type="text"
+                                value={locationEditText}
+                                onChange={(e) => setLocationEditText(e.target.value)}
+                                onBlur={() => {
+                                  updateLocation(item.id, locationEditText);
+                                  setEditingLocation(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    updateLocation(item.id, locationEditText);
+                                    setEditingLocation(null);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingLocation(null);
+                                  }
+                                }}
+                                autoFocus
+                                style={{
+                                  fontSize: '1.8rem',
+                                  fontWeight: '600',
+                                  color: '#78350f',
+                                  background: 'white',
+                                  border: '2px solid #fbbf24',
+                                  borderRadius: '8px',
+                                  padding: '0.5rem',
+                                  textAlign: 'center',
+                                  width: '100%'
+                                }}
+                              />
+                            ) : (
+                              // Display mode
+                              <div
+                                onClick={() => {
+                                  if (!readOnlyMode) {
+                                    setEditingLocation(item.id);
+                                    setLocationEditText(item.location);
+                                  }
+                                }}
+                                style={{
+                                  fontWeight: '600',
+                                  cursor: readOnlyMode ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  padding: '0.5rem'
+                                }}
+                              >
+                                <span>{item.location}</span>
+                                {!readOnlyMode && (
+                                  <svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    style={{ opacity: 0.5 }}
+                                  >
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                  </svg>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Video and All Done buttons on right */}
+                        {/* Video button only */}
                         {!readOnlyMode && (
                           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'nowrap', alignItems: 'stretch' }}>
-                            {/* Video button - now larger, same height as All Done */}
+                            {/* Video button */}
                             {hasVideo ? (
                               <button
                                 onClick={() => {
@@ -2940,30 +3088,6 @@
                                 Make video
                               </button>
                             )}
-                            
-                            {/* All Done button */}
-                            <button
-                              onClick={() => markComplete(item)}
-                              style={{
-                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '12px',
-                                padding: '0',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.6rem',
-                                fontWeight: '700',
-                                fontSize: '1.2rem',
-                                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                                minWidth: '150px',
-                                justifyContent: 'center',
-                                minHeight: '100%'
-                              }}
-                            >
-                              All Done
-                            </button>
                           </div>
                         )}
                       </div>
@@ -2973,6 +3097,212 @@
                   </div>
                 );
               })}
+              </div>
+            )}
+
+            {/* Add Item Dialog */}
+            {showAddItem && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '1rem'
+              }}>
+                <div style={{
+                  background: 'white',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  maxWidth: '500px',
+                  width: '100%',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                }}>
+                  <h2 style={{
+                    margin: '0 0 1.5rem 0',
+                    fontSize: '1.8rem',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    textAlign: 'center'
+                  }}>
+                    Add New Item
+                  </h2>
+
+                  {/* Item Name */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.9rem',
+                      fontWeight: '700',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Item Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      placeholder="e.g., Organic Apples"
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        fontSize: '1rem',
+                        border: '2px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* Instructions/Location */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.9rem',
+                      fontWeight: '700',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Instructions/Location *
+                    </label>
+                    <input
+                      type="text"
+                      value={newItemLocation}
+                      onChange={(e) => setNewItemLocation(e.target.value)}
+                      placeholder="e.g., Cold room - top shelf"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        fontSize: '1rem',
+                        border: '2px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* Cases and Priority side by side */}
+                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                    {/* Number of Cases */}
+                    <div style={{ flex: '1' }}>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.9rem',
+                        fontWeight: '700',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Cases *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newItemCases}
+                        onChange={(e) => setNewItemCases(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          fontSize: '1rem',
+                          border: '2px solid #e2e8f0',
+                          borderRadius: '8px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    {/* Priority */}
+                    <div style={{ flex: '1' }}>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.9rem',
+                        fontWeight: '700',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Priority
+                      </label>
+                      <select
+                        value={newItemPriority}
+                        onChange={(e) => setNewItemPriority(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          fontSize: '1rem',
+                          border: '2px solid #e2e8f0',
+                          borderRadius: '8px',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <option value="missing">Priority missing</option>
+                        <option value="0">Shopping floor</option>
+                        {historicalPriorities.filter(p => p !== 'missing' && p !== 0).map(p => (
+                          <option key={p} value={p}>Priority {p}</option>
+                        ))}
+                        {[1, 2, 3, 4, 5].filter(p => !historicalPriorities.includes(p)).map(p => (
+                          <option key={p} value={p}>Priority {p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Buttons */}
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button
+                      onClick={() => {
+                        setShowAddItem(false);
+                        setNewItemName('');
+                        setNewItemLocation('');
+                        setNewItemCases('1');
+                        setNewItemPriority('missing');
+                      }}
+                      style={{
+                        flex: '1',
+                        background: '#e2e8f0',
+                        color: '#64748b',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={addNewItem}
+                      style={{
+                        flex: '1',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                      }}
+                    >
+                      Add Item
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -4381,6 +4711,142 @@
                 </div>
               </div>
             )}
+
+            {/* Floating Timers - Multiple Support, Bottom-Right */}
+            {(() => {
+              // Find all active timer items (both running and paused)
+              const activeTimerIds = [
+                ...Object.keys(itemsInProcess).filter(id => itemsInProcess[id]),
+                ...Object.keys(itemsPaused).filter(id => itemsPaused[id])
+              ];
+              
+              if (activeTimerIds.length === 0) return null;
+              
+              return (
+                <div style={{
+                  position: 'fixed',
+                  bottom: '2rem',
+                  right: '2rem',
+                  zIndex: 999,
+                  display: 'flex',
+                  flexDirection: 'row-reverse', // Stack from right to left
+                  gap: '1rem',
+                  alignItems: 'flex-end'
+                }}>
+                  {activeTimerIds.map((timerId) => {
+                    const timerItem = [...items, ...completedItems].find(i => i.id === timerId);
+                    if (!timerItem) return null;
+                    
+                    const isPaused = itemsPaused[timerId];
+                    const elapsed = elapsedTimes[timerId] || 0;
+                    
+                    return (
+                      <div
+                        key={timerId}
+                        style={{
+                          background: isPaused 
+                            ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' // Dark gray for paused
+                            : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // Black background
+                          color: '#fbbf24', // Yellow text
+                          border: isPaused ? '3px solid #64748b' : '3px solid #fbbf24', // Yellow border when running, gray when paused
+                          borderRadius: '20px',
+                          padding: '1.5rem 2rem',
+                          boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          minWidth: '280px',
+                          maxWidth: '320px'
+                        }}>
+                        {/* Item name */}
+                        <div style={{
+                          fontSize: '1.1rem',
+                          fontWeight: '700',
+                          textAlign: 'center',
+                          color: '#fbbf24',
+                          maxWidth: '250px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {getDisplayName(timerItem.name)}
+                        </div>
+                        
+                        {/* Timer display */}
+                        <div style={{
+                          fontSize: '3.5rem',
+                          fontWeight: '900',
+                          fontVariantNumeric: 'tabular-nums',
+                          lineHeight: '1',
+                          letterSpacing: '-0.02em',
+                          color: '#fbbf24'
+                        }}>
+                          {formatTime(elapsed)}
+                        </div>
+                        
+                        {/* Status and button */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          flexDirection: 'column'
+                        }}>
+                          {isPaused && (
+                            <div style={{
+                              fontSize: '0.9rem',
+                              fontWeight: '700',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.1em',
+                              color: '#94a3b8'
+                            }}>
+                              Paused
+                            </div>
+                          )}
+                          
+                          {/* Pause/Restart button */}
+                          <button
+                            onClick={() => handleBeginProcessing(timerId)}
+                            style={{
+                              background: isPaused ? '#fbbf24' : 'transparent',
+                              color: isPaused ? '#1e293b' : '#fbbf24',
+                              border: isPaused ? 'none' : '2px solid #fbbf24',
+                              borderRadius: '12px',
+                              padding: '0.75rem 1.5rem',
+                              fontSize: '1rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              width: '100%'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (isPaused) {
+                                e.currentTarget.style.background = '#f59e0b';
+                              } else {
+                                e.currentTarget.style.background = '#fbbf24';
+                                e.currentTarget.style.color = '#1e293b';
+                              }
+                              e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isPaused) {
+                                e.currentTarget.style.background = '#fbbf24';
+                              } else {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = '#fbbf24';
+                              }
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
+                            {isPaused ? 'Restart' : 'Pause'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
           </div>
         </div>
