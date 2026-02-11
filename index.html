@@ -2438,7 +2438,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.104
+                  v2.106
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2831,7 +2831,7 @@
                         </h3>
                       </div>
                       
-                      {/* Line 2: Cases + Done button + Timing metrics */}
+                      {/* Line 2: Cases + Done button + Start Timer button */}
                       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
                         {/* Cases */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b', flexShrink: 0 }}>
@@ -2839,14 +2839,16 @@
                           <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
                         </div>
 
-                        {/* Done button */}
+                        {/* Done button - changes to "Timing..." when timer active */}
                         {!readOnlyMode && (
                           <button
                             onClick={() => markComplete(item)}
                             style={{
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                              color: 'white',
-                              border: 'none',
+                              background: (itemsInProcess[item.id] || itemsPaused[item.id])
+                                ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' // Black when timing
+                                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)', // Green when not timing
+                              color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
+                              border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
                               borderRadius: '12px',
                               padding: '1.2rem 2rem',
                               cursor: 'pointer',
@@ -2855,13 +2857,15 @@
                               gap: '0.6rem',
                               fontWeight: '700',
                               fontSize: '1.1rem',
-                              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                              boxShadow: (itemsInProcess[item.id] || itemsPaused[item.id])
+                                ? '0 4px 15px rgba(251, 191, 36, 0.3)'
+                                : '0 4px 15px rgba(16, 185, 129, 0.3)',
                               flex: '0 0 auto',
                               minWidth: '180px',
                               justifyContent: 'center'
                             }}
                           >
-                            Done
+                            {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
                           </button>
                         )}
 
@@ -2889,53 +2893,6 @@
                           >
                             Start Timer
                           </button>
-                        )}
-                        
-                        {/* Timing metrics */}
-                        {!readOnlyMode && stats && (
-                          <div style={{
-                            padding: '0.5rem 0.75rem',
-                            border: '2px solid #e2e8f0',
-                            borderRadius: '12px',
-                            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                            flex: '0 0 auto',
-                            minWidth: '180px'
-                          }}>
-                            <div style={{ 
-                              display: 'flex', 
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
-                              <div style={{ textAlign: 'center' }}>
-                                <div style={{ 
-                                  fontSize: '0.9rem', 
-                                  color: '#64748b', 
-                                  fontWeight: '600',
-                                  textTransform: 'uppercase',
-                                  marginBottom: '0.25rem'
-                                }}>
-                                  Average processing time per case
-                                </div>
-                                <div 
-                                  onClick={() => setShowTimingEvents(sku)}
-                                  style={{ 
-                                    fontSize: '1.3rem', 
-                                    fontWeight: '700', 
-                                    color: '#0f766e',
-                                    fontVariantNumeric: 'tabular-nums',
-                                    cursor: 'pointer',
-                                    textDecoration: 'underline',
-                                    transition: 'color 0.2s'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.color = '#059669'}
-                                  onMouseLeave={(e) => e.currentTarget.style.color = '#0f766e'}
-                                >
-                                  {formatTime(stats.average)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
                         )}
                       </div>
 
@@ -4880,12 +4837,68 @@
                           {formatTime(elapsed)}
                         </div>
                         
-                        {/* Status and button */}
+                        {/* Time per case and historic average */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '1rem',
+                          alignItems: 'center',
+                          fontSize: '0.9rem',
+                          color: '#94a3b8'
+                        }}>
+                          {/* Time per case */}
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                          }}>
+                            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                              Per Case
+                            </div>
+                            <div style={{
+                              fontSize: '1.1rem',
+                              fontWeight: '700',
+                              color: '#fbbf24',
+                              fontVariantNumeric: 'tabular-nums'
+                            }}>
+                              {formatTime(Math.floor(elapsed / timerItem.cases))}
+                            </div>
+                          </div>
+                          
+                          {/* Historic average (if available) */}
+                          {(() => {
+                            const sku = getSKU(timerItem.name);
+                            const stats = sku ? getStats(sku) : null;
+                            if (!stats) return null;
+                            
+                            return (
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center'
+                              }}>
+                                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                                  Avg
+                                </div>
+                                <div style={{
+                                  fontSize: '1.1rem',
+                                  fontWeight: '700',
+                                  color: '#0f766e',
+                                  fontVariantNumeric: 'tabular-nums'
+                                }}>
+                                  {formatTime(stats.average)}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        
+                        {/* Status and buttons */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '1rem',
-                          flexDirection: 'column'
+                          gap: '0.5rem',
+                          flexDirection: 'column',
+                          width: '100%'
                         }}>
                           {isPaused && (
                             <div style={{
@@ -4899,42 +4912,76 @@
                             </div>
                           )}
                           
-                          {/* Pause/Restart button */}
-                          <button
-                            onClick={() => handleBeginProcessing(timerId)}
-                            style={{
-                              background: isPaused ? '#fbbf24' : 'transparent',
-                              color: isPaused ? '#1e293b' : '#fbbf24',
-                              border: isPaused ? 'none' : '2px solid #fbbf24',
-                              borderRadius: '12px',
-                              padding: '0.75rem 1.5rem',
-                              fontSize: '1rem',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              width: '100%'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (isPaused) {
-                                e.currentTarget.style.background = '#f59e0b';
-                              } else {
-                                e.currentTarget.style.background = '#fbbf24';
-                                e.currentTarget.style.color = '#1e293b';
-                              }
-                              e.currentTarget.style.transform = 'scale(1.05)';
-                            }}
-                            onMouseLeave={(e) => {
-                              if (isPaused) {
-                                e.currentTarget.style.background = '#fbbf24';
-                              } else {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = '#fbbf24';
-                              }
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                          >
-                            {isPaused ? 'Restart' : 'Pause'}
-                          </button>
+                          {/* Button row */}
+                          <div style={{
+                            display: 'flex',
+                            gap: '0.5rem',
+                            width: '100%'
+                          }}>
+                            {/* Pause/Restart button */}
+                            <button
+                              onClick={() => handleBeginProcessing(timerId)}
+                              style={{
+                                background: isPaused ? '#fbbf24' : 'transparent',
+                                color: isPaused ? '#1e293b' : '#fbbf24',
+                                border: isPaused ? 'none' : '2px solid #fbbf24',
+                                borderRadius: '12px',
+                                padding: '0.75rem 1rem',
+                                fontSize: '0.9rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                flex: '1'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (isPaused) {
+                                  e.currentTarget.style.background = '#f59e0b';
+                                } else {
+                                  e.currentTarget.style.background = '#fbbf24';
+                                  e.currentTarget.style.color = '#1e293b';
+                                }
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                if (isPaused) {
+                                  e.currentTarget.style.background = '#fbbf24';
+                                } else {
+                                  e.currentTarget.style.background = 'transparent';
+                                  e.currentTarget.style.color = '#fbbf24';
+                                }
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                            >
+                              {isPaused ? 'Restart' : 'Pause'}
+                            </button>
+                            
+                            {/* Done button */}
+                            <button
+                              onClick={() => markComplete(timerItem)}
+                              style={{
+                                background: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '0.75rem 1rem',
+                                fontSize: '0.9rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                flex: '1'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#059669';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#10b981';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                            >
+                              Done
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

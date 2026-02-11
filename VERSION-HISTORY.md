@@ -1,5 +1,211 @@
 # Version History - Produce Processing App
 
+## v2.106 (2026-02-08)
+**Removed Timing Metrics from Item Cards**
+
+### Changed:
+- **Removed timing metrics box** from item cards
+- **Historic average now only on timer** (not on item card)
+- Cleaner item card layout
+
+### What Was Removed:
+
+**Old Line 2 (v2.105):**
+```
+[Cases] [Done/Timing...] [Start Timer] [Avg: 2:30]
+                                        ↑ REMOVED
+```
+
+**New Line 2 (v2.106):**
+```
+[Cases] [Done/Timing...] [Start Timer]
+```
+
+### Where to See Metrics:
+
+**Item Card:**
+- No metrics displayed
+- Just Cases, Done button, Start Timer button
+
+**Floating Timer:**
+- Main timer (large)
+- Time per case (yellow)
+- Historic average (teal) ✅ Only place to see it now
+
+### Benefits:
+
+✅ **Cleaner item cards** - Less visual clutter  
+✅ **More space** - Better use of screen  
+✅ **Metrics where needed** - On timer when actively timing  
+✅ **Simpler layout** - Focus on actions  
+
+### Item Card Layout Now:
+
+```
+┌─────────────────────────────────────┐
+│ Priority: 1                         │
+│                                     │
+│ Organic Apples - 25 cases          │
+│                                     │
+│ Line 2:                             │
+│ [📦 25 cases] [Done] [Start Timer]  │
+│                                     │
+│ Line 3:                             │
+│ [Instructions] [Video]              │
+└─────────────────────────────────────┘
+```
+
+**Historic average time now only visible on floating timers!** ⏱️
+
+---
+
+## v2.105 (2026-02-08)
+**Enhanced Timer Integration with Done Button**
+
+### Changed:
+- **Item Done button shows "Timing..."** when timer is active
+- **Black/yellow theme on Done button** while timing
+- **Added Done button to floating timers** next to Pause/Restart
+- **Added time per case** below main timer number
+- **Added historic average** next to time per case
+
+### The Changes:
+
+**1. Item Card Done Button:**
+```
+Not timing: [Done] (green)
+     ↓
+Timing:     [Timing...] (black/yellow)
+```
+
+**When timer active:**
+- Background: Black gradient (#1e293b → #0f172a)
+- Text: Yellow (#fbbf24)
+- Border: 2px solid yellow
+- Text changes: "Done" → "Timing..."
+
+**2. Floating Timer - Enhanced:**
+```
+┌─────────────────────┐
+│   Organic Apples    │
+│                     │
+│       5:23          │ ← Main timer (large)
+│                     │
+│  Per Case    Avg    │ ← New metrics
+│   2:05      1:50    │
+│                     │
+│ [Pause]   [Done]    │ ← Both buttons
+└─────────────────────┘
+```
+
+### New Timer Metrics:
+
+**Time Per Case:**
+- Calculated: `elapsed time / number of cases`
+- Shows current pace
+- Yellow color (#fbbf24)
+- Left side
+
+**Historic Average:**
+- From past timing data
+- Shows expected pace
+- Teal color (#0f766e)
+- Right side
+- Only shows if data exists
+
+### Floating Timer Buttons:
+
+**Button layout (side by side):**
+```
+┌──────────┬──────────┐
+│  Pause   │   Done   │
+└──────────┴──────────┘
+```
+
+**Pause/Restart Button:**
+- Left side
+- Yellow when paused, outlined when running
+- Same functionality as before
+
+**Done Button (NEW):**
+- Right side
+- Green (#10b981)
+- Same action as item's Done button
+- Completes the item with photo prompt
+
+### Benefits:
+
+✅ **Clear timing status** - "Timing..." shows on item  
+✅ **Visual consistency** - Black/yellow theme matches timers  
+✅ **Complete from timer** - Don't need to scroll to item  
+✅ **See your pace** - Time per case vs historic average  
+✅ **Better workflow** - All actions on floating timer  
+
+### Use Case Example:
+
+**Worker flow:**
+1. Click "Start Timer" on item
+2. Item Done button changes to "Timing..." (black/yellow)
+3. Floating timer appears with metrics
+4. Can see: current time, per-case time, historic average
+5. When done, click "Done" on floating timer
+6. Item completes, timer disappears
+7. Item Done button returns to green "Done"
+
+### Technical Details:
+
+**Done button state detection:**
+```javascript
+{(itemsInProcess[item.id] || itemsPaused[item.id]) 
+  ? 'Timing...' 
+  : 'Done'}
+```
+
+**Time per case calculation:**
+```javascript
+formatTime(Math.floor(elapsed / timerItem.cases))
+```
+
+**Historic average display:**
+```javascript
+const stats = getStats(sku);
+if (stats) {
+  formatTime(stats.average)
+}
+```
+
+**Button layout:**
+```javascript
+<div style={{ display: 'flex', gap: '0.5rem' }}>
+  <button>Pause/Restart</button>
+  <button onClick={() => markComplete(item)}>Done</button>
+</div>
+```
+
+### Metrics Display:
+
+**Layout:**
+```
+┌─────────┬─────────┐
+│Per Case │   Avg   │
+│  2:05   │  1:50   │
+└─────────┴─────────┘
+```
+
+**Per Case (yellow):**
+- Shows current efficiency
+- Updates in real-time
+- Helps pace work
+
+**Avg (teal):**
+- Historical benchmark
+- Compare to current pace
+- Only if data exists
+
+**Floating timers now show metrics and have Done button for complete workflow!** ✅⏱️
+
+---
+
 ## v2.104 (2026-02-08)
 **BUGFIX: Accept Button Rendering and Order**
 
