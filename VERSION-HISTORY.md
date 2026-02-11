@@ -1,5 +1,143 @@
 # Version History - Produce Processing App
 
+## v2.98 (2026-02-08)
+**Improved Completion Camera UX**
+
+### Changed:
+- **Control buttons moved to TOP** of screen (iPad-friendly)
+- **Fullscreen camera layout** - uses entire screen
+- **Better live preview** - video takes full available space
+- **Clearer layout** - buttons always visible, not off-screen
+- **Added muted attribute** - prevents audio feedback
+
+### The Problem:
+
+**Before (v2.97):**
+```
+┌─────────────────────────┐
+│   Title                 │
+│                         │
+│   [Video preview]       │
+│                         │
+│   [Buttons at bottom]   │ ← Off screen on iPad!
+└─────────────────────────┘
+```
+
+**After (v2.98):**
+```
+┌─────────────────────────┐
+│ Title                   │
+│ [Buttons at TOP] ←      │
+│                         │
+│ [Live Video Preview]    │
+│     (fullscreen)        │
+│                         │
+└─────────────────────────┘
+```
+
+### New Layout:
+
+**Camera View:**
+1. **Dark header bar (top)** with title and buttons
+2. **Live camera preview** fills remaining space
+3. **Black background** for clean appearance
+
+**Photo Review:**
+1. **Dark header bar (top)** with buttons
+2. **Captured photo** fills remaining space
+3. **Options:** Complete with photo or Retake
+
+### Features:
+
+**Live Preview:**
+- Camera stream shows what will be captured
+- Takes full available vertical space
+- Auto-scales to fit screen
+- Centered in view
+
+**Control Buttons (Top):**
+- **📸 Take Photo** - Capture image
+- **Skip Photo** - Complete without photo
+- **Cancel** - Return to items
+
+**Photo Review (Top):**
+- **✅ Complete with This Photo** - Finish
+- **🔄 Retake Photo** - Start camera again
+
+### Benefits:
+
+✅ **No off-screen buttons** - All controls visible  
+✅ **iPad optimized** - Buttons at top where they're reachable  
+✅ **Better preview** - See what you're photographing  
+✅ **Fullscreen use** - Maximum preview size  
+✅ **Cleaner design** - Professional camera interface  
+
+### Technical Changes:
+
+**Modal structure:**
+```javascript
+<div style={{
+  position: 'fixed',
+  top: 0, left: 0, right: 0, bottom: 0,
+  display: 'flex',
+  flexDirection: 'column'  // Vertical layout
+}}>
+  {/* Header with buttons */}
+  <div style={{ background: '#1e293b', padding: '1.5rem' }}>
+    <h3>Take a picture</h3>
+    <div>{/* Buttons */}</div>
+  </div>
+  
+  {/* Video preview */}
+  <div style={{ flex: 1, background: '#000' }}>
+    <video style={{
+      maxWidth: '100%',
+      maxHeight: '100%'
+    }} />
+  </div>
+</div>
+```
+
+**Video attributes:**
+- `autoPlay` - Start immediately
+- `playsInline` - iOS compatibility
+- `muted` - Prevent audio feedback
+- `ref={completionVideoRef}` - Stream connection
+
+### Retake Functionality:
+
+**When retaking:**
+1. Click "🔄 Retake Photo"
+2. Photo clears
+3. Camera restarts automatically
+4. Shows live preview again
+5. Ready to capture new photo
+
+**Camera restart:**
+```javascript
+const stream = await navigator.mediaDevices.getUserMedia({ 
+  video: { facingMode: 'environment' }, 
+  audio: false 
+});
+completionVideoRef.current.srcObject = stream;
+```
+
+### Comparison:
+
+**Before:**
+- Buttons at bottom (off-screen)
+- Small preview in box
+- Modal with padding
+
+**After:**
+- Buttons at top (always visible)
+- Fullscreen preview
+- Immersive camera interface
+
+**Completion camera now iPad-friendly with buttons at top and fullscreen preview!** 📸✨
+
+---
+
 ## v2.97 (2026-02-08)
 **Removed Pause/Restart from Item Cards**
 

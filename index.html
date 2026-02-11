@@ -2425,7 +2425,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.97
+                  v2.98
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -3521,38 +3521,36 @@
                 background: 'rgba(0,0,0,0.95)',
                 zIndex: 1001,
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1rem'
+                flexDirection: 'column',
+                padding: 0
               }}>
-                <div style={{
-                  background: 'white',
-                  borderRadius: '24px',
-                  padding: '2rem',
-                  maxWidth: '800px',
-                  width: '100%',
-                  maxHeight: '90vh',
-                  overflow: 'auto'
-                }}>
-                  <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', textAlign: 'center' }}>
-                    Take a picture of the completed case(s)
-                  </h3>
-                  
-                  {!photoTaken ? (
-                    <div>
-                      <video 
-                        ref={completionVideoRef}
-                        autoPlay 
-                        playsInline
-                        style={{
-                          width: '100%',
-                          borderRadius: '16px',
-                          background: '#000',
-                          marginBottom: '1.5rem'
-                        }}
-                      />
+                {!photoTaken ? (
+                  <>
+                    {/* Header with buttons at TOP */}
+                    <div style={{
+                      background: '#1e293b',
+                      padding: '1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem'
+                    }}>
+                      <h3 style={{ 
+                        margin: 0, 
+                        fontSize: '1.4rem', 
+                        fontWeight: '800', 
+                        color: 'white', 
+                        textAlign: 'center' 
+                      }}>
+                        Take a picture of the completed case(s)
+                      </h3>
                       
-                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {/* Control buttons at top */}
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '1rem', 
+                        justifyContent: 'center', 
+                        flexWrap: 'wrap' 
+                      }}>
                         <button
                           onClick={() => {
                             if (completionVideoRef.current && completionCanvasRef.current) {
@@ -3592,7 +3590,9 @@
                             cursor: 'pointer',
                             fontWeight: '700',
                             fontSize: '1.1rem',
-                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                            flex: '1',
+                            minWidth: '140px'
                           }}
                         >
                           📸 Take Photo
@@ -3616,7 +3616,9 @@
                             cursor: 'pointer',
                             fontWeight: '700',
                             fontSize: '1.1rem',
-                            boxShadow: '0 4px 15px rgba(100, 116, 139, 0.3)'
+                            boxShadow: '0 4px 15px rgba(100, 116, 139, 0.3)',
+                            flex: '1',
+                            minWidth: '140px'
                           }}
                         >
                           Skip Photo
@@ -3639,26 +3641,67 @@
                             cursor: 'pointer',
                             fontWeight: '700',
                             fontSize: '1.1rem',
-                            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)'
+                            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)',
+                            flex: '1',
+                            minWidth: '140px'
                           }}
                         >
                           Cancel
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    <div>
-                      <img 
-                        src={photoData.data}
+                    
+                    {/* Live camera preview - takes remaining space */}
+                    <div style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#000',
+                      padding: '1rem'
+                    }}>
+                      <video 
+                        ref={completionVideoRef}
+                        autoPlay 
+                        playsInline
+                        muted
                         style={{
-                          width: '100%',
-                          borderRadius: '16px',
-                          marginBottom: '1.5rem'
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          width: 'auto',
+                          height: 'auto',
+                          borderRadius: '8px'
                         }}
-                        alt="Completion photo"
                       />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Header for photo review */}
+                    <div style={{
+                      background: '#1e293b',
+                      padding: '1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem'
+                    }}>
+                      <h3 style={{ 
+                        margin: 0, 
+                        fontSize: '1.4rem', 
+                        fontWeight: '800', 
+                        color: 'white', 
+                        textAlign: 'center' 
+                      }}>
+                        Review Photo
+                      </h3>
                       
-                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {/* Control buttons at top */}
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '1rem', 
+                        justifyContent: 'center', 
+                        flexWrap: 'wrap' 
+                      }}>
                         <button
                           onClick={() => {
                             finalizeCompletion(showCompletionCamera, photoData);
@@ -3672,12 +3715,79 @@
                             cursor: 'pointer',
                             fontWeight: '700',
                             fontSize: '1.1rem',
-                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                            flex: '1',
+                            minWidth: '180px'
                           }}
                         >
                           ✅ Complete with This Photo
                         </button>
                         
+                        <button
+                          onClick={async () => {
+                            setPhotoTaken(false);
+                            setPhotoData(null);
+                            // Restart camera
+                            try {
+                              const stream = await navigator.mediaDevices.getUserMedia({ 
+                                video: { facingMode: 'environment' }, 
+                                audio: false 
+                              });
+                              setCompletionMediaStream(stream);
+                              if (completionVideoRef.current) {
+                                completionVideoRef.current.srcObject = stream;
+                              }
+                            } catch (error) {
+                              console.error('Error restarting camera:', error);
+                            }
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '1rem 2rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)',
+                            flex: '1',
+                            minWidth: '180px'
+                          }}
+                        >
+                          🔄 Retake Photo
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Photo preview - takes remaining space */}
+                    <div style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#000',
+                      padding: '1rem'
+                    }}>
+                      <img 
+                        src={photoData.data}
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          width: 'auto',
+                          height: 'auto',
+                          borderRadius: '8px'
+                        }}
+                        alt="Completion photo"
+                      />
+                    </div>
+                  </>
+                )}
+                
+                {/* Hidden canvas for capturing photo */}
+                <canvas ref={completionCanvasRef} style={{ display: 'none' }} />
+              </div>
+            )}
                         <button
                           onClick={() => {
                             setPhotoTaken(false);
