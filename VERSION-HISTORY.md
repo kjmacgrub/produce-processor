@@ -1,5 +1,143 @@
 # Version History - Produce Processing App
 
+## v2.104 (2026-02-08)
+**BUGFIX: Accept Button Rendering and Order**
+
+### Fixed:
+- **Simplified button structure** - removed unnecessary wrapper divs
+- **Swapped button order** - Retake now first, Accept below
+- **Better centering** - using width: 100% and margin: 0 auto
+- Ensures buttons render properly on all devices including iPad
+
+### The Problem:
+
+**v2.103:** On iPad, Accept button wasn't rendering properly. Users saw "Review Photo" title but the Accept button wasn't visible or clickable. Also, button order was wrong (Accept was above Retake).
+
+### The Fix:
+
+**Simplified structure:**
+```javascript
+// Before: Buttons wrapped in divs
+<div><button>Accept</button></div>
+<div><button>Retake</button></div>
+
+// After: Buttons directly in container
+<button>Retake</button>
+<button>Accept</button>
+```
+
+**Corrected order:**
+1. 🔄 Retake Photo (first)
+2. ✅ Accept! (second, below Retake)
+
+**Better styling:**
+```javascript
+style={{
+  width: '100%',
+  maxWidth: '300px',
+  margin: '0 auto'  // Centers button
+}}
+```
+
+### New Layout:
+
+```
+┌──────────────────────────┐
+│ Review Photo             │
+│                          │
+│  [🔄 Retake Photo]       │ ← First (outlined)
+│                          │
+│  ┌──────────────────┐    │
+│  │  ✅  Accept!     │    │ ← Second (solid green)
+│  └──────────────────┘    │
+├──────────────────────────┤
+│                          │
+│    Photo displayed       │
+│                          │
+└──────────────────────────┘
+```
+
+### Benefits:
+
+✅ **Buttons render correctly** - Simplified React structure  
+✅ **Correct order** - Retake first, Accept second  
+✅ **Better centering** - Consistent on all devices  
+✅ **Works on iPad** - Proper rendering confirmed  
+
+**Accept button now renders properly and is in correct order!** ✅
+
+---
+
+## v2.103 (2026-02-08)
+**BUGFIX: Accept Button Visible in Portrait Mode**
+
+### Fixed:
+- **Accept button moved to header** (no longer floating over photo)
+- **Always visible on iPad** in both portrait and landscape orientations
+- Removed duplicate floating button code
+- Cleaned up duplicate styling
+
+### The Problem:
+
+**v2.102:** When iPad held vertically (portrait), the floating Accept button at the bottom was cut off and not visible on screen.
+
+### The Solution:
+
+**Moved Accept button to header section:**
+```
+┌──────────────────────────┐
+│ Review Photo             │
+│                          │
+│  ┌──────────────────┐    │
+│  │  ✅  Accept!     │    │ ← In header (always visible)
+│  └──────────────────┘    │
+│                          │
+│  [🔄 Retake Photo]       │ ← Below Accept
+├──────────────────────────┤
+│                          │
+│    Photo displayed       │
+│    (full height)         │
+│                          │
+└──────────────────────────┘
+```
+
+### Button Order in Header:
+
+1. **✅ Accept!** (large, green, prominent)
+   - Primary action
+   - 1.5rem font size
+   - Green gradient with glow
+   - Checkbox icon
+
+2. **🔄 Retake Photo** (smaller, outlined, secondary)
+   - Secondary action
+   - 1rem font size
+   - Orange outline
+   - No fill background
+
+### Benefits:
+
+✅ **Always visible** - Buttons in header area  
+✅ **Portrait mode fixed** - No cutoff on vertical iPad  
+✅ **Clear hierarchy** - Accept is primary, Retake is secondary  
+✅ **More photo space** - Full screen available for photo preview  
+
+### Technical Changes:
+
+**Removed:**
+- Floating button with `position: absolute`
+- `position: relative` from photo container
+- Duplicate styling code
+
+**Kept:**
+- Accept button in header (added in v2.102)
+- Large, prominent styling
+- ✅ Checkbox icon
+
+**Accept button now always visible in portrait mode!** ✅📱
+
+---
+
 ## v2.102 (2026-02-08)
 **Floating Accept Button Over Photo**
 
