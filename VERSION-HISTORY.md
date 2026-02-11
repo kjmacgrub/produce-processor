@@ -1,5 +1,166 @@
 # Version History - Produce Processing App
 
+## v2.89 (2026-02-08)
+**Smart Timer Button Positioning**
+
+### Changed:
+- **Timer button position adapts** based on whether timing data exists
+- **Simplified layout** - removed nested container structure
+- **Timer grows to fill space** when no timing data
+
+### The Change:
+
+**When NO timing data stored:**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 25 cases [Timer Button ─────────────────→]│
+└──────────────────────────────────────────────┘
+Timer button extends from cases to right margin
+```
+
+**When timing data EXISTS:**
+```
+┌──────────────────────────────────────────────┐
+│ 📦 25 cases [Avg: 2:30] [Timer Button ─────→]│
+└──────────────────────────────────────────────┘
+Timer button starts after timing metrics
+```
+
+### Layout Structure:
+
+**Line 2 now has flat structure:**
+1. Cases (fixed width, `flexShrink: 0`)
+2. Timing metrics (when stats exist, `flex: '1 1 auto'`)
+3. Timer button (always present, flex adapts)
+
+**Timer button flex behavior:**
+- **No stats:** `flex: '1 1 auto'` - grows to fill remaining space
+- **Has stats:** `flex: '0 0 auto'` - fixed size after metrics
+
+### Benefits:
+
+✅ **Efficient use of space** - Timer uses available space when no metrics  
+✅ **Consistent positioning** - Timer always on right side  
+✅ **Logical flow** - Timing elements grouped together  
+✅ **Simpler structure** - No nested containers  
+
+### Technical Implementation:
+
+```javascript
+// Flat structure on Line 2
+<div style={{ display: 'flex', gap: '1rem' }}>
+  {/* Cases */}
+  <div style={{ flexShrink: 0 }}>...</div>
+  
+  {/* Timing metrics - only when stats exist */}
+  {stats && <div style={{ flex: '1 1 auto' }}>...</div>}
+  
+  {/* Timer button - flex adapts */}
+  <button style={{
+    flex: stats ? '0 0 auto' : '1 1 auto',
+    minWidth: '180px'
+  }}>Timer</button>
+</div>
+```
+
+**Timer button now smartly positions based on timing data availability!** 🎯✨
+
+---
+
+## v2.88 (2026-02-08)
+**Major Layout Reorganization: Timer Functions on One Line**
+
+### Changed:
+- **Timer button moved to Line 2** (with timing metrics)
+- **Video button enlarged** to fill Timer's old space
+- **Related functions grouped** - timing on one line, media on another
+
+### The Reorganization:
+
+**Before:**
+```
+Line 2: [Cases + Timing metrics] [empty space]
+Line 3: [Instructions] [Timer/Video stacked] [All Done]
+```
+
+**After:**
+```
+Line 2: [Cases + Timing metrics] [Timer button →→→]
+Line 3: [Instructions] [Video button] [All Done]
+```
+
+### Visual Layout:
+
+**Line 2 - Timing Functions:**
+```
+┌───────────────────────────────────────────────┐
+│ 📦 Cases [Avg time: 2:30] [Timer Button ───→]│
+└───────────────────────────────────────────────┘
+All timing-related functions on one line
+```
+
+**Line 3 - Instructions & Media:**
+```
+┌───────────────────────────────────────────────┐
+│ ⚠️ [Instructions] [Video] [All Done]          │
+└───────────────────────────────────────────────┘
+Video and photo completion on one line
+```
+
+### Button Sizes:
+
+**Timer button (Line 2):**
+- Position: Right side of Line 2
+- Width: `minWidth: '180px'`
+- Extends from timing metrics to right margin
+
+**Video button (Line 3 - ENLARGED):**
+- Width: `minWidth: '180px'` (was 140px)
+- Height: Full height (matches All Done)
+- Takes space Timer used to occupy
+
+**All Done button (Line 3):**
+- Width: `minWidth: '150px'` (unchanged)
+- Height: Full height (unchanged)
+
+### Functional Grouping:
+
+**Timing Functions (Line 2):**
+- Cases count
+- Inline timer (when running)
+- Average processing time
+- **Timer button** (Begin/Pause/Restart)
+
+**Media & Completion (Line 3):**
+- Instructions
+- **Video button** (Play/Make video)
+- **All Done button** (Completion + photo)
+
+### Benefits:
+
+✅ **Logical grouping** - Related functions together  
+✅ **Larger video button** - Easier to tap  
+✅ **Better balance** - Video and All Done similar sizes  
+✅ **Clear separation** - Timing line vs. action line  
+✅ **More space** - Timer button spans full width  
+
+### Technical Changes:
+
+**Line 2:**
+- Removed invisible spacer
+- Added actual Timer button on right
+- Timer button: `flex: '0 0 auto'`, `minWidth: '180px'`
+
+**Line 3:**
+- Removed Timer/Video stacked column
+- Video button now standalone (larger)
+- Video button: `minWidth: '180px'` (was 140px)
+- Video button: `minHeight: '100%'` (matches All Done height)
+
+**Layout now organized by function: Timing line + Action line!** ⚡✨
+
+---
+
 ## v2.87 (2026-02-08)
 **UI Update: "Make video" Button Text**
 

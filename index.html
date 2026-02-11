@@ -2347,7 +2347,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.87
+                  v2.89
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2715,133 +2715,134 @@
                         </h3>
                       </div>
                       
-                      {/* Line 2: Cases with Timing metrics (left), invisible spacer for buttons (right) */}
+                      {/* Line 2: Cases + Timing metrics (left), Timer button (position depends on stats) */}
                       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        {/* Left section: Cases + Timing metrics - matches instructions box width */}
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '1rem', 
-                          flex: '1 1 auto',
-                          minWidth: '200px'
-                        }}>
-                          {/* Cases with inline timer */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b', flexShrink: 0 }}>
-                            <Package size={26} />
-                            <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
-                            
-                            {/* Inline timer when processing - visible in both Process and View modes */}
-                            {(itemsInProcess[item.id] || itemsPaused[item.id]) && (
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 1rem',
-                                background: itemsPaused[item.id]
-                                  ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
-                                  : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                                borderRadius: '12px',
-                                boxShadow: itemsPaused[item.id]
-                                  ? '0 4px 15px rgba(99, 102, 241, 0.3)'
-                                  : '0 4px 15px rgba(245, 158, 11, 0.3)',
-                                marginLeft: '0.5rem'
-                              }}>
-                                <Timer size={20} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
-                                <div style={{
-                                  fontSize: '1.3rem',
-                                  fontWeight: '800',
-                                  color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
-                                  fontVariantNumeric: 'tabular-nums',
-                                  minWidth: '70px'
-                                }}>
-                                  {formatTime(elapsedTimes[item.id] || 0)}
-                                </div>
-                                {/* Show "Paused" text when timer is paused */}
-                                {itemsPaused[item.id] && (
-                                  <span style={{
-                                    fontSize: '0.9rem',
-                                    fontWeight: '700',
-                                    color: '#6366f1',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.05em'
-                                  }}>
-                                    Paused
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Timing metrics - grows to fill remaining space in left section */}
-                          {!readOnlyMode && stats && (
+                        {/* Cases with inline timer */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b', flexShrink: 0 }}>
+                          <Package size={26} />
+                          <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
+                          
+                          {/* Inline timer when processing - visible in both Process and View modes */}
+                          {(itemsInProcess[item.id] || itemsPaused[item.id]) && (
                             <div style={{
-                              padding: '0.5rem 0.75rem',
-                              border: '2px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem 1rem',
+                              background: itemsPaused[item.id]
+                                ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
+                                : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
                               borderRadius: '12px',
-                              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                              flex: '1 1 auto',
-                              minWidth: '150px'
+                              boxShadow: itemsPaused[item.id]
+                                ? '0 4px 15px rgba(99, 102, 241, 0.3)'
+                                : '0 4px 15px rgba(245, 158, 11, 0.3)',
+                              marginLeft: '0.5rem'
                             }}>
-                              <div style={{ 
-                                display: 'flex', 
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center'
+                              <Timer size={20} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
+                              <div style={{
+                                fontSize: '1.3rem',
+                                fontWeight: '800',
+                                color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
+                                fontVariantNumeric: 'tabular-nums',
+                                minWidth: '70px'
                               }}>
-                                <div style={{ textAlign: 'center' }}>
-                                  <div style={{ 
-                                    fontSize: '0.9rem', 
-                                    color: '#64748b', 
-                                    fontWeight: '600',
-                                    textTransform: 'uppercase',
-                                    marginBottom: '0.25rem'
-                                  }}>
-                                    Average processing time per case
-                                  </div>
-                                  <div 
-                                    onClick={() => setShowTimingEvents(sku)}
-                                    style={{ 
-                                      fontSize: '1.3rem', 
-                                      fontWeight: '700', 
-                                      color: '#0f766e',
-                                      fontVariantNumeric: 'tabular-nums',
-                                      cursor: 'pointer',
-                                      textDecoration: 'underline',
-                                      transition: 'color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = '#059669'}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = '#0f766e'}
-                                  >
-                                    {formatTime(stats.average)}
-                                  </div>
-                                </div>
+                                {formatTime(elapsedTimes[item.id] || 0)}
                               </div>
+                              {/* Show "Paused" text when timer is paused */}
+                              {itemsPaused[item.id] && (
+                                <span style={{
+                                  fontSize: '0.9rem',
+                                  fontWeight: '700',
+                                  color: '#6366f1',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em'
+                                }}>
+                                  Paused
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
 
-                        {/* Right section: Invisible spacer matching button area width */}
-                        {!readOnlyMode && (
-                          <div style={{ 
-                            display: 'flex', 
-                            gap: '1rem', 
-                            flexWrap: 'nowrap',
-                            alignItems: 'stretch',
-                            visibility: 'hidden',
-                            pointerEvents: 'none'
+                        {/* Timing metrics - only when stats exist */}
+                        {!readOnlyMode && stats && (
+                          <div style={{
+                            padding: '0.5rem 0.75rem',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                            flex: '1 1 auto',
+                            minWidth: '150px'
                           }}>
-                            {/* Spacer matching Timer/Video column */}
                             <div style={{ 
                               display: 'flex', 
-                              flexDirection: 'column', 
-                              gap: '0.75rem',
-                              minWidth: '140px'
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}>
-                              <div style={{ minHeight: '50px' }} />
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ 
+                                  fontSize: '0.9rem', 
+                                  color: '#64748b', 
+                                  fontWeight: '600',
+                                  textTransform: 'uppercase',
+                                  marginBottom: '0.25rem'
+                                }}>
+                                  Average processing time per case
+                                </div>
+                                <div 
+                                  onClick={() => setShowTimingEvents(sku)}
+                                  style={{ 
+                                    fontSize: '1.3rem', 
+                                    fontWeight: '700', 
+                                    color: '#0f766e',
+                                    fontVariantNumeric: 'tabular-nums',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    transition: 'color 0.2s'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.color = '#059669'}
+                                  onMouseLeave={(e) => e.currentTarget.style.color = '#0f766e'}
+                                >
+                                  {formatTime(stats.average)}
+                                </div>
+                              </div>
                             </div>
-                            {/* Spacer matching All Done button */}
-                            <div style={{ minWidth: '150px', minHeight: '100%' }} />
                           </div>
+                        )}
+                        
+                        {/* Timer button - position changes based on stats */}
+                        {!readOnlyMode && (
+                          <button
+                            onClick={() => handleBeginProcessing(item.id)}
+                            style={{
+                              background: itemsInProcess[item.id]
+                                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' // Orange for Pause
+                                : itemsPaused[item.id]
+                                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Green for Restart
+                                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', // Blue for Begin
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '1.2rem 2rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              fontWeight: '700',
+                              fontSize: '1.1rem',
+                              boxShadow: itemsInProcess[item.id]
+                                ? '0 4px 15px rgba(245, 158, 11, 0.3)'
+                                : itemsPaused[item.id]
+                                ? '0 4px 15px rgba(16, 185, 129, 0.3)'
+                                : '0 4px 15px rgba(59, 130, 246, 0.3)',
+                              flex: stats ? '0 0 auto' : '1 1 auto', // Grow when no stats, fixed when stats exist
+                              minWidth: '180px',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            {itemsInProcess[item.id] ? 'Pause' : itemsPaused[item.id] ? 'Restart' : 'Timer'}
+                          </button>
                         )}
                       </div>
 
@@ -2881,98 +2882,66 @@
                           </div>
                         </div>
 
-                        {/* Timer/Video and All Done buttons on right */}
+                        {/* Video and All Done buttons on right */}
                         {!readOnlyMode && (
                           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'nowrap', alignItems: 'stretch' }}>
-                            {/* Left column: Timer and Video stacked */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {/* Video button - now larger, same height as All Done */}
+                            {hasVideo ? (
                               <button
-                                onClick={() => handleBeginProcessing(item.id)}
+                                onClick={() => {
+                                  console.log('Video button clicked. SKU:', sku);
+                                  console.log('Video data exists:', !!videos[sku]);
+                                  console.log('Video data:', videos[sku]);
+                                  setPlayingVideo(sku);
+                                }}
                                 style={{
-                                  background: itemsInProcess[item.id]
-                                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' // Orange for Pause
-                                    : itemsPaused[item.id]
-                                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Green for Restart
-                                    : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', // Blue for Begin
+                                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '12px',
-                                  padding: '1.2rem 2rem',
+                                  padding: '0',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
+                                  justifyContent: 'center',
                                   gap: '0.6rem',
                                   fontWeight: '700',
                                   fontSize: '1.1rem',
-                                  boxShadow: itemsInProcess[item.id]
-                                    ? '0 4px 15px rgba(245, 158, 11, 0.3)'
-                                    : itemsPaused[item.id]
-                                    ? '0 4px 15px rgba(16, 185, 129, 0.3)'
-                                    : '0 4px 15px rgba(59, 130, 246, 0.3)',
-                                  minWidth: '140px',
-                                  justifyContent: 'center'
+                                  boxShadow: '0 4px 15px rgba(5, 150, 105, 0.3)',
+                                  minWidth: '180px',
+                                  minHeight: '100%'
                                 }}
                               >
-                                {itemsInProcess[item.id] ? 'Pause' : itemsPaused[item.id] ? 'Restart' : 'Timer'}
+                                <Play size={22} />
+                                Video
                               </button>
-                              
-                              {/* Video button */}
-                              {hasVideo ? (
-                                <button
-                                  onClick={() => {
-                                    console.log('Video button clicked. SKU:', sku);
-                                    console.log('Video data exists:', !!videos[sku]);
-                                    console.log('Video data:', videos[sku]);
-                                    setPlayingVideo(sku);
-                                  }}
-                                  style={{
-                                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '1.2rem 1.5rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.6rem',
-                                    fontWeight: '700',
-                                    fontSize: '1.1rem',
-                                    boxShadow: '0 4px 15px rgba(5, 150, 105, 0.3)',
-                                    minWidth: '140px',
-                                    justifyContent: 'center'
-                                  }}
-                                >
-                                  <Play size={22} />
-                                  Video
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => setShowVideoUpload(item.id)}
-                                  style={{
-                                    background: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '1.2rem 1.5rem',
-                                    cursor: 'default',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.6rem',
-                                    fontWeight: '700',
-                                    fontSize: '1.1rem',
-                                    boxShadow: '0 4px 15px rgba(100, 116, 139, 0.2)',
-                                    minWidth: '140px',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  <Video size={22} />
-                                  Make video
-                                </button>
-                              )}
-                            </div>
+                            ) : (
+                              <button
+                                onClick={() => setShowVideoUpload(item.id)}
+                                style={{
+                                  background: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '12px',
+                                  padding: '0',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '0.6rem',
+                                  fontWeight: '700',
+                                  fontSize: '1.1rem',
+                                  boxShadow: '0 4px 15px rgba(100, 116, 139, 0.2)',
+                                  minWidth: '180px',
+                                  minHeight: '100%'
+                                }}
+                              >
+                                <Video size={22} />
+                                Make video
+                              </button>
+                            )}
                             
-                            {/* Right column: All Done button (taller) */}
+                            {/* All Done button */}
                             <button
                               onClick={() => markComplete(item)}
                               style={{
