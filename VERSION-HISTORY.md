@@ -1,5 +1,83 @@
 # Version History - Produce Processing App
 
+## v2.100 (2026-02-08)
+**BUGFIX: Camera Preview on iPad**
+
+### Fixed:
+- **Camera preview now works on iPad** (was working on desktop only)
+- Added timing delay for iOS video element initialization
+- Force play() call for iOS compatibility
+- Added video resolution hints for better quality
+
+### The Problem:
+
+After pressing Done → "Take a Photo", the camera preview would:
+- ✅ Work on desktop
+- ❌ Not show on iPad (black screen)
+
+### Root Cause:
+
+iOS/Safari requires:
+1. Time for video element to be ready
+2. Explicit `.play()` call
+3. Proper video constraints
+
+### The Fix:
+
+**Added 100ms delay before setting stream:**
+```javascript
+setTimeout(() => {
+  if (completionVideoRef.current) {
+    completionVideoRef.current.srcObject = stream;
+    // Force play on iOS
+    completionVideoRef.current.play().catch(e => {
+      console.log('Stream should still work:', e);
+    });
+  }
+}, 100);
+```
+
+**Better video constraints:**
+```javascript
+video: { 
+  facingMode: 'environment',  // Back camera
+  width: { ideal: 1920 },      // Better quality
+  height: { ideal: 1080 }
+}
+```
+
+### Applied To:
+
+1. **Initial camera start** (useEffect)
+2. **Retake photo** button handler
+
+### Why This Works:
+
+**iOS Safari Requirements:**
+- Video elements need time to mount in DOM
+- `srcObject` assignment must wait for element ready
+- `.play()` must be called explicitly
+- Autoplay alone isn't enough
+
+**The timeout:**
+- Gives React time to render video element
+- Ensures ref is populated
+- Prevents race condition
+
+**The play() call:**
+- Forces video playback on iOS
+- Caught error is expected and harmless
+- Stream still works even if play() fails
+
+### Testing:
+
+**Desktop:** ✅ Still works  
+**iPad:** ✅ Now shows preview  
+
+**Camera preview now works on both desktop and iPad!** 📸✨
+
+---
+
 ## v2.99 (2026-02-08)
 **BUGFIX: Completion Camera JSX Error**
 

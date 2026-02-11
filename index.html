@@ -207,13 +207,26 @@
         const startCamera = async () => {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { facingMode: 'environment' }, 
+              video: { 
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+              }, 
               audio: false 
             });
+            
             setCompletionMediaStream(stream);
-            if (completionVideoRef.current) {
-              completionVideoRef.current.srcObject = stream;
-            }
+            
+            // Wait a moment for video element to be ready, especially on iOS
+            setTimeout(() => {
+              if (completionVideoRef.current) {
+                completionVideoRef.current.srcObject = stream;
+                // Force play on iOS
+                completionVideoRef.current.play().catch(e => {
+                  console.log('Video play failed, but stream should still work:', e);
+                });
+              }
+            }, 100);
           } catch (error) {
             console.error('Error accessing camera:', error);
             alert('Could not access camera. You can still complete without a photo.');
@@ -2425,7 +2438,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.99
+                  v2.100
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -3525,7 +3538,7 @@
                 padding: 0
               }}>
                 {!photoTaken ? (
-                  <>
+                  <React.Fragment>
                     {/* Header with buttons at TOP */}
                     <div style={{
                       background: '#1e293b',
@@ -3674,9 +3687,9 @@
                         }}
                       />
                     </div>
-                  </>
+                  </React.Fragment>
                 ) : (
-                  <>
+                  <React.Fragment>
                     {/* Header for photo review */}
                     <div style={{
                       background: '#1e293b',
@@ -3730,13 +3743,25 @@
                             // Restart camera
                             try {
                               const stream = await navigator.mediaDevices.getUserMedia({ 
-                                video: { facingMode: 'environment' }, 
+                                video: { 
+                                  facingMode: 'environment',
+                                  width: { ideal: 1920 },
+                                  height: { ideal: 1080 }
+                                }, 
                                 audio: false 
                               });
                               setCompletionMediaStream(stream);
-                              if (completionVideoRef.current) {
-                                completionVideoRef.current.srcObject = stream;
-                              }
+                              
+                              // Wait for video element, especially on iOS
+                              setTimeout(() => {
+                                if (completionVideoRef.current) {
+                                  completionVideoRef.current.srcObject = stream;
+                                  // Force play on iOS
+                                  completionVideoRef.current.play().catch(e => {
+                                    console.log('Video play failed, but stream should still work:', e);
+                                  });
+                                }
+                              }, 100);
                             } catch (error) {
                               console.error('Error restarting camera:', error);
                             }
@@ -3781,7 +3806,7 @@
                         alt="Completion photo"
                       />
                     </div>
-                  </>
+                  </React.Fragment>
                 )}
                 
                 {/* Hidden canvas for capturing photo */}
