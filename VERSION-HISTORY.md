@@ -1,5 +1,460 @@
 # Version History - Produce Processing App
 
+## v2.87 (2026-02-08)
+**UI Update: "Make video" Button Text**
+
+### Changed:
+- **Video button text changed** from "No video available" to "Make video"
+- **Button looks more clickable** - removed opacity, changed cursor
+- More action-oriented language
+
+### The Change:
+
+**Before:**
+```
+┌──────────────────────┐
+│  📹 No video available│  ← Grayed out, looked disabled
+└──────────────────────┘
+cursor: default
+opacity: 0.7
+```
+
+**After:**
+```
+┌──────────────────────┐
+│  📹 Make video        │  ← Clear call-to-action
+└──────────────────────┘
+cursor: pointer
+opacity: 1.0 (full)
+```
+
+### Benefits:
+
+✅ **Action-oriented** - "Make video" is clearer than "No video available"  
+✅ **Looks clickable** - No opacity, pointer cursor  
+✅ **Encourages use** - Invites workers to create videos  
+✅ **Shorter text** - Fits better in button  
+
+### Technical Changes:
+
+```javascript
+// Before
+cursor: 'default',
+opacity: 0.7
+// Text: "No video available"
+
+// After
+cursor: 'pointer'
+// No opacity property (full opacity)
+// Text: "Make video"
+```
+
+**Button now invites action instead of stating absence!** 📹✨
+
+---
+
+## v2.86 (2026-02-08)
+**UI Fix: Corrected Timing Metrics Alignment**
+
+### Fixed:
+- **Invisible spacer now matches exact button structure**
+- **Timing metrics right edge properly aligned** with instructions box
+- Used correct button widths (140px + 150px, not estimated values)
+
+### The Fix:
+
+**Problem in v2.85:**
+The invisible spacer didn't match the actual button container structure:
+- Used `width` instead of `minWidth`
+- Incorrect widths (140px + 180px instead of 140px + 150px)
+- Didn't match flex structure
+
+**Solution in v2.86:**
+Replicated the exact button container structure for the spacer:
+
+```javascript
+// Invisible spacer (exact match of button container)
+<div style={{ 
+  display: 'flex', 
+  gap: '1rem',           // Same as buttons
+  alignItems: 'stretch'  // Same as buttons
+}}>
+  {/* Timer/Video column spacer */}
+  <div style={{ 
+    display: 'flex', 
+    flexDirection: 'column',
+    gap: '0.75rem',    // Match button column gap
+    minWidth: '140px'  // Match Timer/Video width
+  }}>
+    <div style={{ minHeight: '50px' }} />
+  </div>
+  
+  {/* All Done button spacer */}
+  <div style={{ 
+    minWidth: '150px',  // Correct All Done width
+    minHeight: '100%' 
+  }} />
+</div>
+```
+
+### Corrected Dimensions:
+
+**Button container actual widths:**
+- Timer/Video column: `minWidth: '140px'`
+- All Done button: `minWidth: '150px'` (not 180px!)
+- Gap between: `1rem`
+- Total reserved space: ~306px
+
+### Benefits:
+
+✅ **Exact match** - Spacer structure identical to buttons  
+✅ **Correct widths** - Uses actual button dimensions  
+✅ **Precise alignment** - Right edges now align perfectly  
+✅ **Responsive** - Matches button behavior  
+
+**Timing metrics right edge now properly stops at instructions box edge!** 📐✨
+
+---
+
+## v2.85 (2026-02-08)
+**UI Fix: Timing Metrics Right Edge Now Properly Aligned**
+
+### Changed:
+- **Restructured Line 2 layout** to match Line 3
+- **Timing metrics right edge** now stops at instructions box right edge
+- **Added invisible spacer** to reserve button space
+
+### The Fix:
+
+**Problem:**
+Timing metrics was stretching all the way to the right margin, not stopping at the instructions box edge.
+
+**Solution:**
+Restructured Line 2 to have the same left/right split as Line 3:
+- **Left section:** Cases + Timing metrics (flex container)
+- **Right section:** Invisible spacer matching button widths
+
+**Before (v2.84):**
+```
+┌────────────────────────────────────────────┐
+│  📦 25 cases  [Avg time: 2:30 ──────────]  │ ← Stretched to margin
+│                                            │
+│  ⚠️ [Instructions] [Buttons]               │
+└────────────────────────────────────────────┘
+```
+
+**After (v2.85):**
+```
+┌────────────────────────────────────────────┐
+│  📦 25 cases  [Avg: 2:30] [invisible space]│ ← Stops at instructions edge
+│                                            │
+│  ⚠️ [Instructions] [Buttons]               │
+└────────────────────────────────────────────┘
+                          ↑ Right edges aligned!
+```
+
+### Technical Implementation:
+
+**Line 2 Structure (NEW):**
+```javascript
+<div style={{ display: 'flex', gap: '1rem' }}>
+  {/* Left: Cases + Timing (flex: 1 1 auto) */}
+  <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
+    <div>📦 Cases</div>
+    <div style={{ flex: '1 1 auto' }}>Timing metrics</div>
+  </div>
+  
+  {/* Right: Invisible spacer matching buttons */}
+  <div style={{ visibility: 'hidden' }}>
+    <div style={{ width: '140px' }} /> {/* Timer/Video column */}
+    <div style={{ width: '180px' }} /> {/* All Done button */}
+  </div>
+</div>
+```
+
+**Line 3 Structure (EXISTING):**
+```javascript
+<div style={{ display: 'flex', gap: '1rem' }}>
+  {/* Left: Instructions (flex: 1 1 auto) */}
+  <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
+    Instructions
+  </div>
+  
+  {/* Right: Actual buttons */}
+  <div>
+    <div style={{ width: '140px' }}>Timer/Video</div>
+    <div style={{ width: '180px' }}>All Done</div>
+  </div>
+</div>
+```
+
+### Layout Alignment:
+
+Both Line 2 and Line 3 now have:
+- **Left section:** `flex: '1 1 auto'` with `minWidth: '200px'`
+- **Right section:** Fixed width (320px total with gaps)
+- **Same gap:** 1rem between sections
+
+Result: **Perfect vertical alignment!**
+
+### Benefits:
+
+✅ **Precise alignment** - Right edges match exactly  
+✅ **Clean layout** - Both boxes same width  
+✅ **Responsive** - Both grow/shrink together  
+✅ **Visual consistency** - Boxes stack perfectly  
+
+**Timing metrics now stops at the exact right edge of instructions box!** 📐✨
+
+---
+
+## v2.84 (2026-02-08)
+**UI Fix: Timing Metrics Right Edge Aligned with Instructions Box**
+
+### Changed:
+- **Timing metrics right edge now aligns** with instructions box right edge
+- **Left edge stays after cases text** as before
+- Timing metrics box grows/shrinks with instructions box
+
+### The Fix:
+
+**Before (v2.83):**
+```
+┌──────────────────────────────────────────┐
+│  📦 25 cases  [Avg time: 2:30]           │ ← Fixed 200px
+│                              [Buttons →] │
+│                                          │
+│  ⚠️ [  Instructions  ] [Buttons →]       │ ← Grows to fill
+└──────────────────────────────────────────┘
+Right edges didn't align ❌
+```
+
+**After (v2.84):**
+```
+┌──────────────────────────────────────────┐
+│  📦 25 cases  [Avg time per case: 2:30]  │ ← Grows to match
+│                              [Buttons →] │
+│                                          │
+│  ⚠️ [  Instructions  ] [Buttons →]       │ ← Grows to fill
+└──────────────────────────────────────────┘
+Right edges aligned! ✅
+```
+
+### Technical Changes:
+
+**Line 2 container:**
+```javascript
+// Before
+justifyContent: 'space-between' // Pushed items apart
+
+// After
+// Removed space-between // Natural flow
+```
+
+**Timing metrics box:**
+```javascript
+// Before
+flex: '0 1 auto',  // Doesn't grow
+maxWidth: '200px'  // Fixed at 200px
+
+// After
+flex: '1 1 auto',  // Grows like instructions box
+minWidth: '200px'  // Minimum 200px
+```
+
+### Layout Behavior:
+
+**Both timing metrics and instructions boxes now:**
+- Start at same left position (after cases text)
+- Grow to fill available space
+- End at same right position (before buttons)
+- Minimum width: 200px
+- Responsive: shrink together on small screens
+
+### Benefits:
+
+✅ **Aligned right edges** - Clean vertical alignment  
+✅ **Consistent spacing** - Both boxes use same width  
+✅ **Better visual flow** - Boxes stack neatly  
+✅ **Responsive layout** - Both resize together  
+
+**Timing metrics and instructions boxes now perfectly aligned on both edges!** 📐✨
+
+---
+
+## v2.83 (2026-02-08)
+**UI Polish: Timing Metrics Box Width Matched to Instructions**
+
+### Changed:
+- **Timing metrics box now matches width** of instructions box below
+- Fixed to 200px width (no wider)
+- Cleaner, more aligned appearance
+
+### The Change:
+
+**Before:**
+```
+┌──────────────────────────────────────┐
+│  25 cases  [Average time: 2:30] ←── Wide  │
+│                                      │
+│  [Instructions box]  ←── 200px       │
+└──────────────────────────────────────┘
+```
+
+**After:**
+```
+┌──────────────────────────────────────┐
+│  25 cases  [Avg time: 2:30] ←── 200px│
+│                                      │
+│  [Instructions box]  ←── 200px       │
+└──────────────────────────────────────┘
+```
+
+### Visual Comparison:
+
+**Before:**
+- Timing metrics box: Expanded to fill available space
+- Instructions box: Fixed at 200px minimum
+- Mismatched widths
+
+**After:**
+- Timing metrics box: Fixed at 200px
+- Instructions box: Fixed at 200px
+- Matched widths ✅
+
+### Technical Implementation:
+
+```javascript
+// Before
+flex: '1 1 auto',  // Grows to fill space
+minWidth: '200px'
+
+// After  
+flex: '0 1 auto',  // Doesn't grow
+minWidth: '200px',
+maxWidth: '200px'  // Caps width
+```
+
+### Benefits:
+
+✅ **Aligned layout** - Boxes stack neatly  
+✅ **Consistent width** - Both 200px  
+✅ **Cleaner appearance** - Visually balanced  
+✅ **Better readability** - Uniform column width  
+
+**Timing metrics and instructions boxes now perfectly aligned!** 📐✨
+
+---
+
+## v2.82 (2026-02-08)
+**UI Enhancement: Full-Width Priority Dropdown + Smart Clear Data Button**
+
+### Changed:
+- **Priority dropdown now stretches full width** across item panel
+- **Clear Data button hidden** when viewing today's data
+- Cleaner layout and safer data handling
+
+### The Changes:
+
+**1. Full-Width Priority Dropdown:**
+
+**Before:**
+```
+┌─────────────────────────┐
+│                         │
+│    [Priority 1]         │  ← Centered, small
+│                         │
+│  Item Name              │
+└─────────────────────────┘
+```
+
+**After:**
+```
+┌─────────────────────────┐
+│ [    Priority 1      ]  │  ← Full width
+│                         │
+│  Item Name              │
+└─────────────────────────┘
+```
+
+**2. Smart Clear Data Button:**
+
+**Before:**
+- Always visible when items loaded
+- Could accidentally clear today's work
+
+**After:**
+- **Hidden when viewing today's date**
+- Only shows for historical dates
+- Prevents accidental data loss
+
+### Clear Data Button Logic:
+
+**Today's date (e.g., 2026-02-08):**
+```
+File loaded: 2026-02-08
+→ Clear Data button: HIDDEN ❌
+→ Safe - can't accidentally clear current work
+```
+
+**Historical date (e.g., 2026-02-05):**
+```
+File loaded: 2026-02-05
+→ Clear Data button: VISIBLE ✅
+→ Can clear old data if needed
+```
+
+### Technical Implementation:
+
+**Priority dropdown:**
+```javascript
+// Before
+<select style={{ minWidth: '140px' }}>
+
+// After
+<select style={{ width: '100%' }}>
+```
+
+**Clear Data check:**
+```javascript
+const today = new Date();
+const todayStr = `${year}-${month}-${day}`; // Format: YYYY-MM-DD
+const isToday = pdfDate === todayStr;
+
+// Only show if NOT today
+{!readOnlyMode && items.length > 0 && !isToday && (
+  <button>Clear Data</button>
+)}
+```
+
+### Benefits:
+
+✅ **Easier to tap** - Full-width priority button on mobile  
+✅ **Better visual** - Priority spans entire item panel  
+✅ **Safer workflow** - Can't clear today's active work  
+✅ **Intentional clearing** - Only for historical data  
+
+### Use Cases:
+
+**Use Case 1: Working on today's items**
+- Load today's file (2026-02-08)
+- Clear Data button hidden
+- Can't accidentally clear current work ✅
+
+**Use Case 2: Reviewing yesterday's work**
+- Load yesterday's file (2026-02-07)
+- Clear Data button visible
+- Can clear if needed (e.g., to reload fresh data) ✅
+
+**Use Case 3: Checking last week's data**
+- Load old file (2026-02-01)
+- Clear Data button visible
+- Can clear historical data if desired ✅
+
+**Priority dropdown now full-width, and Clear Data protected for today's work!** 🎯✨
+
+---
+
 ## v2.81 (2026-02-08)
 **UI Improvement: Compact Completed Items Link**
 

@@ -2203,46 +2203,54 @@
               {/* Top buttons - Clear Data (left) and View Mode indicator (right) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 {/* Left side - Clear Data button or empty spacer */}
-                {!readOnlyMode && items.length > 0 ? (
-                  <button
-                    onClick={async () => {
-                      if (confirm('Clear all data? This will remove all items and start fresh.')) {
-                        if (db) {
-                          await db.ref('items').remove();
-                          await db.ref('completedItems').remove();
-                          await db.ref('pdfDate').remove();
-                          await db.ref('totalCases').remove();
-                          await db.ref('completionPhotos').remove(); // Clear photos from Firebase
+                {(() => {
+                  // Check if pdfDate is today
+                  const today = new Date();
+                  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                  const isToday = pdfDate === todayStr;
+                  
+                  // Only show Clear Data if not in read-only mode, items exist, and date is NOT today
+                  return !readOnlyMode && items.length > 0 && !isToday ? (
+                    <button
+                      onClick={async () => {
+                        if (confirm('Clear all data? This will remove all items and start fresh.')) {
+                          if (db) {
+                            await db.ref('items').remove();
+                            await db.ref('completedItems').remove();
+                            await db.ref('pdfDate').remove();
+                            await db.ref('totalCases').remove();
+                            await db.ref('completionPhotos').remove(); // Clear photos from Firebase
+                          }
+                          // Clear all state variables
+                          setItems([]);
+                          setCompletedItems([]);
+                          setActiveItem(null);
+                          setIsProcessing(false);
+                          setStartTime(null);
+                          setPdfDate('');
+                          setOriginalTotalCases(0);
+                          setCompletionPhotos({}); // Clear photos from state
+                          console.log('✅ All data cleared');
                         }
-                        // Clear all state variables
-                        setItems([]);
-                        setCompletedItems([]);
-                        setActiveItem(null);
-                        setIsProcessing(false);
-                        setStartTime(null);
-                        setPdfDate('');
-                        setOriginalTotalCases(0);
-                        setCompletionPhotos({}); // Clear photos from state
-                        console.log('✅ All data cleared');
-                      }
-                    }}
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)', // Orange with 85% opacity
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      padding: '0.75rem 1.5rem',
-                      fontSize: '0.95rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 15px rgba(249, 115, 22, 0.3)'
-                    }}
-                  >
-                    🗑️ Clear Data
-                  </button>
-                ) : (
-                  <div /> // Empty spacer for alignment
-                )}
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)', // Orange with 85% opacity
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '0.75rem 1.5rem',
+                        fontSize: '0.95rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(249, 115, 22, 0.3)'
+                      }}
+                    >
+                      🗑️ Clear Data
+                    </button>
+                  ) : (
+                    <div /> // Empty spacer for alignment
+                  );
+                })()}
                 
                 {/* Mode indicator (top-right) - shows current mode */}
                 {!isIPad ? (
@@ -2339,7 +2347,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.81
+                  v2.87
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2631,8 +2639,8 @@
                       transform: activeItem?.id === item.id ? 'scale(1.02)' : 'scale(1)'
                     }}
                   >
-                    {/* Priority dropdown at center top */}
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                    {/* Priority dropdown stretching full width */}
+                    <div style={{ marginBottom: '1rem' }}>
                       {!readOnlyMode ? (
                         // Editable priority dropdown in Edit mode
                         <select
@@ -2653,7 +2661,7 @@
                             padding: '0.5rem 1rem',
                             fontSize: '1rem',
                             fontWeight: '700',
-                            minWidth: '140px',
+                            width: '100%', // Full width
                             textAlign: 'center',
                             cursor: 'pointer'
                           }}
@@ -2683,7 +2691,9 @@
                           borderRadius: '10px',
                           padding: '0.4rem 1rem',
                           fontSize: '1rem',
-                          fontWeight: '700'
+                          fontWeight: '700',
+                          textAlign: 'center',
+                          width: '100%' // Full width
                         }}>
                           {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
                         </div>
@@ -2705,99 +2715,132 @@
                         </h3>
                       </div>
                       
-                      {/* Line 2: Cases, Timing metrics, and action buttons */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                        {/* Cases on left with inline timer */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b' }}>
-                          <Package size={26} />
-                          <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
-                          
-                          {/* Inline timer when processing - visible in both Process and View modes */}
-                          {(itemsInProcess[item.id] || itemsPaused[item.id]) && (
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              padding: '0.5rem 1rem',
-                              background: itemsPaused[item.id]
-                                ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
-                                : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                              borderRadius: '12px',
-                              boxShadow: itemsPaused[item.id]
-                                ? '0 4px 15px rgba(99, 102, 241, 0.3)'
-                                : '0 4px 15px rgba(245, 158, 11, 0.3)',
-                              marginLeft: '0.5rem'
-                            }}>
-                              <Timer size={20} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
+                      {/* Line 2: Cases with Timing metrics (left), invisible spacer for buttons (right) */}
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        {/* Left section: Cases + Timing metrics - matches instructions box width */}
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '1rem', 
+                          flex: '1 1 auto',
+                          minWidth: '200px'
+                        }}>
+                          {/* Cases with inline timer */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b', flexShrink: 0 }}>
+                            <Package size={26} />
+                            <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
+                            
+                            {/* Inline timer when processing - visible in both Process and View modes */}
+                            {(itemsInProcess[item.id] || itemsPaused[item.id]) && (
                               <div style={{
-                                fontSize: '1.3rem',
-                                fontWeight: '800',
-                                color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
-                                fontVariantNumeric: 'tabular-nums',
-                                minWidth: '70px'
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                background: itemsPaused[item.id]
+                                  ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
+                                  : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                                borderRadius: '12px',
+                                boxShadow: itemsPaused[item.id]
+                                  ? '0 4px 15px rgba(99, 102, 241, 0.3)'
+                                  : '0 4px 15px rgba(245, 158, 11, 0.3)',
+                                marginLeft: '0.5rem'
                               }}>
-                                {formatTime(elapsedTimes[item.id] || 0)}
-                              </div>
-                              {/* Show "Paused" text when timer is paused */}
-                              {itemsPaused[item.id] && (
-                                <span style={{
-                                  fontSize: '0.9rem',
-                                  fontWeight: '700',
-                                  color: '#6366f1',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.05em'
+                                <Timer size={20} style={{ color: itemsPaused[item.id] ? '#6366f1' : '#d97706' }} />
+                                <div style={{
+                                  fontSize: '1.3rem',
+                                  fontWeight: '800',
+                                  color: itemsPaused[item.id] ? '#6366f1' : '#d97706',
+                                  fontVariantNumeric: 'tabular-nums',
+                                  minWidth: '70px'
                                 }}>
-                                  Paused
-                                </span>
-                              )}
+                                  {formatTime(elapsedTimes[item.id] || 0)}
+                                </div>
+                                {/* Show "Paused" text when timer is paused */}
+                                {itemsPaused[item.id] && (
+                                  <span style={{
+                                    fontSize: '0.9rem',
+                                    fontWeight: '700',
+                                    color: '#6366f1',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em'
+                                  }}>
+                                    Paused
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Timing metrics - grows to fill remaining space in left section */}
+                          {!readOnlyMode && stats && (
+                            <div style={{
+                              padding: '0.5rem 0.75rem',
+                              border: '2px solid #e2e8f0',
+                              borderRadius: '12px',
+                              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                              flex: '1 1 auto',
+                              minWidth: '150px'
+                            }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ 
+                                    fontSize: '0.9rem', 
+                                    color: '#64748b', 
+                                    fontWeight: '600',
+                                    textTransform: 'uppercase',
+                                    marginBottom: '0.25rem'
+                                  }}>
+                                    Average processing time per case
+                                  </div>
+                                  <div 
+                                    onClick={() => setShowTimingEvents(sku)}
+                                    style={{ 
+                                      fontSize: '1.3rem', 
+                                      fontWeight: '700', 
+                                      color: '#0f766e',
+                                      fontVariantNumeric: 'tabular-nums',
+                                      cursor: 'pointer',
+                                      textDecoration: 'underline',
+                                      transition: 'color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.color = '#059669'}
+                                    onMouseLeave={(e) => e.currentTarget.style.color = '#0f766e'}
+                                  >
+                                    {formatTime(stats.average)}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Timing metrics - matches instructions box width below */}
-                        {!readOnlyMode && stats && (
-                          <div style={{
-                            padding: '0.5rem 0.75rem',
-                            border: '2px solid #e2e8f0',
-                            borderRadius: '12px',
-                            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                            flex: '1 1 auto',
-                            minWidth: '200px'
+                        {/* Right section: Invisible spacer matching button area width */}
+                        {!readOnlyMode && (
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: '1rem', 
+                            flexWrap: 'nowrap',
+                            alignItems: 'stretch',
+                            visibility: 'hidden',
+                            pointerEvents: 'none'
                           }}>
+                            {/* Spacer matching Timer/Video column */}
                             <div style={{ 
                               display: 'flex', 
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center'
+                              flexDirection: 'column', 
+                              gap: '0.75rem',
+                              minWidth: '140px'
                             }}>
-                              <div style={{ textAlign: 'center' }}>
-                                <div style={{ 
-                                  fontSize: '0.9rem', 
-                                  color: '#64748b', 
-                                  fontWeight: '600',
-                                  textTransform: 'uppercase',
-                                  marginBottom: '0.25rem'
-                                }}>
-                                  Average processing time per case
-                                </div>
-                                <div 
-                                  onClick={() => setShowTimingEvents(sku)}
-                                  style={{ 
-                                    fontSize: '1.3rem', 
-                                    fontWeight: '700', 
-                                    color: '#0f766e',
-                                    fontVariantNumeric: 'tabular-nums',
-                                    cursor: 'pointer',
-                                    textDecoration: 'underline',
-                                    transition: 'color 0.2s'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.color = '#059669'}
-                                  onMouseLeave={(e) => e.currentTarget.style.color = '#0f766e'}
-                                >
-                                  {formatTime(stats.average)}
-                                </div>
-                              </div>
+                              <div style={{ minHeight: '50px' }} />
                             </div>
+                            {/* Spacer matching All Done button */}
+                            <div style={{ minWidth: '150px', minHeight: '100%' }} />
                           </div>
                         )}
                       </div>
@@ -2920,11 +2963,11 @@
                                     boxShadow: '0 4px 15px rgba(100, 116, 139, 0.2)',
                                     minWidth: '140px',
                                     justifyContent: 'center',
-                                    opacity: 0.7
+                                    cursor: 'pointer'
                                   }}
                                 >
                                   <Video size={22} />
-                                  No video available
+                                  Make video
                                 </button>
                               )}
                             </div>
