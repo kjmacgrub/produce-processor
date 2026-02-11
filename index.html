@@ -2438,7 +2438,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.100
+                  v2.102
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -3708,34 +3708,13 @@
                         Review Photo
                       </h3>
                       
-                      {/* Control buttons at top */}
+                      {/* Retake button at top */}
                       <div style={{ 
                         display: 'flex', 
                         gap: '1rem', 
                         justifyContent: 'center', 
                         flexWrap: 'wrap' 
                       }}>
-                        <button
-                          onClick={() => {
-                            finalizeCompletion(showCompletionCamera, photoData);
-                          }}
-                          style={{
-                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '12px',
-                            padding: '1rem 2rem',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            fontSize: '1.1rem',
-                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                            flex: '1',
-                            minWidth: '180px'
-                          }}
-                        >
-                          ✅ Complete with This Photo
-                        </button>
-                        
                         <button
                           onClick={async () => {
                             setPhotoTaken(false);
@@ -3777,7 +3756,7 @@
                             fontSize: '1.1rem',
                             boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)',
                             flex: '1',
-                            minWidth: '180px'
+                            maxWidth: '300px'
                           }}
                         >
                           🔄 Retake Photo
@@ -3785,14 +3764,15 @@
                       </div>
                     </div>
                     
-                    {/* Photo preview - takes remaining space */}
+                    {/* Photo preview with floating Accept button */}
                     <div style={{
                       flex: 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       background: '#000',
-                      padding: '1rem'
+                      padding: '1rem',
+                      position: 'relative'
                     }}>
                       <img 
                         src={photoData.data}
@@ -3805,6 +3785,37 @@
                         }}
                         alt="Completion photo"
                       />
+                      
+                      {/* Floating Accept button over photo */}
+                      <button
+                        onClick={() => {
+                          finalizeCompletion(showCompletionCamera, photoData);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '2rem',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '16px',
+                          padding: '1.5rem 3rem',
+                          cursor: 'pointer',
+                          fontWeight: '800',
+                          fontSize: '1.5rem',
+                          boxShadow: '0 8px 30px rgba(16, 185, 129, 0.5)',
+                          zIndex: 10,
+                          minWidth: '200px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.8rem' }}>✅</span>
+                        Accept!
+                      </button>
                     </div>
                   </React.Fragment>
                 )}

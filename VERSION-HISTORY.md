@@ -1,5 +1,137 @@
 # Version History - Produce Processing App
 
+## v2.102 (2026-02-08)
+**Floating Accept Button Over Photo**
+
+### Changed:
+- **Accept button now floats over the photo** for maximum visibility
+- **Added ✅ checkbox back** before "Accept!" text
+- **Larger, more prominent button** design
+- **Retake button moved to header** (no longer side-by-side)
+
+### The Change:
+
+**Before (v2.101):**
+```
+┌──────────────────────────┐
+│ Review Photo             │
+│ [Accept!] [Retake Photo] │ ← Both in header
+├──────────────────────────┤
+│                          │
+│    Photo displayed       │
+│                          │
+└──────────────────────────┘
+```
+
+**After (v2.102):**
+```
+┌──────────────────────────┐
+│ Review Photo             │
+│ [🔄 Retake Photo]        │ ← Only Retake in header
+├──────────────────────────┤
+│                          │
+│    Photo displayed       │
+│                          │
+│    ┌────────────┐        │
+│    │ ✅ Accept! │        │ ← Floating over photo
+│    └────────────┘        │
+└──────────────────────────┘
+```
+
+### Floating Button Design:
+
+**Position:**
+- Centered horizontally (`left: 50%`, `transform: translateX(-50%)`)
+- Near bottom (`bottom: 2rem`)
+- Above photo (`position: absolute`, `zIndex: 10`)
+
+**Styling:**
+- **Larger:** 1.5rem font, 1.5rem × 3rem padding
+- **Prominent shadow:** 30px blur with green glow
+- **Checkbox icon:** ✅ (1.8rem, larger than text)
+- **Rounded:** 16px border radius
+- **Green gradient:** Stands out against photo
+
+**Button content:**
+```
+[✅ Accept!]
+ ↑    ↑
+ icon text
+```
+
+### Benefits:
+
+✅ **Can't miss it** - Floats over content  
+✅ **Clear action** - Primary button stands out  
+✅ **Checkbox visual** - Confirms acceptance action  
+✅ **Larger target** - Easier to tap on iPad  
+✅ **Cleaner header** - Only Retake button remains  
+
+### Layout Structure:
+
+**Header (dark gray bar):**
+- Title: "Review Photo"
+- 🔄 Retake Photo button (orange, centered)
+
+**Photo area (black background):**
+- Photo displayed (centered)
+- ✅ Accept! button (floating over bottom-center)
+
+### Technical Details:
+
+```javascript
+<button style={{
+  position: 'absolute',      // Float over photo
+  bottom: '2rem',            // Near bottom
+  left: '50%',               // Center horizontally
+  transform: 'translateX(-50%)',
+  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  padding: '1.5rem 3rem',    // Large padding
+  fontSize: '1.5rem',        // Large text
+  fontWeight: '800',         // Extra bold
+  boxShadow: '0 8px 30px rgba(16, 185, 129, 0.5)',  // Green glow
+  zIndex: 10,                // Above photo
+  display: 'flex',
+  gap: '0.75rem'             // Space between icon and text
+}}>
+  <span style={{ fontSize: '1.8rem' }}>✅</span>
+  Accept!
+</button>
+```
+
+**Accept button now floats prominently over the photo with checkbox icon!** ✅✨
+
+---
+
+## v2.101 (2026-02-08)
+**Simplified Photo Confirmation Button Text**
+
+### Changed:
+- Photo confirmation button text changed from "✅ Complete with This Photo" to "Accept!"
+- Shorter, clearer, more action-oriented
+
+### Button Text:
+
+**Before:**
+```
+[✅ Complete with This Photo]
+```
+
+**After:**
+```
+[Accept!]
+```
+
+### Benefits:
+
+✅ **Shorter** - Takes less space  
+✅ **Clearer** - Simple action word  
+✅ **Faster to read** - Quick decision  
+
+**Button text now says "Accept!" instead of "Complete with This Photo"!** ✨
+
+---
+
 ## v2.100 (2026-02-08)
 **BUGFIX: Camera Preview on iPad**
 
