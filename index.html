@@ -28,7 +28,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useRef, useMemo } = React;
 
     // ========================================
     // FIREBASE CONFIGURATION
@@ -166,6 +166,7 @@
       const videoPreviewRef = useRef(null);
       const completionVideoRef = useRef(null);
       const completionCanvasRef = useRef(null);
+      const playbackVideoRef = useRef(null);
 
       // Check Firebase connection
       useEffect(() => {
@@ -178,6 +179,37 @@
 
         return () => connectedRef.off();
       }, []);
+
+      // Force video loop to false when playback video changes
+      useEffect(() => {
+        if (playbackVideoRef.current && playingVideo) {
+          const video = playbackVideoRef.current;
+          video.loop = false;
+          console.log('🔴 FORCE: Set video.loop = false via useEffect');
+          
+          // Also add event listener to prevent any loop
+          const handleEnded = () => {
+            console.log('🔴 Video ended, forcing pause');
+            video.pause();
+            video.currentTime = video.duration;
+          };
+          
+          video.addEventListener('ended', handleEnded);
+          
+          // Check loop status periodically and force it false
+          const intervalId = setInterval(() => {
+            if (video.loop === true) {
+              console.log('🔴 WARNING: Video loop was true, forcing back to false');
+              video.loop = false;
+            }
+          }, 100);
+          
+          return () => {
+            video.removeEventListener('ended', handleEnded);
+            clearInterval(intervalId);
+          };
+        }
+      }, [playingVideo, playbackVideoRef.current]);
 
       // Load timing data from Firebase
       useEffect(() => {
@@ -2272,6 +2304,50 @@
         return () => clearInterval(interval);
       }, [isProcessing, startTime]);
 
+      // Memoize video Blob URL so it doesn't recreate on every render
+      const { videoSrc, videoError } = useMemo(() => {
+        if (!playingVideo || !videos[playingVideo]) {
+          return { videoSrc: null, videoError: null };
+        }
+
+        const videoData = videos[playingVideo];
+        let src = null;
+        let error = null;
+        
+        try {
+          if (videoData.data instanceof ArrayBuffer) {
+            console.log('🎬 Creating Blob URL from ArrayBuffer (memoized)');
+            const blob = new Blob([videoData.data], { type: videoData.type });
+            src = URL.createObjectURL(blob);
+          } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
+            console.log('🎬 Creating Blob URL from data URL (memoized)');
+            const parts = videoData.data.split(',');
+            if (parts.length !== 2) throw new Error('Invalid data URL format');
+            
+            const base64Data = parts[1];
+            const mimeTypeMatch = parts[0].match(/data:([^;]+)/);
+            if (!mimeTypeMatch) throw new Error('Could not extract MIME type');
+            const mimeType = mimeTypeMatch[1];
+            
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const blob = new Blob([bytes], { type: mimeType });
+            src = URL.createObjectURL(blob);
+          } else {
+            throw new Error('Unknown video data format');
+          }
+        } catch (err) {
+          console.error('❌ Error creating video URL:', err);
+          error = err.message;
+        }
+        
+        return { videoSrc: src, videoError: error };
+      }, [playingVideo, videos]);
+
       return (
         <div style={{
           minHeight: '100vh',
@@ -2475,7 +2551,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.122
+                  v2.134
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2799,96 +2875,50 @@
                       position: 'relative'
                     }}
                   >
-                    {/* Vegetable/Fruit corner decorations */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '8px',
-                      left: '8px',
-                      fontSize: '2.5rem',
-                      opacity: 0.6
-                    }}>🥕</div>
-                    <div style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      fontSize: '2.5rem',
-                      opacity: 0.6
-                    }}>🍅</div>
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      left: '8px',
-                      fontSize: '2.5rem',
-                      opacity: 0.6
-                    }}>🥒</div>
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      right: '8px',
-                      fontSize: '2.5rem',
-                      opacity: 0.6
-                    }}>🌽</div>
-                    {/* Priority dropdown - yellow on black, 1/3 width, left-justified */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      {!readOnlyMode ? (
-                        // Editable priority dropdown in Edit mode
-                        <select
-                          value={item.priority}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === 'EDIT') {
-                              setShowPriorityEditor(true);
-                            } else {
-                              updatePriority(item.id, val);
-                            }
-                          }}
-                          style={{
-                            background: '#1e293b',
-                            color: '#fbbf24',
-                            border: '2px solid #fbbf24',
-                            borderRadius: '10px',
-                            padding: '0.5rem 1rem',
-                            fontSize: '1rem',
-                            fontWeight: '700',
-                            width: '33.33%',
-                            textAlign: 'center',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {/* Current priority */}
-                          <option value={item.priority}>
-                            {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
-                          </option>
-                          
-                          {/* Historical priorities (excluding current) */}
-                          {historicalPriorities.filter(p => p !== item.priority).map(p => (
-                            <option key={p} value={p}>
-                              {p === 'missing' ? 'Priority missing' : p === 0 ? 'Shopping floor' : `Priority ${p}`}
-                            </option>
-                          ))}
-                          
-                          {/* Edit option */}
-                          <option value="EDIT" style={{ fontStyle: 'italic', borderTop: '1px solid #ccc' }}>
-                            ✏️ Edit priorities...
-                          </option>
-                        </select>
-                      ) : (
-                        // Read-only priority badge in View mode
-                        <div style={{
-                          background: '#1e293b',
-                          color: '#fbbf24',
-                          border: '2px solid #fbbf24',
-                          borderRadius: '10px',
-                          padding: '0.4rem 1rem',
-                          fontSize: '1rem',
-                          fontWeight: '700',
-                          textAlign: 'center',
-                          width: '33.33%'
-                        }}>
-                          {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
-                        </div>
-                      )}
-                    </div>
+                    {/* Vegetable/Fruit corner decorations - randomized based on item ID */}
+                    {(() => {
+                      const produceEmojis = ['🍅', '🥒', '🌽', '🍆', '🥬', '🥦', '🫑', '🌶️', '🥕', '🧅', '🧄', '🥔', '🍠', '🫘', '🍄', '🥜', '🫚'];
+                      
+                      // Simple hash function to get consistent random emoji based on item ID + position
+                      const getEmojiForPosition = (position) => {
+                        const str = item.id + position;
+                        let hash = 0;
+                        for (let i = 0; i < str.length; i++) {
+                          hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                          hash = hash & hash; // Convert to 32bit integer
+                        }
+                        return produceEmojis[Math.abs(hash) % produceEmojis.length];
+                      };
+                      
+                      return (
+                        <>
+                          {/* Top-right */}
+                          <div style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            fontSize: '2.5rem',
+                            opacity: 0.6
+                          }}>{getEmojiForPosition('top-right')}</div>
+                          {/* Bottom-left */}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            left: '8px',
+                            fontSize: '2.5rem',
+                            opacity: 0.6
+                          }}>{getEmojiForPosition('bottom-left')}</div>
+                          {/* Bottom-right */}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '8px',
+                            fontSize: '2.5rem',
+                            opacity: 0.6
+                          }}>{getEmojiForPosition('bottom-right')}</div>
+                        </>
+                      );
+                    })()}
 
                     {/* Header Info */}
                     <div style={{ marginBottom: '1.5rem' }}>
@@ -2900,7 +2930,7 @@
                           fontWeight: '800',
                           color: '#1e293b',
                           letterSpacing: '-0.01em',
-                          textAlign: 'center',
+                          textAlign: 'left',
                           fontFamily: 'Georgia, "Times New Roman", Times, serif'
                         }}>
                           {getDisplayName(item.name)}
@@ -3103,11 +3133,85 @@
                                   fontSize: '1.1rem',
                                   boxShadow: '0 4px 15px rgba(5, 150, 105, 0.3)',
                                   minWidth: '180px',
-                                  minHeight: '100%'
+                                  minHeight: '100%',
+                                  overflow: 'hidden',
+                                  position: 'relative'
                                 }}
                               >
-                                <Play size={22} />
-                                Video
+                                {(() => {
+                                  // Create video thumbnail
+                                  const videoData = videos[sku];
+                                  let videoSrc = null;
+                                  
+                                  try {
+                                    if (videoData.data instanceof ArrayBuffer) {
+                                      const blob = new Blob([videoData.data], { type: videoData.type });
+                                      videoSrc = URL.createObjectURL(blob);
+                                    } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
+                                      videoSrc = videoData.data;
+                                    }
+                                  } catch (error) {
+                                    console.error('Error creating video thumbnail:', error);
+                                  }
+                                  
+                                  if (videoSrc) {
+                                    return (
+                                      <>
+                                        <video
+                                          src={videoSrc}
+                                          style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            borderRadius: '12px',
+                                            pointerEvents: 'none'
+                                          }}
+                                          muted
+                                          preload="metadata"
+                                          autoPlay={false}
+                                          playsInline={false}
+                                          onLoadedMetadata={(e) => {
+                                            e.target.loop = false;
+                                            e.target.pause();
+                                            e.target.currentTime = 0;
+                                            console.log('🖼️ Thumbnail loaded, paused at frame 0');
+                                          }}
+                                          onPlay={(e) => {
+                                            console.log('⚠️ Thumbnail tried to play, forcing pause');
+                                            e.target.pause();
+                                            e.target.currentTime = 0;
+                                          }}
+                                        />
+                                        <div style={{
+                                          position: 'absolute',
+                                          top: '50%',
+                                          left: '50%',
+                                          transform: 'translate(-50%, -50%)',
+                                          background: 'rgba(0, 0, 0, 0.6)',
+                                          borderRadius: '50%',
+                                          width: '50px',
+                                          height: '50px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          zIndex: 1
+                                        }}>
+                                          <Play size={28} />
+                                        </div>
+                                      </>
+                                    );
+                                  } else {
+                                    return (
+                                      <>
+                                        <Play size={22} />
+                                        Video
+                                      </>
+                                    );
+                                  }
+                                })()}
                               </button>
                             ) : (
                               <button
@@ -3137,6 +3241,68 @@
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    {/* Priority dropdown - yellow on black, centered, below instructions */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                      {!readOnlyMode ? (
+                        // Editable priority dropdown in Edit mode
+                        <select
+                          value={item.priority}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'EDIT') {
+                              setShowPriorityEditor(true);
+                            } else {
+                              updatePriority(item.id, val);
+                            }
+                          }}
+                          style={{
+                            background: '#1e293b',
+                            color: '#fbbf24',
+                            border: '2px solid #fbbf24',
+                            borderRadius: '10px',
+                            padding: '0.5rem 1rem',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            width: '33.33%',
+                            textAlign: 'center',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {/* Current priority */}
+                          <option value={item.priority}>
+                            {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
+                          </option>
+                          
+                          {/* Historical priorities (excluding current) */}
+                          {historicalPriorities.filter(p => p !== item.priority).map(p => (
+                            <option key={p} value={p}>
+                              {p === 'missing' ? 'Priority missing' : p === 0 ? 'Shopping floor' : `Priority ${p}`}
+                            </option>
+                          ))}
+                          
+                          {/* Edit option */}
+                          <option value="EDIT" style={{ fontStyle: 'italic', borderTop: '1px solid #ccc' }}>
+                            ✏️ Edit priorities...
+                          </option>
+                        </select>
+                      ) : (
+                        // Read-only priority badge in View mode
+                        <div style={{
+                          background: '#1e293b',
+                          color: '#fbbf24',
+                          border: '2px solid #fbbf24',
+                          borderRadius: '10px',
+                          padding: '0.4rem 1rem',
+                          fontSize: '1rem',
+                          fontWeight: '700',
+                          textAlign: 'center',
+                          width: '33.33%'
+                        }}>
+                          {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
+                        </div>
+                      )}
                     </div>
 
 
@@ -4100,70 +4266,7 @@
             )}
 
             {/* Video Player Modal */}
-            {playingVideo && videos[playingVideo] && (() => {
-              // Convert video data to Blob URL for playback
-              const videoData = videos[playingVideo];
-              let videoSrc = null;
-              let conversionError = null;
-              
-              try {
-                // Check if data is ArrayBuffer (new format) or data URL (old format)
-                if (videoData.data instanceof ArrayBuffer) {
-                  console.log('✅ Video stored as ArrayBuffer (new format)');
-                  console.log('ArrayBuffer size:', videoData.data.byteLength, 'bytes');
-                  console.log('MIME type:', videoData.type);
-                  
-                  // Convert ArrayBuffer directly to Blob URL
-                  const blob = new Blob([videoData.data], { type: videoData.type });
-                  videoSrc = URL.createObjectURL(blob);
-                  console.log('✅ Created Blob URL:', videoSrc);
-                  
-                } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
-                  console.log('⚠️ Video stored as data URL (old format)');
-                  console.log('Data URL prefix:', videoData.data.substring(0, 100));
-                  
-                  // Try to convert old base64 data URL format
-                  const parts = videoData.data.split(',');
-                  if (parts.length !== 2) {
-                    throw new Error('Invalid data URL format');
-                  }
-                  
-                  const base64Data = parts[1];
-                  const mimeTypeMatch = parts[0].match(/data:([^;]+)/);
-                  if (!mimeTypeMatch) {
-                    throw new Error('Could not extract MIME type');
-                  }
-                  const mimeType = mimeTypeMatch[1];
-                  
-                  console.log('Base64 data length:', base64Data.length);
-                  console.log('MIME type:', mimeType);
-                  
-                  // Validate base64
-                  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-                  if (!base64Regex.test(base64Data)) {
-                    throw new Error('Base64 string contains invalid characters (corrupted)');
-                  }
-                  
-                  // Convert to binary
-                  const binaryString = atob(base64Data);
-                  const bytes = new Uint8Array(binaryString.length);
-                  for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                  }
-                  
-                  // Create Blob and Blob URL
-                  const blob = new Blob([bytes], { type: mimeType });
-                  videoSrc = URL.createObjectURL(blob);
-                  console.log('✅ Created Blob URL from old format:', videoSrc);
-                } else {
-                  throw new Error('Unknown video data format');
-                }
-              } catch (error) {
-                console.error('❌ Error creating video URL:', error);
-                conversionError = error.message;
-              }
-              
-              return (
+            {playingVideo && videos[playingVideo] && (
               <div
                 style={{
                   position: 'fixed',
@@ -4181,7 +4284,7 @@
                 }}
                 onClick={() => setPlayingVideo(null)}
               >
-                {console.log('Video modal rendering. playingVideo:', playingVideo, 'Video data:', videoData, 'Video src:', videoSrc)}
+                {console.log('🎬 Video modal rendering. playingVideo:', playingVideo, 'Video src:', videoSrc)}
                 <div
                   style={{
                     background: 'white',
@@ -4250,7 +4353,7 @@
                       </button>
                     </div>
                   </div>
-                  {conversionError && (
+                  {videoError && (
                     <div style={{
                       background: '#fef2f2',
                       border: '2px solid #dc2626',
@@ -4268,18 +4371,28 @@
                         <strong>Solution:</strong> Delete this video (🗑️ button above) and record a new one.
                       </div>
                       <div style={{ color: '#7f1d1d', fontSize: '0.9rem', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                        Error: {conversionError}
+                        Error: {videoError}
                       </div>
                     </div>
                   )}
                   <video
+                    ref={playbackVideoRef}
                     key={playingVideo}
                     controls
                     autoPlay
                     playsInline
-                    loop={false}
+                    loop="false"
+                    onLoadedMetadata={(e) => {
+                      e.target.loop = false;
+                      console.log('🔴 Video metadata loaded, loop set to:', e.target.loop);
+                    }}
                     onLoadedData={() => console.log('Video loaded successfully!')}
                     onError={(e) => console.error('Video error:', e.target.error)}
+                    onEnded={(e) => {
+                      console.log('🔴 Video ended event fired');
+                      e.target.pause();
+                      e.target.currentTime = e.target.duration;
+                    }}
                     style={{
                       width: '100%',
                       borderRadius: '16px',
@@ -4290,8 +4403,7 @@
                   />
                 </div>
               </div>
-              );
-            })()}
+            )}
 
             {/* Video Upload/Recording Section - Full Screen Modal */}
             {!readOnlyMode && showVideoUpload && (() => {
