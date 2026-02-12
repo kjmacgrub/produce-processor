@@ -2289,17 +2289,21 @@
               borderRadius: '24px',
               padding: '2.5rem',
               marginBottom: '2rem',
-              boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
-              border: '8px solid #8b7355', // Wood brown color
-              borderImage: 'linear-gradient(135deg, #8b7355 0%, #6b5344 25%, #8b7355 50%, #6b5344 75%, #8b7355 100%) 1',
               position: 'relative',
-              // Inner shadow for depth
-              boxShadow: `
-                0 25px 70px rgba(0,0,0,0.25),
-                inset 0 0 0 2px #d4a574,
-                inset 0 0 0 4px #8b7355,
-                inset 0 0 10px rgba(0,0,0,0.2)
-              `
+              boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
+              // Ivy vine border with leaves
+              border: '14px solid #3a6b1e',
+              // Create winding vine pattern with leaves
+              backgroundImage: `
+                linear-gradient(white, white),
+                url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q20,30 30,50 T50,50 T70,50 T90,50' stroke='%23543b2c' stroke-width='3' fill='none'/%3E%3Cpath d='M15,45 Q20,38 25,35 Q22,40 20,45 Q18,42 15,45 Z' fill='%234a8526'/%3E%3Cpath d='M35,55 Q40,48 45,45 Q42,50 40,55 Q38,52 35,55 Z' fill='%233a6b1e'/%3E%3Cpath d='M55,45 Q60,38 65,35 Q62,40 60,45 Q58,42 55,45 Z' fill='%234a8526'/%3E%3Cpath d='M75,55 Q80,48 85,45 Q82,50 80,55 Q78,52 75,55 Z' fill='%232d5016'/%3E%3C/svg%3E"),
+                url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,10 Q30,20 50,30 T50,50 T50,70 T50,90' stroke='%23543b2c' stroke-width='3' fill='none'/%3E%3Cpath d='M45,15 Q38,20 35,25 Q40,22 45,20 Q42,18 45,15 Z' fill='%234a8526'/%3E%3Cpath d='M55,35 Q48,40 45,45 Q50,42 55,40 Q52,38 55,35 Z' fill='%233a6b1e'/%3E%3Cpath d='M45,55 Q38,60 35,65 Q40,62 45,60 Q42,58 45,55 Z' fill='%234a8526'/%3E%3Cpath d='M55,75 Q48,80 45,85 Q50,82 55,80 Q52,78 55,75 Z' fill='%232d5016'/%3E%3C/svg%3E")
+              `,
+              backgroundPosition: 'center, top, left',
+              backgroundSize: 'auto, 100% 14px, 14px 100%',
+              backgroundRepeat: 'no-repeat, repeat-x, repeat-y',
+              backgroundClip: 'padding-box, border-box, border-box',
+              backgroundOrigin: 'padding-box, border-box, border-box'
             }}>
               {/* Top buttons - Clear Data (left) and View Mode indicator (right) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -2417,11 +2421,11 @@
               {/* Date above title */}
               {/* Date display - Always shown */}
               <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '600',
+                fontSize: '2.2rem',
+                fontWeight: '700',
                 color: '#64748b',
                 textAlign: 'center',
-                marginBottom: '0.5rem'
+                marginBottom: '0.75rem'
               }}>
                 {pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
               </div>
@@ -2448,7 +2452,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.108
+                  v2.116
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2502,7 +2506,7 @@
                             </div>
                           </div>
                           
-                          {/* Remaining info below */}
+                          {/* Remaining or Completed info below */}
                           <div style={{ 
                             marginTop: '1.5rem', 
                             textAlign: 'center'
@@ -2515,7 +2519,7 @@
                               textTransform: 'uppercase',
                               letterSpacing: '0.05em'
                             }}>
-                              Remaining
+                              {showCompleted ? 'Completed' : 'Remaining'}
                             </div>
                             
                             {/* Cases and Items side by side */}
@@ -2531,11 +2535,11 @@
                                 <div style={{
                                   fontSize: '3.5rem',
                                   fontWeight: '900',
-                                  color: '#0f766e',
+                                  color: showCompleted ? '#10b981' : '#0f766e',
                                   lineHeight: '1',
                                   marginBottom: '0.25rem'
                                 }}>
-                                  {remainingCases}
+                                  {showCompleted ? completedCases : remainingCases}
                                 </div>
                                 <div style={{
                                   fontSize: '1.5rem',
@@ -2551,18 +2555,18 @@
                                 <div style={{
                                   fontSize: '3.5rem',
                                   fontWeight: '900',
-                                  color: '#0f766e',
+                                  color: showCompleted ? '#10b981' : '#0f766e',
                                   lineHeight: '1',
                                   marginBottom: '0.25rem'
                                 }}>
-                                  ({remainingItems})
+                                  {showCompleted ? completedItems.length : remainingItems}
                                 </div>
                                 <div style={{
                                   fontSize: '1.5rem',
                                   fontWeight: '700',
                                   color: '#64748b'
                                 }}>
-                                  {remainingItems === 1 ? 'item' : 'items'}
+                                  {(showCompleted ? completedItems.length : remainingItems) === 1 ? 'item' : 'items'}
                                 </div>
                               </div>
                             </div>
@@ -2573,7 +2577,7 @@
                   </div>
               </div>
               
-              {/* Back to REMAINING button (only shown when viewing completed) */}
+              {/* Back to REMAINING WORK button (only shown when viewing completed) */}
               {showCompleted && (
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                   <button
@@ -2590,7 +2594,7 @@
                       boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
                     }}
                   >
-                    ← Back to REMAINING
+                    ← Back to REMAINING WORK
                   </button>
                 </div>
               )}
@@ -2768,9 +2772,39 @@
                         : '0 4px 20px rgba(0,0,0,0.1)',
                       transition: 'all 0.3s ease',
                       border: activeItem?.id === item.id ? '3px solid #0f766e' : '3px solid transparent',
-                      transform: activeItem?.id === item.id ? 'scale(1.02)' : 'scale(1)'
+                      transform: activeItem?.id === item.id ? 'scale(1.02)' : 'scale(1)',
+                      position: 'relative'
                     }}
                   >
+                    {/* Vegetable/Fruit corner decorations */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '8px',
+                      left: '8px',
+                      fontSize: '1.8rem',
+                      opacity: 0.3
+                    }}>🥕</div>
+                    <div style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      fontSize: '1.8rem',
+                      opacity: 0.3
+                    }}>🍅</div>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      left: '8px',
+                      fontSize: '1.8rem',
+                      opacity: 0.3
+                    }}>🥒</div>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '8px',
+                      fontSize: '1.8rem',
+                      opacity: 0.3
+                    }}>🌽</div>
                     {/* Priority dropdown stretching full width */}
                     <div style={{ marginBottom: '1rem' }}>
                       {!readOnlyMode ? (
@@ -3790,87 +3824,6 @@
             {/* Completed Items View */}
             {showCompleted && (
               <div>
-                <div style={{
-                  background: 'white',
-                  borderRadius: '20px',
-                  padding: '2rem',
-                  marginBottom: '2rem',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  textAlign: 'center'
-                }}>
-                  {/* Cases and Items side by side */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '3rem',
-                    flexWrap: 'wrap',
-                    marginBottom: '1.5rem'
-                  }}>
-                    {/* Cases */}
-                    <div>
-                      <div style={{
-                        fontSize: '3.5rem',
-                        fontWeight: '900',
-                        color: '#10b981',
-                        lineHeight: '1',
-                        marginBottom: '0.25rem'
-                      }}>
-                        {completedItems.reduce((sum, item) => sum + item.cases, 0)}
-                      </div>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: '700',
-                        color: '#64748b'
-                      }}>
-                        cases
-                      </div>
-                    </div>
-                    
-                    {/* Items */}
-                    <div>
-                      <div style={{
-                        fontSize: '3.5rem',
-                        fontWeight: '900',
-                        color: '#10b981',
-                        lineHeight: '1',
-                        marginBottom: '0.25rem'
-                      }}>
-                        {completedItems.length}
-                      </div>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: '700',
-                        color: '#64748b'
-                      }}>
-                        items
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* COMPLETED label with REMAINING link */}
-                  <div style={{
-                    fontSize: '1.5rem',
-                    fontWeight: '700',
-                    color: '#64748b',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}>
-                    <span 
-                      onClick={() => setShowCompleted(false)}
-                      style={{
-                        color: '#0f766e',
-                        cursor: 'pointer',
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      Remaining
-                    </span>
-                    <span> / </span>
-                    <span style={{ color: '#10b981' }}>Completed</span>
-                  </div>
-                </div>
-
                 {completedItems.length === 0 ? (
                   <div style={{
                     background: 'white',
@@ -4849,43 +4802,36 @@
               
               if (activeTimerIds.length === 0) return null;
               
-              return (
-                <div style={{
-                  position: 'fixed',
-                  bottom: '2rem',
-                  right: '2rem',
-                  zIndex: 999,
-                  display: 'flex',
-                  flexDirection: 'row-reverse', // Stack from right to left
-                  gap: '1rem',
-                  alignItems: 'flex-end'
-                }}>
-                  {activeTimerIds.map((timerId) => {
-                    const timerItem = [...items, ...completedItems].find(i => i.id === timerId);
-                    if (!timerItem) return null;
-                    
-                    const isPaused = itemsPaused[timerId];
-                    const elapsed = elapsedTimes[timerId] || 0;
-                    
-                    return (
-                      <div
-                        key={timerId}
-                        style={{
-                          background: isPaused 
-                            ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' // Dark gray for paused
-                            : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // Black background
-                          color: '#fbbf24', // Yellow text
-                          border: isPaused ? '3px solid #64748b' : '3px solid #fbbf24', // Yellow border when running, gray when paused
-                          borderRadius: '20px',
-                          padding: '1.5rem 2rem',
-                          boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '1rem',
-                          minWidth: '280px',
-                          maxWidth: '320px'
-                        }}>
+              // Split timers: first 2 go bottom, 3rd and 4th stack above
+              const bottomTimers = activeTimerIds.slice(0, 2);
+              const stackedTimers = activeTimerIds.slice(2, 4);
+              
+              const renderTimer = (timerId) => {
+                const timerItem = [...items, ...completedItems].find(i => i.id === timerId);
+                if (!timerItem) return null;
+                
+                const isPaused = itemsPaused[timerId];
+                const elapsed = elapsedTimes[timerId] || 0;
+                
+                return (
+                  <div
+                    key={timerId}
+                    style={{
+                      background: isPaused 
+                        ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' 
+                        : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                      color: '#fbbf24',
+                      border: isPaused ? '3px solid #64748b' : '3px solid #fbbf24',
+                      borderRadius: '20px',
+                      padding: '1.5rem 2rem',
+                      boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      minWidth: '280px',
+                      maxWidth: '320px'
+                    }}>
                         {/* Item name */}
                         <div style={{
                           fontSize: '1.1rem',
@@ -5060,8 +5006,40 @@
                         </div>
                       </div>
                     );
-                  })}
-                </div>
+                  };
+              
+              return (
+                <React.Fragment>
+                  {/* Bottom row: First 2 timers side by side */}
+                  <div style={{
+                    position: 'fixed',
+                    bottom: '2rem',
+                    right: '2rem',
+                    zIndex: 999,
+                    display: 'flex',
+                    flexDirection: 'row-reverse',
+                    gap: '1rem',
+                    alignItems: 'flex-end'
+                  }}>
+                    {bottomTimers.map(timerId => renderTimer(timerId))}
+                  </div>
+                  
+                  {/* Stacked timers: 3rd and 4th stack vertically on right */}
+                  {stackedTimers.length > 0 && (
+                    <div style={{
+                      position: 'fixed',
+                      bottom: 'calc(2rem + 280px + 1rem)', // Above first timer
+                      right: '2rem',
+                      zIndex: 999,
+                      display: 'flex',
+                      flexDirection: 'column-reverse', // Stack bottom to top
+                      gap: '1rem',
+                      alignItems: 'flex-end'
+                    }}>
+                      {stackedTimers.map(timerId => renderTimer(timerId))}
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })()}
 

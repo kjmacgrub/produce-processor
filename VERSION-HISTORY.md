@@ -1,5 +1,923 @@
 # Version History - Produce Processing App
 
+## v2.116 (2026-02-08)
+**Larger Date Display**
+
+### Changed:
+- **Date is much bigger** at the top of the page
+- **Bolder font weight** for better visibility
+- Increased from 1.5rem to 2.2rem (~47% larger)
+
+### The Changes:
+
+**Before:**
+```
+    Sunday, February 9, 2026
+          ↑ (1.5rem)
+```
+
+**After:**
+```
+   Sunday, February 9, 2026
+          ↑ (2.2rem)
+```
+
+### Technical Details:
+
+**Font size:**
+- Before: 1.5rem
+- After: 2.2rem
+- Increase: 47% larger
+
+**Font weight:**
+- Before: 600
+- After: 700 (bolder)
+
+**Margin:**
+- Before: 0.5rem
+- After: 0.75rem (slightly more space)
+
+### Benefits:
+
+✅ **More prominent** - Date is much easier to read  
+✅ **Better hierarchy** - Date stands out appropriately  
+✅ **Improved visibility** - Especially on iPad at distance  
+
+**Date is now much larger and more visible!** 📅
+
+---
+
+## v2.115 (2026-02-08)
+**Removed Leaves, Added Produce Emojis**
+
+### Changed:
+- **Removed all leaf decorations** (SVG leaves weren't working well)
+- **Added vegetable/fruit emojis** to item panel corners
+- Simple, clean, recognizable produce icons
+
+### The Changes:
+
+**Removed:**
+- Complex SVG ivy leaves from header corners
+- Complex SVG brown oak leaves from item panels
+
+**Added:**
+- Simple emoji produce in item card corners
+
+**Item panel corners:**
+```
+🥕              🍅
+┌──────────────┐
+│              │
+│  Item Card   │
+│              │
+└──────────────┘
+🥒              🌽
+```
+
+**Emoji produce used:**
+- 🥕 Carrot (top-left)
+- 🍅 Tomato (top-right)
+- 🥒 Cucumber (bottom-left)
+- 🌽 Corn (bottom-right)
+
+### Design Details:
+
+**Emoji styling:**
+```javascript
+fontSize: '1.8rem',  // Nice readable size
+opacity: 0.3         // Subtle, not overpowering
+```
+
+**Position:**
+- 8px from edges
+- All 4 corners
+- Doesn't interfere with content
+
+### Benefits:
+
+✅ **Simple and clean** - No complex SVG  
+✅ **Instantly recognizable** - Real produce emojis  
+✅ **Fits produce theme** - Perfect for produce processing  
+✅ **Cross-platform** - Works everywhere emojis work  
+✅ **Low opacity** - Decorative, not distracting  
+
+### Comparison:
+
+**v2.113 (Brown leaves):**
+- Complex SVG paths
+- 45×45px
+- Hard to recognize as leaves
+- Many paths and curves
+
+**v2.115 (Produce emojis):**
+- Simple Unicode emojis
+- 1.8rem
+- Instantly recognizable
+- Clean and simple
+
+**Simple produce emojis in corners - clean and recognizable!** 🥕🍅🥒🌽
+
+---
+
+## v2.114 (2026-02-08)
+**BUGFIX: Removed Code Displaying on Page**
+
+### Fixed:
+- **Removed leftover code** that was showing at top of page
+- Code was from old ivy leaf implementation
+- Lines were outside JSX structure causing text rendering
+
+### The Problem:
+
+Leftover code from v2.111 ivy implementation was displaying as text:
+```
+height: '60px', backgroundImage: `url("data:image/svg+xml...
+```
+
+### The Cause:
+
+When upgrading from v2.111 to v2.112, some orphaned lines of code were left outside of any JSX component structure. React rendered these as plain text on the page.
+
+**Location:** Lines 2345-2348 in header section
+**Issue:** Not inside proper JSX structure
+**Result:** Displayed as text instead of being processed as code
+
+### The Fix:
+
+Removed the orphaned lines:
+```javascript
+// REMOVED:
+height: '60px',
+backgroundImage: `url("...")`,
+pointerEvents: 'none'
+}} />
+```
+
+These were leftover from the old 60px ivy corner decorations that were upgraded to 80px in v2.112.
+
+**Page now displays correctly with no stray code!** ✅
+
+---
+
+## v2.113 (2026-02-08)
+**Larger, More Realistic Brown Leaves on Item Panels**
+
+### Changed:
+- **Brown leaves are much larger** (20px → 45px)
+- **Oak-style leaf shapes** with visible lobes
+- **More detailed with veins** and structure
+- **Better visibility** (40% → 50% opacity)
+
+### The Changes:
+
+**Size comparison:**
+- **Before:** 20px × 20px (small, hard to see)
+- **After:** 45px × 45px (much larger, clearly visible)
+
+**Leaf design improvements:**
+```
+Before:          After:
+   🍂              🍂🍂
+  tiny          oak-style
+                with lobes
+```
+
+### Oak-Style Leaf Features:
+
+**Main leaf body:**
+- Pointed tip
+- Central vein visible
+- Tapered base
+- Natural brown color (#543b2c)
+
+**Side lobes:**
+- 2 small lobes per leaf
+- Lighter brown (#664d3c)
+- Oak tree characteristic
+- Adds realistic detail
+
+**Structure:**
+```
+     /\       ← Pointed tip
+    /  \
+   |◊  ◊|     ← Side lobes
+   | ◊  |     ← Veins
+    \  /
+     \/       ← Base
+```
+
+### Technical Details:
+
+**Leaf SVG (45×45px):**
+```svg
+<!-- Main leaf body -->
+<path d='M5,40 Q8,35 12,32 
+  L15,29 Q18,26 21,24 
+  L23,23 Q21,26 19,29 
+  L17,32 Q15,35 12,37 
+  L10,39 Q8,40 7,40 L5,40 Z 
+  M15,29 L17,28 L18,30 L16,31 Z  <!-- Vein -->
+  M19,29 L21,28 L22,30 L20,31 Z' <!-- Vein -->
+  fill='#543b2c' 
+  stroke='#3d2b1f' 
+  stroke-width='1.2'/>
+
+<!-- Side lobes (oak characteristic) -->
+<path d='M12,32 Q10,30 9,28 Q11,29 12,30 Z' 
+  fill='#664d3c' 
+  stroke='#3d2b1f' 
+  stroke-width='0.8'/>
+```
+
+**Positioning:**
+```javascript
+position: 'absolute',
+top: '8px',      // Moved from 5px
+left: '8px',     // Moved from 5px
+width: '45px',   // Increased from 20px
+height: '45px',  // Increased from 20px
+opacity: 0.5     // Increased from 0.4
+```
+
+### Visual Appearance:
+
+**Each item card corner:**
+```
+🍂               🍂
+ Oak leaf      Oak leaf
+ (45px)        (45px)
+     ┌───────────┐
+     │           │
+     │   Item    │
+     │   Card    │
+     │           │
+     └───────────┘
+ Oak leaf      Oak leaf
+ (45px)        (45px)
+🍂               🍂
+```
+
+### Color Palette:
+
+**Main leaf:** Dark brown (#543b2c)
+**Side lobes:** Medium brown (#664d3c)
+**Outline:** Very dark brown (#3d2b1f)
+
+### Benefits:
+
+✅ **Much more visible** - 225% larger (45px vs 20px)  
+✅ **Clearly leaves** - Oak shape with lobes  
+✅ **Natural detail** - Visible veins and structure  
+✅ **Better decoration** - Adds autumn/harvest theme  
+✅ **Professional look** - Detailed, not generic  
+
+### Comparison:
+
+**v2.112 leaves:**
+- 20×20px
+- Simple shape
+- Hard to recognize
+- 40% opacity
+
+**v2.113 leaves:**
+- 45×45px (2.25× larger!)
+- Oak tree style
+- Side lobes visible
+- Veins shown
+- 50% opacity
+
+**Brown leaves are now much larger and look like real oak leaves!** 🍂✨
+
+---
+
+## v2.112 (2026-02-08)
+**Enhanced Leaf Details & Smart Timer Stacking**
+
+### Changed:
+- **More detailed ivy leaf shapes** with visible veins and structure
+- **Brown leaf decorations** added to item panel corners
+- **Smart timer stacking** - first 2 side-by-side, 3rd and 4th stack vertically
+
+### The Changes:
+
+**1. More Realistic Ivy Leaves:**
+
+**Improvements:**
+- Larger leaves (60px → 80px)
+- Visible leaf veins/structure
+- Multiple leaf segments
+- Pointed tips more pronounced
+- Thicker stroke outlines (1.5px vs 1px)
+- More detailed SVG paths
+
+**Leaf anatomy:**
+```
+    /\      ← Pointed tip
+   /  \
+  |    |    ← Veins
+  |    |
+   \  /     ← Base
+    \/
+```
+
+**Each corner cluster now has:**
+- 1 large leaf (with visible veins)
+- 1 medium leaf
+- 1 small leaf
+- Better leaf shapes with structure
+
+**2. Brown Leaf Decorations on Item Cards:**
+
+**Placement:**
+```
+🍂              🍂
+┌──────────────┐
+│              │
+│  Item Card   │
+│              │
+└──────────────┘
+🍂              🍂
+```
+
+**Features:**
+- Small brown leaves in all 4 corners
+- Brown color (#543b2c)
+- Subtle (40% opacity)
+- 20px size
+- Doesn't interfere with content
+
+**Colors:**
+- Brown: #543b2c
+- Dark brown outline: #3d2b1f
+
+**3. Smart Timer Stacking:**
+
+**Layout logic:**
+- **Timers 1-2:** Side by side at bottom-right
+- **Timers 3-4:** Stack vertically above timer 1
+
+**Visual layout:**
+```
+         [Timer 4]  ← Stacked
+            ↑
+         [Timer 3]  ← Stacked
+            ↑
+[Timer 2] [Timer 1] ← Side by side
+```
+
+**Bottom row (first 2 timers):**
+```
+[Timer 2] [Timer 1]
+    ←         ←
+  Second    First
+```
+- Position: bottom 2rem, right 2rem
+- Direction: row-reverse
+- Gap: 1rem between them
+
+**Stacked timers (3rd and 4th):**
+```
+[Timer 4]  ← Fourth
+    ↑
+[Timer 3]  ← Third
+```
+- Position: bottom calc(2rem + 280px + 1rem), right 2rem
+- Direction: column-reverse (stack bottom to top)
+- Gap: 1rem between them
+- Aligned to right edge
+
+### Technical Details:
+
+**Improved leaf SVG:**
+```svg
+<!-- Large leaf with structure -->
+<path d='M10,70 Q15,60 20,55 
+  L25,50 Q30,45 35,42 
+  L38,40 Q35,45 32,50 
+  L30,55 Q28,60 25,65 
+  L22,68 Q18,70 15,72 
+  L10,70 Z 
+  M25,50 L28,48 L30,52 L27,54 Z  <!-- Vein -->
+  M32,50 L35,48 L37,52 L34,54 Z'  <!-- Vein -->
+  fill='#4a8526' 
+  stroke='#2d5016' 
+  stroke-width='1.5'/>
+```
+
+**Brown leaf decoration:**
+```javascript
+<div style={{
+  position: 'absolute',
+  top: '5px',
+  left: '5px',
+  width: '20px',
+  height: '20px',
+  backgroundImage: `url("data:image/svg+xml,...")`,
+  opacity: 0.4
+}} />
+```
+
+**Timer stacking containers:**
+```javascript
+// Bottom row container
+<div style={{
+  position: 'fixed',
+  bottom: '2rem',
+  right: '2rem',
+  flexDirection: 'row-reverse'
+}}>
+  {bottomTimers.map(...)}
+</div>
+
+// Stacked container (if 3+ timers)
+<div style={{
+  position: 'fixed',
+  bottom: 'calc(2rem + 280px + 1rem)',
+  right: '2rem',
+  flexDirection: 'column-reverse'
+}}>
+  {stackedTimers.map(...)}
+</div>
+```
+
+### Benefits:
+
+✅ **More realistic leaves** - Visible structure and veins  
+✅ **Consistent decoration** - Brown leaves on items match theme  
+✅ **Better timer organization** - No horizontal overcrowding  
+✅ **Vertical space usage** - Timers stack efficiently  
+✅ **Clear visual hierarchy** - Easy to see all active timers  
+
+### Timer Stacking Examples:
+
+**1 timer:**
+```
+[Timer 1]
+```
+
+**2 timers:**
+```
+[Timer 2] [Timer 1]
+```
+
+**3 timers:**
+```
+         [Timer 3]  ← Stacked above
+            ↑
+[Timer 2] [Timer 1] ← Bottom row
+```
+
+**4 timers:**
+```
+         [Timer 4]  ← Top
+            ↑
+         [Timer 3]  ← Middle
+            ↑
+[Timer 2] [Timer 1] ← Bottom
+```
+
+**More realistic ivy leaves! Brown leaf decorations on items! Smart timer stacking!** 🍂✨
+
+---
+
+## v2.111 (2026-02-08)
+**Realistic Ivy Border with Leaves and Vines**
+
+### Changed:
+- **Realistic ivy leaf shapes** instead of green dots
+- **Winding brown vine stems** visible around frame
+- **Large ivy clusters** in all four corners
+- More recognizable as actual ivy
+
+### The Changes:
+
+**Before (v2.110):**
+- Green dots around frame
+- Not recognizable as ivy
+- No visible stems
+
+**After (v2.111):**
+- Actual leaf-shaped ivy leaves
+- Brown winding vine stems
+- Leaf clusters in corners
+- Looks like real ivy
+
+### Ivy Design:
+
+**Border elements:**
+- **14px solid green border** as base (#3a6b1e)
+- **Winding brown stems** (#543b2c) running around edges
+- **Ivy leaves** in multiple green shades along stems
+- **Corner clusters** with 3-4 leaves each
+
+**Ivy leaf colors:**
+- Light green: #4a8526
+- Medium green: #3a6b1e
+- Dark green: #2d5016
+- Brown stems: #543b2c
+
+**Visual structure:**
+```
+    🌿─🍃─🌿─🍃─🌿
+   ╱             ╲
+  🍃             🍃
+  │               │
+ 🌿               🌿
+  │               │
+  🍃             🍃
+   ╲             ╱
+    🌿─🍃─🌿─🍃─🌿
+```
+
+### Corner Leaf Clusters:
+
+**Each corner has:**
+- 3-4 ivy leaves in different sizes
+- Leaves at various angles
+- Natural clustering pattern
+- Mix of light, medium, dark green
+
+**Corner positions:**
+- Top-left: Large cluster
+- Top-right: Large cluster
+- Bottom-left: Large cluster
+- Bottom-right: Large cluster
+
+### Winding Vine Pattern:
+
+**Horizontal vines (top & bottom):**
+- Brown stem winds side to side
+- Leaves positioned along curve
+- 4 leaves per horizontal edge
+
+**Vertical vines (left & right):**
+- Brown stem winds up and down
+- Leaves positioned along curve
+- 4 leaves per vertical edge
+
+### Technical Implementation:
+
+**SVG leaf shapes:**
+- Actual pointed ivy leaf paths
+- Varied sizes and orientations
+- Natural organic shapes
+- Stroke outline for definition
+
+**Vine pattern:**
+```svg
+<path d='M10,50 Q20,30 30,50 T50,50 T70,50 T90,50' 
+  stroke='#543b2c' stroke-width='3' fill='none'/>
+```
+- Quadratic curves for winding effect
+- Brown color for natural stem
+- Continues pattern around frame
+
+**Leaf shape example:**
+```svg
+<path d='M15,45 Q20,38 25,35 Q22,40 20,45 Q18,42 15,45 Z' 
+  fill='#4a8526' stroke='#2d5016' stroke-width='1'/>
+```
+- Curved points for ivy leaf shape
+- Green fill with darker outline
+- Natural leaf proportions
+
+### Benefits:
+
+✅ **Recognizable as ivy** - Actual leaf shapes  
+✅ **Natural appearance** - Winding vines visible  
+✅ **Organic feel** - Varied leaf sizes/colors  
+✅ **Corner emphasis** - Large leaf clusters  
+✅ **Professional look** - Detailed botanical design  
+
+### Design Details:
+
+**Leaf characteristics:**
+- Pointed tips (typical of ivy)
+- Varied sizes (small to large)
+- Different angles (natural growth)
+- Multiple green shades (depth)
+
+**Vine characteristics:**
+- Brown stems (natural color)
+- Winding pattern (organic growth)
+- Continuous around frame
+- Visible throughout border
+
+**Realistic ivy with actual leaves and winding vines!** 🌿✨
+
+---
+
+## v2.110 (2026-02-08)
+**Ivy Border & Cleaner Completed View**
+
+### Changed:
+- **Removed redundant panel** below "Back to REMAINING WORK" button
+- **Replaced wood frame with ivy vine border** around header
+- Green ivy leaves wound around edge of frame
+
+### The Changes:
+
+**1. Removed Redundant Panel:**
+
+**Before (v2.109):**
+```
+[← Back to REMAINING WORK]
+
+┌────────────────────────┐
+│   25 cases, 8 items    │ ← Redundant panel
+│ REMAINING / Completed  │
+└────────────────────────┘
+
+[Completed item 1...]
+[Completed item 2...]
+```
+
+**After (v2.110):**
+```
+[← Back to REMAINING WORK]
+
+[Completed item 1...]
+[Completed item 2...]
+[Completed item 3...]
+```
+
+**Why removed:**
+- Numbers already shown in header at top
+- Toggle already available via button
+- Eliminates visual redundancy
+- More space for completed items list
+
+**2. Ivy Border Design:**
+
+**Frame features:**
+- Green vine border (12px thick)
+- Ivy leaf pattern around all edges
+- Natural, organic appearance
+- Green color scheme (#2d5016, #3a6b1e, #4a8526)
+
+**Ivy placement:**
+```
+    🍃  🍃  🍃
+   ┌───────────┐
+🍃 │           │ 🍃
+🍃 │  Header   │ 🍃
+🍃 │  Content  │ 🍃
+   └───────────┘
+    🍃  🍃  🍃
+```
+
+**Leaf positions:**
+- **Corners:** 4 leaves in each corner (8 total)
+- **Sides:** 3 leaves per side (12 total)
+- **Top/Bottom:** 3 leaves each (6 total)
+- **Total:** 20 ivy leaves winding around frame
+
+### Ivy Color Palette:
+
+**Border vine:**
+- Dark green: #2d5016
+- Medium green: #3a6b1e  
+- Light green: #4a8526
+- Accent: #68a047
+
+**Gradient pattern:**
+- Repeating vine texture
+- Natural green tones
+- Organic striping effect
+
+### Technical Details:
+
+**Ivy border styling:**
+```javascript
+border: '12px solid transparent',
+borderImage: `
+  repeating-linear-gradient(
+    0deg,
+    #2d5016 0px,    // Dark green
+    #3a6b1e 3px,    // Medium green
+    #4a8526 6px,    // Light green
+    #3a6b1e 9px,    // Medium green
+    #2d5016 12px    // Dark green
+  )
+`,
+boxShadow: `
+  0 25px 70px rgba(0,0,0,0.25),
+  inset 0 0 0 2px #68a047,         // Light green accent
+  inset 0 0 0 4px #3a6b1e,         // Medium green
+  inset 0 0 15px rgba(45, 80, 22, 0.2)  // Green shadow
+`
+```
+
+**Ivy leaves (ellipse radial gradients):**
+```javascript
+// Corner leaves (8x12px ellipses)
+radial-gradient(ellipse 8px 12px at 5% 8%, #4a8526 45%, transparent 50%)
+
+// Side leaves (6x10px ellipses)  
+radial-gradient(ellipse 6px 10px at 3% 25%, #4a8526 45%, transparent 50%)
+
+// Top/bottom leaves (10x6px ellipses)
+radial-gradient(ellipse 10px 6px at 25% 3%, #4a8526 45%, transparent 50%)
+```
+
+### Benefits:
+
+✅ **Cleaner completed view** - No redundant information  
+✅ **More space** - Completed items list starts immediately  
+✅ **Natural aesthetic** - Ivy instead of wood  
+✅ **Green theme** - Matches produce/organic theme  
+✅ **Elegant frame** - Ivy vines wind naturally around edges  
+
+### Visual Comparison:
+
+**Wood Frame (v2.109):**
+```
+╔══════════════════╗ ← Brown wood
+║                  ║
+║    Content       ║
+║                  ║
+╚══════════════════╝
+```
+
+**Ivy Frame (v2.110):**
+```
+🍃══🍃══🍃══🍃══🍃 ← Green ivy vines
+║                  ║
+🍃   Content      🍃
+║                  ║
+🍃══🍃══🍃══🍃══🍃
+```
+
+### Design Philosophy:
+
+The ivy border represents:
+- **Growth** - Living, organic produce
+- **Nature** - Fresh, natural products  
+- **Sustainability** - Green practices
+- **Freshness** - Living plants, not static wood
+
+**Ivy border creates natural, organic frame! Completed view is cleaner!** 🌿✨
+
+---
+
+## v2.109 (2026-02-08)
+**Dynamic Header Display & Ornate Frame Enhancement**
+
+### Changed:
+- **Header shows "COMPLETED" when viewing completed items** (was always "REMAINING")
+- **Header numbers switch dynamically** between remaining and completed
+- **"Back to REMAINING" changed to "Back to REMAINING WORK"**
+- **Thicker, more ornate frame** with vine/leaf decorative elements
+
+### The Changes:
+
+**1. Dynamic Header Display:**
+
+**Viewing remaining items:**
+```
+┌──────────────────────────┐
+│     REMAINING            │ ← Label
+│                          │
+│        50                │ ← Remaining cases
+│       cases              │
+│                          │
+│        12                │ ← Remaining items
+│       items              │
+└──────────────────────────┘
+```
+
+**Viewing completed items (after clicking progress bar):**
+```
+┌──────────────────────────┐
+│     COMPLETED            │ ← Label changes!
+│                          │
+│        25                │ ← Completed cases (green)
+│       cases              │
+│                          │
+│        8                 │ ← Completed items (green)
+│       items              │
+└──────────────────────────┘
+```
+
+**2. Button Text Update:**
+- Old: "← Back to REMAINING"
+- New: "← Back to REMAINING WORK"
+- More descriptive and clear
+
+**3. Ornate Frame Enhancement:**
+
+**Frame specifications:**
+- **Thickness:** 8px → 16px (doubled)
+- **Pattern:** Diagonal repeating gradient (vine-like texture)
+- **Colors:** Multiple wood tones (#8b7355, #6b5344, #a0826d, #d4a574)
+- **Depth:** Multiple inset borders (4 layers)
+- **Decorative:** Subtle green leaf accents in corners
+- **Outer rim:** Additional border layers for dimension
+
+**Frame layers (inside to outside):**
+1. Light tan inner border (3px) - #d4a574
+2. Medium brown (6px) - #8b7355
+3. Dark brown (9px) - #6b5344
+4. Light brown accent (12px) - #a0826d
+5. Main 16px ornate border with diagonal pattern
+6. Outer dark rim - #4a3f35
+7. Final outer wood layer - #8b7355
+
+**Decorative elements:**
+- Subtle green leaf patterns in corners (vine suggestion)
+- Radial gradients at 8 positions (corners + midpoints)
+- Very subtle (2-3% opacity) to not overwhelm
+- Suggests natural, organic frame decoration
+
+### Dynamic Color Scheme:
+
+**Remaining view:**
+- Numbers: Teal (#0f766e)
+- Label: Gray (#64748b)
+
+**Completed view:**
+- Numbers: Green (#10b981)
+- Label: Gray (#64748b)
+- Matches completed theme
+
+### Technical Details:
+
+**Dynamic display logic:**
+```javascript
+<div style={{
+  color: showCompleted ? '#10b981' : '#0f766e'
+}}>
+  {showCompleted ? completedCases : remainingCases}
+</div>
+
+<div style={{
+  color: showCompleted ? '#10b981' : '#0f766e'
+}}>
+  {showCompleted ? completedItems.length : remainingItems}
+</div>
+```
+
+**Ornate frame styling:**
+```javascript
+border: '16px solid #8b7355',
+borderImage: `
+  repeating-linear-gradient(
+    45deg,
+    #8b7355 0px,   // Medium brown
+    #6b5344 5px,   // Dark brown
+    #8b7355 10px,  // Medium brown
+    #a0826d 15px,  // Light brown
+    #6b5344 20px,  // Dark brown
+    #8b7355 25px   // Medium brown
+  ) 16
+`,
+boxShadow: `
+  0 25px 70px rgba(0,0,0,0.25),           // Main shadow
+  inset 0 0 0 3px #d4a574,                 // Inner light border
+  inset 0 0 0 6px #8b7355,                 // Inner medium border
+  inset 0 0 0 9px #6b5344,                 // Inner dark border
+  inset 0 0 0 12px #a0826d,                // Inner light accent
+  inset 0 0 20px rgba(0,0,0,0.3),          // Inner depth shadow
+  0 0 0 2px #4a3f35,                       // Outer dark rim
+  0 0 0 4px #8b7355                        // Outer wood layer
+`,
+backgroundImage: `
+  radial-gradient(circle at 10% 10%, rgba(34, 139, 34, 0.03) 0%, transparent 3%),
+  // ... 8 positions total for vine/leaf decoration
+`
+```
+
+### Benefits:
+
+✅ **Clear context** - Header shows what you're viewing  
+✅ **Dynamic numbers** - See relevant counts (remaining or completed)  
+✅ **Better labeling** - "REMAINING WORK" is more descriptive  
+✅ **Ornate appearance** - Thicker, more decorative frame  
+✅ **Visual richness** - Multiple layers create depth  
+✅ **Subtle decoration** - Vine/leaf hints without overwhelming  
+
+### Use Case Example:
+
+**Normal workflow:**
+1. View remaining: Header shows "REMAINING" with remaining cases/items
+2. Click progress bar: Header changes to "COMPLETED" with completed counts
+3. Click "Back to REMAINING WORK": Returns to remaining view
+4. Header updates back to "REMAINING" with remaining counts
+
+**Visual flow:**
+```
+REMAINING (50 cases, 12 items)
+       ↓ (click progress bar)
+COMPLETED (25 cases, 8 items)
+       ↓ (click "Back to REMAINING WORK")
+REMAINING (50 cases, 12 items)
+```
+
+**Header now dynamically shows context! Frame is thicker and more ornate!** 🖼️✨
+
+---
+
 ## v2.108 (2026-02-08)
 **Interactive Progress Bar & Wood Frame Header**
 
