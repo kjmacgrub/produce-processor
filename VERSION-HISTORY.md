@@ -1,5 +1,100 @@
 # Version History - Produce Processing App
 
+## v2.135 (2026-02-08)
+**Full-Width Mode Button with New Text**
+
+### Changed:
+- **Mode button now full width** at the very top of the panel
+- **Changed text** from "Mode" to "View Mode" and "Work Mode"
+- **Graphics next to text** (horizontal layout instead of vertical)
+- Larger button (1.1rem font size vs 0.85rem)
+- Clear Data button moved below mode button
+
+### The Changes:
+
+**Text:**
+- View Mode: "View Mode" (was "Mode")
+- Work Mode: "Work Mode" (was "Mode")
+
+**Layout:**
+- Before: Small button in top-right corner
+- After: Full-width button across entire top
+
+**Graphics position:**
+- Before: Icon above text (vertical)
+- After: Icon next to text (horizontal)
+
+### Visual Comparison:
+
+**Before (v2.134):**
+```
+┌─────────────────────────┐
+│ [Clear Data]      [👁️] │ ← Small button, right
+│                   Mode  │
+└─────────────────────────┘
+```
+
+**After (v2.135):**
+```
+┌─────────────────────────┐
+│   👁️ View Mode          │ ← Full width, centered
+└─────────────────────────┘
+┌─────────────────────────┐
+│   [Clear Data]          │ ← Below mode button
+└─────────────────────────┘
+```
+
+### Styling Details:
+
+**Button:**
+```javascript
+width: '100%',           // Full width
+display: 'flex',
+flexDirection: 'row',    // Horizontal (was 'column')
+alignItems: 'center',
+justifyContent: 'center',
+gap: '0.75rem',          // Space between icon and text
+fontSize: '1.1rem',      // Larger (was 0.85rem)
+marginBottom: '1rem'
+```
+
+**Icons:**
+- View Mode: 👁️ (eye emoji)
+- Work Mode: 🟢 (green twist tie SVG)
+
+### Button States:
+
+**View Mode:**
+- Blue background (rgba(59, 130, 246, 0.15))
+- Blue border
+- Eye emoji + "View Mode" text
+
+**Work Mode:**
+- Green background (rgba(15, 118, 110, 0.15))
+- Green border
+- Twist tie icon + "Work Mode" text
+
+### Layout Hierarchy:
+
+**Top to bottom:**
+1. **Mode button** (full width, top margin)
+2. Clear Data button (if applicable)
+3. Date display
+4. Title
+5. Items...
+
+### Benefits:
+
+✅ **More prominent** - Full width button  
+✅ **Clearer labels** - "View Mode" and "Work Mode" instead of just "Mode"  
+✅ **Better visual hierarchy** - Mode button at very top  
+✅ **Horizontal layout** - Icon and text side-by-side  
+✅ **Larger text** - 1.1rem for better readability  
+
+**Mode button now full width at top with "View Mode" / "Work Mode" text!** 🔄
+
+---
+
 ## v2.134 (2026-02-08)
 **Fixed: Thumbnail Preview No Longer Plays/Loops**
 
