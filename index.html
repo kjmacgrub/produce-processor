@@ -1620,8 +1620,16 @@
             await saveVideoToDB(sku, videoData);
             console.log('Uploaded video saved to IndexedDB');
             
-            // Reload to show the video
-            window.location.reload();
+            // Update state to show the video
+            setVideos(prev => ({
+              ...prev,
+              [sku]: videoData
+            }));
+            
+            // Close the upload modal
+            setShowVideoUpload(null);
+            
+            console.log('Video added for SKU:', sku);
           } catch (error) {
             console.error('Error saving uploaded video:', error);
             alert('Error saving video. Please try again.');
@@ -1761,13 +1769,18 @@
                 
                 console.log('Video saved to IndexedDB successfully');
                 
-                // Wait 500ms to ensure IndexedDB transaction completes
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Update state to show the video
+                setVideos(prev => ({
+                  ...prev,
+                  [sku]: videoData
+                }));
                 
-                console.log('Reloading page...');
+                // Close recording interface
+                setIsRecording(false);
+                setRecordingItemId(null);
+                setShowVideoUpload(null);
                 
-                // Reload page to show the new video without React DOM conflicts
-                window.location.reload();
+                console.log('Video added for SKU:', sku);
               } catch (error) {
                 console.error('Error saving video to IndexedDB:', error);
                 alert('Error saving video. Please try again.');
@@ -2556,7 +2569,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.137
+                  v2.138
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -4246,10 +4259,14 @@
                             // Delete from IndexedDB
                             await deleteVideoFromDB(sku);
                             
-                            console.log('Video deleted, reloading page...');
+                            // Update state to remove video
+                            setVideos(prev => {
+                              const updated = { ...prev };
+                              delete updated[sku];
+                              return updated;
+                            });
                             
-                            // Reload page to show updated state without React DOM conflicts
-                            window.location.reload();
+                            console.log('Video deleted from SKU:', sku);
                           }}
                           style={{
                             background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',

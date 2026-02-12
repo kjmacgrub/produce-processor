@@ -1,5 +1,92 @@
 # Version History - Produce Processing App
 
+## v2.138 (2026-02-08)
+**Fixed: Video Delete/Upload No Longer Causes Blank Screen on iPad**
+
+### Fixed:
+- **Removed window.location.reload()** from all video operations
+- **Updates React state instead** of reloading page
+- Works properly on iPad now
+- Smoother UX - no page reload needed
+
+### The Problem:
+
+When deleting, uploading, or recording a video on iPad:
+1. Action completed successfully
+2. Page reloaded with `window.location.reload()`
+3. **Screen went blank and didn't recover**
+4. App unusable until manual refresh
+
+### The Solution:
+
+**Before:**
+```javascript
+// Delete video
+await deleteVideoFromDB(sku);
+window.location.reload();  // ❌ Causes blank screen on iPad
+```
+
+**After:**
+```javascript
+// Delete video
+await deleteVideoFromDB(sku);
+setVideos(prev => {
+  const updated = { ...prev };
+  delete updated[sku];
+  return updated;
+});  // ✅ Updates state, React re-renders
+```
+
+### Fixed Operations:
+
+**1. Delete Video:**
+- Closes modal
+- Deletes from IndexedDB
+- Updates state to remove video
+- React re-renders naturally
+
+**2. Upload Video:**
+- Saves to IndexedDB
+- Updates state to add video
+- Closes upload modal
+- Shows "Watch" button immediately
+
+**3. Record Video:**
+- Saves to IndexedDB
+- Updates state to add video
+- Closes recording interface
+- Shows "Watch" button immediately
+
+### Technical Details:
+
+**State update pattern:**
+```javascript
+// Add video
+setVideos(prev => ({
+  ...prev,
+  [sku]: videoData
+}));
+
+// Remove video
+setVideos(prev => {
+  const updated = { ...prev };
+  delete updated[sku];
+  return updated;
+});
+```
+
+### Benefits:
+
+✅ **No blank screen** - State updates work on iPad  
+✅ **Smoother UX** - No page reload flash  
+✅ **Faster** - Instant state update vs full reload  
+✅ **More reliable** - React handles re-rendering  
+✅ **Better for all devices** - Not just iPad  
+
+**Video operations now update state instead of reloading - no more blank screen!** 🎬✅
+
+---
+
 ## v2.137 (2026-02-08)
 **Mode Button Back to Top Right Corner**
 
