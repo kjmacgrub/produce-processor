@@ -1,5 +1,302 @@
 # Version History - Produce Processing App
 
+## v2.143 (2026-02-12)
+**Reload Data Button - Load Today's CSV from Firebase Storage**
+
+### Added:
+- **Reload Data button** in top left corner (non-iPad only)
+- **Automatic today's date lookup** in Firebase Storage
+- **Date picker fallback** if today's file doesn't exist
+- **Preserves videos and photos** during reload
+
+### How It Works:
+
+**Button visibility:**
+- **Non-iPad devices:** Shows "🔄 Reload Data" button (blue)
+- **iPad devices:** Shows "🗑️ Clear Data" button (orange, only for old data)
+
+**Reload Data flow:**
+
+1. **Clear current data:**
+   - Removes items, completedItems, pdfDate, totalCases from Firebase
+   - Clears state (but keeps videos and photos in IndexedDB)
+
+2. **Look for today's CSV:**
+   - Gets today's date (e.g., "2026-02-12")
+   - Searches Firebase Storage folder "produce-pdfs"
+   - Looks for CSV with matching date in content
+
+3. **Three scenarios:**
+
+**A. Today's file exists:**
+```
+✅ Found: 2026-02-12-produce-report.csv
+→ Loads and parses automatically
+→ Alert: "Today's data loaded successfully!"
+```
+
+**B. Today's file missing, but other dates available:**
+```
+❌ No file for today
+✅ Found: 2026-02-11, 2026-02-10, etc.
+→ Opens date picker modal
+→ Alert: "No data for today, pick the day you want to use."
+```
+
+**C. No files at all:**
+```
+❌ No CSV files in Storage
+→ Alert: "No data files available"
+```
+
+### Button Design:
+
+**Reload Data (non-iPad):**
+```
+┌─────────────────┐
+│ 🔄 Reload Data  │ ← Blue gradient
+└─────────────────┘
+```
+
+**Clear Data (iPad, old data only):**
+```
+┌─────────────────┐
+│ 🗑️ Clear Data   │ ← Orange gradient
+└─────────────────┘
+```
+
+### What Gets Cleared:
+
+**Cleared:**
+- items ❌
+- completedItems ❌
+- pdfDate ❌
+- totalCases ❌
+- All processing state ❌
+
+**Preserved:**
+- Videos (IndexedDB) ✅
+- Completion photos (IndexedDB) ✅
+
+### Use Case:
+
+**Manager uploads tomorrow's CSV to Firebase Storage tonight**
+```
+File: 2026-02-12-produce-report.csv
+Location: Firebase Storage > produce-pdfs folder
+```
+
+**Worker arrives next morning on desktop/laptop**
+```
+1. Click "🔄 Reload Data"
+2. System finds today's file automatically
+3. Data loads instantly
+4. Start processing!
+```
+
+**If today's file missing:**
+```
+1. Click "🔄 Reload Data"
+2. See message: "No data for today, pick the day you want to use."
+3. Date picker opens with available dates
+4. Select date to load
+```
+
+### Technical Details:
+
+**Date extraction:**
+- Reads first line of CSV file
+- Looks for pattern: YYYY-MM-DD (e.g., "2026-02-12")
+- Compares to today's date
+
+**File listing:**
+- Uses existing `listAvailableCSVs()` function
+- Fetches all .csv files from "produce-pdfs" folder
+- Extracts date from each file's content
+- Sorts by date (most recent first)
+
+**File loading:**
+- Uses existing `loadCSVFromStorage()` function
+- Fetches CSV from Storage
+- Parses into items
+- Saves to Firebase Realtime Database
+
+### Why Non-iPad Only:
+
+- iPad users work in the field processing items
+- Desktop/laptop users manage data loading
+- Prevents accidental data reload during processing
+- iPad still has manual CSV upload if needed
+
+### Console Logs:
+
+Watch for:
+```
+🔄 Reload Data clicked
+✅ Data cleared, loading files from Storage...
+📥 Found today's file: 2026-02-12-produce-report.csv
+```
+
+or
+
+```
+🔄 Reload Data clicked
+✅ Data cleared, loading files from Storage...
+📅 No file for today, showing date picker
+```
+
+### Benefits:
+
+✅ **One-click reload** - No manual CSV upload  
+✅ **Automatic date detection** - Finds today's file  
+✅ **Fallback picker** - Choose different date if needed  
+✅ **Preserves videos** - Local recordings stay  
+✅ **Non-iPad only** - Protects field workers  
+✅ **Reuses existing code** - Same CSV parsing logic  
+
+**Reload Data button loads today's CSV from Firebase Storage automatically!** 🔄✅
+
+---
+
+## v2.142 (2026-02-12)
+**Pull-to-Refresh with Automatic Date Checking** (removed - not working properly)
+
+### Added:
+- **Pull-to-refresh gesture** - Native iOS Safari swipe down to refresh
+- **Automatic date synchronization** with Firebase
+- **Smart data management** - Clears old data, imports new data
+- **Visual feedback** - Pull indicator and notification messages
+- **Respects active processing** - Waits if user is actively working
+
+### How It Works:
+
+**Pull down at top of page** to trigger refresh. The app will:
+
+**Scenario 1: No today's data in Firebase**
+- Firebase has date = "2026-02-11" (yesterday)
+- Today is "2026-02-12"
+- **Action:** Clear all local items/data
+- **Keeps:** Videos and completion photos (IndexedDB)
+- **Message:** "✅ No data for today. Local data cleared."
+
+**Scenario 2: Today's data exists + local is empty/old**
+- Firebase has date = "2026-02-12" (today)
+- Local memory is empty OR has old date
+- **Action:** Import items, completedItems, totalCases from Firebase
+- **Message:** "📥 Loading today's data..."
+- **Message:** "✅ Today's data loaded successfully!"
+
+**Scenario 3: Today's data exists + local matches**
+- Firebase has date = "2026-02-12" (today)
+- Local memory has date = "2026-02-12" (today)
+- **Action:** Nothing - already up to date
+- **Message:** "✓ Data is up to date"
+
+### Visual Indicators:
+
+**Pull-to-refresh indicator:**
+```
+┌────────────────────┐
+│ ↓ Pull down to     │ ← Shows while pulling
+│   refresh          │
+└────────────────────┘
+      (changes to)
+┌────────────────────┐
+│ ↓ Release to       │ ← Shows when pulled enough
+│   refresh          │
+└────────────────────┘
+```
+
+**Notification messages:**
+- White box at top of screen
+- Green border
+- Auto-dismisses after 2-3 seconds
+- Shows status/result of refresh
+
+### Use Case:
+
+**Workflow:**
+1. Manager uploads tomorrow's CSV to Firebase tonight
+2. Worker arrives in morning
+3. Worker pulls down to refresh on iPad
+4. Old data clears
+5. New data imports automatically
+6. Worker starts processing
+
+### Technical Details:
+
+**Date comparison:**
+- Uses `pdfDate` from Firebase (path: `/pdfDate`)
+- Compares to today's date from `new Date()`
+- Format: "YYYY-MM-DD" (e.g., "2026-02-12")
+
+**Pull detection:**
+```javascript
+touchstart  → Record start position (only if at top)
+touchmove   → Track pull distance
+touchend    → If pulled > 80px, trigger refresh
+```
+
+**Data preserved:**
+- Videos (IndexedDB) ✅
+- Completion photos (IndexedDB) ✅
+
+**Data cleared/imported:**
+- items
+- completedItems
+- pdfDate
+- totalCases
+- Active processing state
+
+**Waits for processing:**
+- If `isProcessing` is true, shows:
+  "⏸️ Waiting for processing to finish..."
+- Prevents data loss mid-task
+
+### Console Logs:
+
+Watch for these:
+```
+📅 Date check - Today: 2026-02-12 Firebase: 2026-02-11 Local: 2026-02-11
+🗑️ No today's data in Firebase - clearing local data
+```
+or
+```
+📅 Date check - Today: 2026-02-12 Firebase: 2026-02-12 Local: 
+📥 Today's data found in Firebase - importing
+```
+
+### Benefits:
+
+✅ **Automatic sync** - No manual CSV upload needed  
+✅ **Morning-ready** - Data refreshes when workers arrive  
+✅ **Prevents stale data** - Old work cleared automatically  
+✅ **Preserves videos** - Local recordings stay intact  
+✅ **Safe processing** - Won't interrupt active work  
+✅ **Clear feedback** - User knows what happened  
+
+### Important Notes:
+
+**After CSV upload:**
+- Check still runs on pull-to-refresh
+- Ensures consistency with Firebase
+- Will import if dates don't match
+
+**Videos & Photos:**
+- Stored locally in IndexedDB by SKU
+- NOT cleared during refresh
+- Persist across data changes
+
+**Firebase path:**
+- Date stored at `/pdfDate` (legacy name, works with CSVs)
+- Items at `/items`
+- Completed at `/completedItems`
+- Total cases at `/totalCases`
+
+**Pull-to-refresh now checks dates and syncs data automatically!** 📅✅
+
+---
+
 ## v2.141 (2026-02-08)
 **Back to Page Reload - Only Reliable Solution for iPad**
 
