@@ -1,5 +1,221 @@
 # Version History - Produce Processing App
 
+## v2.147 (2026-02-12)
+**Fixed Console Log Messages - Now Says Firebase Storage**
+
+### Changed:
+- **Updated console logs** to say "Firebase Storage" instead of "IndexedDB"
+- **Clarified comments** in video upload code
+- No functional changes - just clearer messaging
+
+### Console Logs Now Show:
+
+**Before:**
+```
+✅ Video saved to IndexedDB
+Loaded videos from IndexedDB (by SKU): ['1000230', '1001098']
+```
+
+**After:**
+```
+✅ Video saved to Firebase Storage
+Loaded videos from Firebase Storage (by SKU): ['1000230', '1001098']
+```
+
+### If You Still See Old Messages:
+
+**Do a hard refresh:**
+- Windows/Linux: `Ctrl + Shift + R`
+- Mac: `Cmd + Shift + R`
+
+Or **clear browser cache** to get the latest code.
+
+### Updated Messages:
+
+- Upload: "Video saved to Firebase Storage"
+- Record: "Video saved to Firebase Storage"
+- Load: "Loaded videos from Firebase Storage"
+- Comments: "Save to Firebase Storage" (not IndexedDB)
+
+**Console logs now accurately reflect Firebase Storage usage!** 📝
+
+---
+
+## v2.146 (2026-02-12)
+**Videos Moved to Firebase Storage - Cloud Sync Across Devices**
+
+### Changed:
+- **Videos now stored in Firebase Storage** (was IndexedDB local storage)
+- **Videos sync across all devices** automatically
+- **SKU-based naming convention** for video files
+- **Videos persist even if device destroyed** (cloud backup)
+
+### Storage Location Change:
+
+**Before (v2.145):**
+- Location: IndexedDB (local browser storage)
+- Sync: No - each device has its own videos
+- Backup: No - lost if device destroyed
+- Access: Only on device where recorded
+
+**After (v2.146):**
+- Location: Firebase Storage (cloud)
+- Path: `produce-videos/{SKU}.webm`
+- Sync: Yes - all devices see all videos
+- Backup: Yes - stored in Firebase cloud
+- Access: Any device with Firebase access
+
+### File Naming Convention:
+
+**Format:** `{SKU}.webm`
+
+**Examples:**
+- SKU #1000230 → `1000230.webm`
+- SKU #2508681 → `2508681.webm`
+- SKU #5432109 → `5432109.webm`
+
+### How It Works:
+
+**Recording/Uploading Video:**
+1. User records or uploads video for SKU #1000230
+2. App uploads to Firebase Storage as `produce-videos/1000230.webm`
+3. Video immediately available on all devices
+
+**Watching Video:**
+1. App lists all available videos from Firebase Storage on startup
+2. When user clicks "Watch" button
+3. App fetches video URL from Firebase Storage
+4. Video streams from cloud
+
+**Deleting Video:**
+1. User clicks delete in video modal
+2. App deletes `produce-videos/1000230.webm` from Firebase Storage
+3. Video removed from all devices
+
+### Benefits:
+
+✅ **Multi-device access** - Videos created anywhere, available everywhere  
+✅ **Team collaboration** - Anyone can record videos for processors  
+✅ **Cloud backup** - Videos safe even if iPad destroyed  
+✅ **Centralized management** - One place for all videos  
+✅ **No device limits** - Not constrained by device storage  
+✅ **Easy sharing** - Just need Firebase access  
+
+### Technical Changes:
+
+**New Functions:**
+- `saveVideoToStorage(sku, videoData)` - Upload to Firebase Storage
+- `deleteVideoFromStorage(sku)` - Delete from Firebase Storage
+- `listAllVideosFromStorage()` - List all video SKUs
+- `getVideoURL(sku)` - Get streaming URL on-demand
+
+**Removed:**
+- IndexedDB video storage functions
+- Local video data caching
+
+**Video State Format:**
+
+**Before:**
+```javascript
+videos = {
+  "1000230": {
+    data: ArrayBuffer,  // Full video in memory
+    type: "video/webm",
+    name: "recording.webm"
+  }
+}
+```
+
+**After:**
+```javascript
+videos = {
+  "1000230": {
+    exists: true,
+    filename: "1000230.webm",
+    storageRef: "produce-videos/1000230.webm"
+  }
+}
+```
+
+### Use Cases:
+
+**Scenario 1: Manager creates videos at desk**
+```
+1. Manager records instruction videos on laptop
+2. Uploads to Firebase Storage
+3. iPad workers immediately see "Watch" button
+4. Workers watch videos while processing
+```
+
+**Scenario 2: Worker needs video on different device**
+```
+1. Video recorded on iPad A
+2. iPad A breaks
+3. Worker gets iPad B
+4. All videos still available on iPad B
+```
+
+**Scenario 3: Update existing video**
+```
+1. Delete old video for SKU #1000230
+2. Record new video
+3. New video replaces old one everywhere
+```
+
+### Important Notes:
+
+**File Format:**
+- Currently only .webm format supported
+- All videos saved as `{SKU}.webm`
+- One video per SKU
+
+**Storage Quota:**
+- Firebase Storage has generous limits
+- Videos compressed by browser
+- Typical video: 1-5MB per item
+
+**Network Required:**
+- Upload: Need internet to save video
+- Download: Need internet to watch video
+- Loading: Can work offline with cached video list
+
+**Backward Compatibility:**
+- Old IndexedDB videos NOT automatically migrated
+- Users need to re-record/re-upload videos
+- Old local videos remain on device but won't be used
+
+### Console Logs:
+
+Watch for these new messages:
+
+**Upload:**
+```
+📤 Uploading video to Firebase Storage for SKU: 1000230
+✅ Video uploaded to Firebase Storage for SKU: 1000230
+```
+
+**Load List:**
+```
+📋 Listing videos from Firebase Storage...
+✅ Found 15 videos in Firebase Storage
+```
+
+**Watch:**
+```
+🎬 Fetching video URL from Firebase Storage for SKU: 1000230
+✅ Video URL fetched successfully
+```
+
+**Delete:**
+```
+🗑️ Deleting video from Firebase Storage for SKU: 1000230
+✅ Video deleted from Firebase Storage for SKU: 1000230
+```
+
+**Videos now stored in Firebase Storage and sync across all devices!** 📹☁️✅
+
+---
+
 ## v2.145 (2026-02-12)
 **Progress Bar - Cleaner Completed Display**
 

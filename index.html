@@ -305,64 +305,139 @@
         });
       };
 
-      const saveVideoToDB = async (sku, videoData) => {
+      // ========================================
+      // FIREBASE STORAGE - VIDEO FUNCTIONS
+      // ========================================
+      
+      // Save video to Firebase Storage
+      const saveVideoToStorage = async (sku, videoData) => {
+        if (!storage) {
+          console.error('Firebase Storage not initialized');
+          return;
+        }
+        
         try {
-          const db = await openDB();
-          const transaction = db.transaction(['videos'], 'readwrite');
-          const store = transaction.objectStore('videos');
+          console.log('📤 Uploading video to Firebase Storage for SKU:', sku);
           
-          await store.put({
-            id: sku,
-            data: videoData.data,
-            name: videoData.name,
-            type: videoData.type
+          // Create filename based on SKU
+          const filename = `${sku}.webm`;
+          const storageRef = storage.ref(`produce-videos/${filename}`);
+          
+          // Convert videoData to Blob if it's ArrayBuffer
+          let blob;
+          if (videoData.data instanceof ArrayBuffer) {
+            blob = new Blob([videoData.data], { type: videoData.type || 'video/webm' });
+          } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
+            // Convert data URL to blob
+            const response = await fetch(videoData.data);
+            blob = await response.blob();
+          } else {
+            blob = videoData.data; // Assume it's already a Blob
+          }
+          
+          // Upload to Firebase Storage
+          await storageRef.put(blob, {
+            contentType: videoData.type || 'video/webm',
+            customMetadata: {
+              sku: sku,
+              uploadedAt: new Date().toISOString()
+            }
           });
           
-          console.log('Video saved to IndexedDB for SKU:', sku);
+          console.log('✅ Video uploaded to Firebase Storage for SKU:', sku);
         } catch (error) {
-          console.error('Error saving video to IndexedDB:', error);
-          alert('Error saving video. Storage may be full.');
+          console.error('❌ Error uploading video to Firebase Storage:', error);
+          throw error;
         }
       };
 
-      const deleteVideoFromDB = async (sku) => {
-        try {
-          const db = await openDB();
-          const transaction = db.transaction(['videos'], 'readwrite');
-          const store = transaction.objectStore('videos');
-          await store.delete(sku);
-          console.log('Video deleted from IndexedDB for SKU:', sku);
-        } catch (error) {
-          console.error('Error deleting video from IndexedDB:', error);
+      // Delete video from Firebase Storage
+      const deleteVideoFromStorage = async (sku) => {
+        if (!storage) {
+          console.error('Firebase Storage not initialized');
+          return;
         }
-      };
-
-      const loadAllVideosFromDB = async () => {
+        
         try {
-          const db = await openDB();
-          const transaction = db.transaction(['videos'], 'readonly');
-          const store = transaction.objectStore('videos');
-          const request = store.getAll();
+          console.log('🗑️ Deleting video from Firebase Storage for SKU:', sku);
           
-          return new Promise((resolve, reject) => {
-            request.onsuccess = () => {
-              const videos = {};
-              request.result.forEach(video => {
-                videos[video.id] = {
-                  data: video.data,
-                  name: video.name,
-                  type: video.type
-                };
-              });
-              resolve(videos);
+          const filename = `${sku}.webm`;
+          const storageRef = storage.ref(`produce-videos/${filename}`);
+          
+          await storageRef.delete();
+          
+          console.log('✅ Video deleted from Firebase Storage for SKU:', sku);
+        } catch (error) {
+          if (error.code === 'storage/object-not-found') {
+            console.log('Video not found in Firebase Storage for SKU:', sku);
+          } else {
+            console.error('❌ Error deleting video from Firebase Storage:', error);
+          }
+        }
+      };
+
+      // List all available video SKUs from Firebase Storage
+      const listAllVideosFromStorage = async () => {
+        if (!storage) {
+          console.error('Firebase Storage not initialized');
+          return {};
+        }
+        
+        try {
+          console.log('📋 Listing videos from Firebase Storage...');
+          
+          const storageRef = storage.ref('produce-videos');
+          const result = await storageRef.listAll();
+          
+          const videos = {};
+          
+          // For each video file, extract the SKU from filename
+          for (const itemRef of result.items) {
+            const filename = itemRef.name;
+            // Extract SKU from filename (e.g., "1000230.webm" -> "1000230")
+            const sku = filename.replace('.webm', '');
+            
+            // Store just a reference - we'll load the actual video on-demand
+            videos[sku] = {
+              exists: true,
+              filename: filename,
+              storageRef: itemRef.fullPath
             };
-            request.onerror = () => reject(request.error);
-          });
+          }
+          
+          console.log(`✅ Found ${Object.keys(videos).length} videos in Firebase Storage`);
+          return videos;
         } catch (error) {
-          console.error('Error loading videos from IndexedDB:', error);
+          console.error('❌ Error listing videos from Firebase Storage:', error);
           return {};
         }
       };
+
+      // Get video URL from Firebase Storage (on-demand)
+      const getVideoURL = async (sku) => {
+        if (!storage) {
+          console.error('Firebase Storage not initialized');
+          return null;
+        }
+        
+        try {
+          const filename = `${sku}.webm`;
+          const storageRef = storage.ref(`produce-videos/${filename}`);
+          const url = await storageRef.getDownloadURL();
+          return url;
+        } catch (error) {
+          if (error.code === 'storage/object-not-found') {
+            console.log('Video not found for SKU:', sku);
+          } else {
+            console.error('Error getting video URL:', error);
+          }
+          return null;
+        }
+      };
+
+      const saveVideoToDB = saveVideoToStorage; // Alias for backward compatibility
+      const deleteVideoFromDB = deleteVideoFromStorage; // Alias for backward compatibility
+      const loadAllVideosFromDB = listAllVideosFromStorage; // Alias for backward compatibility
 
       const saveCompletionPhotoToDB = async (sku, photoData) => {
         try {
@@ -556,9 +631,9 @@
             console.error('Error checking old videos:', error);
           }
           
-          // Load all videos from IndexedDB (keyed by SKU) - KEEP LOCAL
+          // Load all videos from Firebase Storage (keyed by SKU)
           const loadedVideos = await loadAllVideosFromDB();
-          console.log('Loaded videos from IndexedDB (by SKU):', Object.keys(loadedVideos));
+          console.log('Loaded videos from Firebase Storage (by SKU):', Object.keys(loadedVideos));
           setVideos(loadedVideos);
           
           // Load all completion photos from IndexedDB - KEEP LOCAL
@@ -1770,14 +1845,14 @@
           try {
             console.log('📤 Uploading video for SKU:', sku);
             
-            // Save to IndexedDB
+            // Save to Firebase Storage
             await saveVideoToDB(sku, videoData);
-            console.log('✅ Video saved to IndexedDB');
+            console.log('✅ Video saved to Firebase Storage');
             
             // Close modal
             setShowVideoUpload(null);
             
-            // Wait to ensure DB transaction completes
+            // Wait to ensure upload completes
             await new Promise(resolve => setTimeout(resolve, 300));
             
             // Reload page
@@ -1921,16 +1996,16 @@
               try {
                 console.log('🎥 Recording video save for SKU:', sku);
                 
-                // Save to IndexedDB
+                // Save to Firebase Storage
                 await saveVideoToDB(sku, videoData);
-                console.log('✅ Video saved to IndexedDB');
+                console.log('✅ Video saved to Firebase Storage');
                 
                 // Close recording interface
                 setIsRecording(false);
                 setRecordingItemId(null);
                 setShowVideoUpload(null);
                 
-                // Wait to ensure DB transaction completes
+                // Wait to ensure upload completes
                 await new Promise(resolve => setTimeout(resolve, 300));
                 
                 // Reload page
@@ -2473,58 +2548,46 @@
         return () => clearInterval(interval);
       }, [isProcessing, startTime]);
 
-      // Memoize video Blob URL so it doesn't recreate on every render
-      const { videoSrc, videoError } = useMemo(() => {
-        try {
+      // Fetch video URL from Firebase Storage when user wants to watch
+      const [videoSrc, setVideoSrc] = useState(null);
+      const [videoError, setVideoError] = useState(null);
+      
+      useEffect(() => {
+        const loadVideoURL = async () => {
           if (!playingVideo || !videos[playingVideo]) {
-            return { videoSrc: null, videoError: null };
+            setVideoSrc(null);
+            setVideoError(null);
+            return;
           }
 
           const videoData = videos[playingVideo];
-          if (!videoData || !videoData.data) {
-            console.warn('⚠️ Video data missing for SKU:', playingVideo);
-            return { videoSrc: null, videoError: 'Video data missing' };
+          if (!videoData || !videoData.exists) {
+            console.warn('⚠️ Video not found for SKU:', playingVideo);
+            setVideoSrc(null);
+            setVideoError('Video not found');
+            return;
           }
-          
-          let src = null;
-          let error = null;
           
           try {
-            if (videoData.data instanceof ArrayBuffer) {
-              console.log('🎬 Creating Blob URL from ArrayBuffer (memoized)');
-              const blob = new Blob([videoData.data], { type: videoData.type });
-              src = URL.createObjectURL(blob);
-            } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
-              console.log('🎬 Creating Blob URL from data URL (memoized)');
-              const parts = videoData.data.split(',');
-              if (parts.length !== 2) throw new Error('Invalid data URL format');
-              
-              const base64Data = parts[1];
-              const mimeTypeMatch = parts[0].match(/data:([^;]+)/);
-            if (!mimeTypeMatch) throw new Error('Could not extract MIME type');
-            const mimeType = mimeTypeMatch[1];
+            console.log('🎬 Fetching video URL from Firebase Storage for SKU:', playingVideo);
+            const url = await getVideoURL(playingVideo);
             
-            const binaryString = atob(base64Data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
+            if (url) {
+              setVideoSrc(url);
+              setVideoError(null);
+              console.log('✅ Video URL fetched successfully');
+            } else {
+              setVideoSrc(null);
+              setVideoError('Video not found');
             }
-            
-            const blob = new Blob([bytes], { type: mimeType });
-            src = URL.createObjectURL(blob);
-          } else {
-            throw new Error('Unknown video data format');
+          } catch (error) {
+            console.error('❌ Error fetching video URL:', error);
+            setVideoSrc(null);
+            setVideoError(error.message);
           }
-        } catch (err) {
-          console.error('❌ Error creating video URL:', err);
-          error = err.message;
-        }
-        
-        return { videoSrc: src, videoError: error };
-        } catch (outerError) {
-          console.error('❌ Critical error in video Blob URL creation:', outerError);
-          return { videoSrc: null, videoError: 'Failed to create video URL' };
-        }
+        };
+
+        loadVideoURL();
       }, [playingVideo, videos]);
 
       return (
@@ -2856,7 +2919,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.145
+                  v2.147
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
