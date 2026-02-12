@@ -2381,110 +2381,17 @@
               backgroundClip: 'padding-box, border-box, border-box',
               backgroundOrigin: 'padding-box, border-box, border-box'
             }}>
-              {/* Mode button - full width at top */}
-              {!isIPad ? (
-                // Non-iPad: Clickable toggle button
-                <button
-                  onClick={() => setReadOnlyMode(!readOnlyMode)}
-                  title="Click to toggle between View Mode and Work Mode"
-                  style={{
-                    background: readOnlyMode 
-                      ? 'rgba(59, 130, 246, 0.15)' 
-                      : 'rgba(15, 118, 110, 0.15)',
-                    color: '#1e293b',
-                    border: readOnlyMode 
-                      ? '2px solid rgba(59, 130, 246, 0.3)' 
-                      : '2px solid rgba(15, 118, 110, 0.3)',
-                    borderRadius: '12px',
-                    padding: '0.75rem 1rem',
-                    fontSize: '1.1rem',
-                    fontWeight: '700',
-                    boxShadow: readOnlyMode 
-                      ? '0 4px 15px rgba(59, 130, 246, 0.1)' 
-                      : '0 4px 15px rgba(15, 118, 110, 0.1)',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.75rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    width: '100%',
-                    marginBottom: '1rem'
-                  }}
-                >
-                  {readOnlyMode ? (
-                    <>
-                      <div style={{ fontSize: '1.5rem' }}>👁️</div>
-                      <div>View Mode</div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Green twist tie SVG */}
-                      <div style={{ 
-                        width: '24px', 
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          {/* Twisted wire shape */}
-                          <path d="M4,12 Q6,8 8,10 Q10,12 12,10 Q14,8 16,10 Q18,12 20,10" 
-                            stroke="#10b981" 
-                            strokeWidth="3" 
-                            fill="none" 
-                            strokeLinecap="round"/>
-                          <path d="M4,12 Q6,16 8,14 Q10,12 12,14 Q14,16 16,14 Q18,12 20,14" 
-                            stroke="#059669" 
-                            strokeWidth="3" 
-                            fill="none" 
-                            strokeLinecap="round"/>
-                        </svg>
-                      </div>
-                      <div>Work Mode</div>
-                    </>
-                  )}
-                </button>
-              ) : (
-                // iPad: Non-clickable indicator (use keyboard shortcut)
-                readOnlyMode && (
-                  <div 
-                    title="Hold Shift, then press V then M to toggle modes"
-                    style={{
-                      background: 'rgba(59, 130, 246, 0.15)',
-                      color: '#1e293b',
-                      border: '2px solid rgba(59, 130, 246, 0.3)',
-                      borderRadius: '12px',
-                      padding: '0.75rem 1rem',
-                      fontSize: '1.1rem',
-                      fontWeight: '700',
-                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)',
-                      display: 'flex',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.75rem',
-                      cursor: 'help',
-                      width: '100%',
-                      marginBottom: '1rem'
-                    }}>
-                    <div style={{ fontSize: '1.5rem' }}>👁️</div>
-                    <div>View Mode</div>
-                  </div>
-                )
-              )}
-
-              {/* Clear Data button - below mode button */}
-              {(() => {
-                // Check if pdfDate is today
-                const today = new Date();
-                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                const isToday = pdfDate === todayStr;
-                
-                // Only show Clear Data if not in read-only mode, items exist, and date is NOT today
-                return !readOnlyMode && items.length > 0 && !isToday ? (
-                  <div style={{ marginBottom: '1rem' }}>
+              {/* Top buttons - Clear Data (left) and Mode (right) */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                {/* Left side - Clear Data button or empty spacer */}
+                {(() => {
+                  // Check if pdfDate is today
+                  const today = new Date();
+                  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                  const isToday = pdfDate === todayStr;
+                  
+                  // Only show Clear Data if not in read-only mode, items exist, and date is NOT today
+                  return !readOnlyMode && items.length > 0 && !isToday ? (
                     <button
                       onClick={async () => {
                         if (confirm('Clear all data? This will remove all items and start fresh.')) {
@@ -2521,9 +2428,99 @@
                     >
                       🗑️ Clear Data
                     </button>
-                  </div>
-                ) : null;
-              })()}
+                  ) : (
+                    <div /> // Empty spacer for alignment
+                  );
+                })()}
+                
+                {/* Mode indicator (top-right) */}
+                {!isIPad ? (
+                  // Non-iPad: Clickable toggle button
+                  <button
+                    onClick={() => setReadOnlyMode(!readOnlyMode)}
+                    title="Click to toggle between View Mode and Work Mode"
+                    style={{
+                      background: readOnlyMode 
+                        ? 'rgba(59, 130, 246, 0.15)' 
+                        : 'rgba(15, 118, 110, 0.15)',
+                      color: '#1e293b',
+                      border: readOnlyMode 
+                        ? '2px solid rgba(59, 130, 246, 0.3)' 
+                        : '2px solid rgba(15, 118, 110, 0.3)',
+                      borderRadius: '12px',
+                      padding: '0.75rem 1rem',
+                      fontSize: '0.9rem',
+                      fontWeight: '700',
+                      boxShadow: readOnlyMode 
+                        ? '0 4px 15px rgba(59, 130, 246, 0.1)' 
+                        : '0 4px 15px rgba(15, 118, 110, 0.1)',
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {readOnlyMode ? (
+                      <>
+                        <div style={{ fontSize: '1.3rem' }}>👁️</div>
+                        <div>View Mode</div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Green twist tie SVG */}
+                        <div style={{ 
+                          width: '20px', 
+                          height: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            {/* Twisted wire shape */}
+                            <path d="M4,12 Q6,8 8,10 Q10,12 12,10 Q14,8 16,10 Q18,12 20,10" 
+                              stroke="#10b981" 
+                              strokeWidth="3" 
+                              fill="none" 
+                              strokeLinecap="round"/>
+                            <path d="M4,12 Q6,16 8,14 Q10,12 12,14 Q14,16 16,14 Q18,12 20,14" 
+                              stroke="#059669" 
+                              strokeWidth="3" 
+                              fill="none" 
+                              strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                        <div>Work Mode</div>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  // iPad: Non-clickable indicator (use keyboard shortcut)
+                  readOnlyMode && (
+                    <div 
+                      title="Hold Shift, then press V then M to toggle modes"
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        color: '#1e293b',
+                        border: '2px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '12px',
+                        padding: '0.75rem 1rem',
+                        fontSize: '0.9rem',
+                        fontWeight: '700',
+                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'help'
+                      }}>
+                      <div style={{ fontSize: '1.3rem' }}>👁️</div>
+                      <div>View Mode</div>
+                    </div>
+                  )
+                )}
+              </div>
               
               {/* Date above title */}
               {/* Date display - Always shown */}
@@ -2559,7 +2556,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.136
+                  v2.137
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}

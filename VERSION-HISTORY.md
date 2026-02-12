@@ -1,5 +1,74 @@
 # Version History - Produce Processing App
 
+## v2.137 (2026-02-08)
+**Mode Button Back to Top Right Corner**
+
+### Changed:
+- **Mode button moved back to top right** (not full width)
+- **Clear Data button on left** when applicable
+- Slightly smaller, less prominent
+- Horizontal layout preserved (icon + text)
+
+### The Change:
+
+**Before (v2.135):**
+```
+┌───────────────────────────────┐
+│   👁️ View Mode                │ ← Full width
+└───────────────────────────────┘
+┌───────────────────────────────┐
+│   [Clear Data]                │
+└───────────────────────────────┘
+```
+
+**After (v2.137):**
+```
+┌───────────────────────────────┐
+│ [Clear Data]    👁️ View Mode │ ← Side by side
+└───────────────────────────────┘
+```
+
+### Layout:
+
+**Top row (flexbox with space-between):**
+- **Left:** Clear Data button (when applicable, or empty spacer)
+- **Right:** Mode button
+
+### Mode Button Styling:
+
+**Size:**
+- fontSize: 0.9rem (was 1.1rem in full-width version)
+- Icon: 1.3rem emoji / 20px SVG (was 1.5rem / 24px)
+- padding: 0.75rem 1rem
+- gap: 0.5rem (between icon and text)
+
+**Layout:**
+- flexDirection: 'row' (horizontal)
+- Compact, top-right position
+- Still shows "View Mode" / "Work Mode" text
+- Icon next to text
+
+### Visual States:
+
+**View Mode:**
+- Blue background
+- 👁️ View Mode
+
+**Work Mode:**
+- Green background
+- 🟢 Work Mode
+
+### Benefits:
+
+✅ **Less prominent** - Smaller, corner position  
+✅ **Better hierarchy** - Date and title more prominent  
+✅ **Still clear** - Full text labels preserved  
+✅ **Clean layout** - Top buttons in one row  
+
+**Mode button back in top right corner - less prominent!** 🔄
+
+---
+
 ## v2.136 (2026-02-08)
 **Removed Video Thumbnail - Simple "Watch" Text Instead**
 
