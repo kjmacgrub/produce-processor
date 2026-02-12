@@ -2559,7 +2559,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.135
+                  v2.136
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -3131,7 +3131,7 @@
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '12px',
-                                  padding: '0',
+                                  padding: '1rem 1.5rem',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -3141,85 +3141,11 @@
                                   fontSize: '1.1rem',
                                   boxShadow: '0 4px 15px rgba(5, 150, 105, 0.3)',
                                   minWidth: '180px',
-                                  minHeight: '100%',
-                                  overflow: 'hidden',
-                                  position: 'relative'
+                                  minHeight: '100%'
                                 }}
                               >
-                                {(() => {
-                                  // Create video thumbnail
-                                  const videoData = videos[sku];
-                                  let videoSrc = null;
-                                  
-                                  try {
-                                    if (videoData.data instanceof ArrayBuffer) {
-                                      const blob = new Blob([videoData.data], { type: videoData.type });
-                                      videoSrc = URL.createObjectURL(blob);
-                                    } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
-                                      videoSrc = videoData.data;
-                                    }
-                                  } catch (error) {
-                                    console.error('Error creating video thumbnail:', error);
-                                  }
-                                  
-                                  if (videoSrc) {
-                                    return (
-                                      <>
-                                        <video
-                                          src={videoSrc}
-                                          style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            objectFit: 'cover',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            borderRadius: '12px',
-                                            pointerEvents: 'none'
-                                          }}
-                                          muted
-                                          preload="metadata"
-                                          autoPlay={false}
-                                          playsInline={false}
-                                          onLoadedMetadata={(e) => {
-                                            e.target.loop = false;
-                                            e.target.pause();
-                                            e.target.currentTime = 0;
-                                            console.log('🖼️ Thumbnail loaded, paused at frame 0');
-                                          }}
-                                          onPlay={(e) => {
-                                            console.log('⚠️ Thumbnail tried to play, forcing pause');
-                                            e.target.pause();
-                                            e.target.currentTime = 0;
-                                          }}
-                                        />
-                                        <div style={{
-                                          position: 'absolute',
-                                          top: '50%',
-                                          left: '50%',
-                                          transform: 'translate(-50%, -50%)',
-                                          background: 'rgba(0, 0, 0, 0.6)',
-                                          borderRadius: '50%',
-                                          width: '50px',
-                                          height: '50px',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          zIndex: 1
-                                        }}>
-                                          <Play size={28} />
-                                        </div>
-                                      </>
-                                    );
-                                  } else {
-                                    return (
-                                      <>
-                                        <Play size={22} />
-                                        Video
-                                      </>
-                                    );
-                                  }
-                                })()}
+                                <Play size={22} />
+                                Watch
                               </button>
                             ) : (
                               <button
@@ -3229,7 +3155,7 @@
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '12px',
-                                  padding: '0',
+                                  padding: '1rem 1.5rem',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',

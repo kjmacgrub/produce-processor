@@ -1,5 +1,92 @@
 # Version History - Produce Processing App
 
+## v2.136 (2026-02-08)
+**Removed Video Thumbnail - Simple "Watch" Text Instead**
+
+### Changed:
+- **Removed video thumbnail preview** from button
+- **Shows simple "Watch" text** with play icon
+- No more flickering or looping issues
+- Button padding now consistent (1rem 1.5rem)
+
+### The Problem:
+
+The video thumbnail in the button was:
+- Flickering constantly
+- Looping despite all prevention attempts
+- Creating Blob URLs on every render
+- Causing performance issues
+
+### The Solution:
+
+**Before (v2.127-v2.134):**
+```
+┌──────────────┐
+│ [video frame]│ ← Video thumbnail
+│      ▶       │   (flickering/looping)
+└──────────────┘
+```
+
+**After (v2.136):**
+```
+┌──────────────┐
+│  ▶  Watch    │ ← Simple text
+└──────────────┘
+```
+
+### Technical Changes:
+
+**Removed:**
+- Video element in button
+- Blob URL creation
+- IIFE for thumbnail generation
+- All video event handlers (onLoadedMetadata, onPlay)
+- Complex positioning (absolute, overflow, etc.)
+
+**Added:**
+- Simple text "Watch"
+- Consistent padding (1rem 1.5rem)
+- Clean, straightforward button
+
+### Button States:
+
+**Has video:**
+```javascript
+<button>
+  <Play size={22} />
+  Watch
+</button>
+```
+
+**No video:**
+```javascript
+<button>
+  <Video size={22} />
+  Make video
+</button>
+```
+
+### Styling:
+
+**Both buttons now have:**
+- padding: '1rem 1.5rem' (was '0' for video buttons)
+- Consistent sizing
+- No special positioning
+- Clean, simple layout
+
+### Benefits:
+
+✅ **No flickering** - No video element  
+✅ **No looping** - No video to loop  
+✅ **Better performance** - No Blob URL creation  
+✅ **Cleaner UI** - Simple, clear text  
+✅ **Consistent padding** - Both buttons match  
+✅ **Faster rendering** - No video processing  
+
+**Video button now shows simple "Watch" text - no more thumbnail issues!** 🎬✅
+
+---
+
 ## v2.135 (2026-02-08)
 **Full-Width Mode Button with New Text**
 
