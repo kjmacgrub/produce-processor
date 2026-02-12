@@ -1,5 +1,71 @@
 # Version History - Produce Processing App
 
+## v2.148 (2026-02-12)
+**Removed Clear Data Button - Reload Data Only**
+
+### Changed:
+- **Removed Clear Data button** completely
+- **Reload Data button** only shows on non-iPad devices in Work Mode
+- Simplified button logic
+
+### Button Visibility:
+
+**Before (v2.147):**
+- Non-iPad + Work Mode: Reload Data button ✓
+- iPad + Work Mode: Clear Data button ✓
+- View Mode: No button
+
+**After (v2.148):**
+- Non-iPad + Work Mode: Reload Data button ✓
+- iPad + Work Mode: No button ✗
+- View Mode: No button ✗
+
+### Why This Change:
+
+- **iPad users** don't need to clear data (they load from Firebase)
+- **iPad users** don't need to reload data (they use current data)
+- **Desktop/laptop users** manage data loading with Reload Data
+- **Simpler interface** - one button, one purpose
+
+### Button States by Device:
+
+**Desktop/Laptop:**
+```
+Work Mode:
+┌──────────────────────────────────────┐
+│ 🔄 Reload Data       🟢 Work Mode   │
+└──────────────────────────────────────┘
+
+View Mode:
+┌──────────────────────────────────────┐
+│ (empty)              👁️ View Mode   │
+└──────────────────────────────────────┘
+```
+
+**iPad:**
+```
+Work Mode:
+┌──────────────────────────────────────┐
+│ (empty)              🟢 Work Mode    │
+└──────────────────────────────────────┘
+
+View Mode:
+┌──────────────────────────────────────┐
+│ (empty)              👁️ View Mode   │
+└──────────────────────────────────────┘
+```
+
+### Impact:
+
+✅ **Cleaner iPad interface** - No unnecessary buttons  
+✅ **Clearer purpose** - Reload Data is for data management  
+✅ **Prevents accidents** - iPad users can't accidentally clear data  
+✅ **Simpler code** - One button path instead of two  
+
+**Clear Data button removed, Reload Data only on non-iPad Work Mode!** 🗑️❌
+
+---
+
 ## v2.147 (2026-02-12)
 **Fixed Console Log Messages - Now Says Firebase Storage**
 
