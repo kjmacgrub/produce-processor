@@ -2289,7 +2289,17 @@
               borderRadius: '24px',
               padding: '2.5rem',
               marginBottom: '2rem',
-              boxShadow: '0 25px 70px rgba(0,0,0,0.25)'
+              boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
+              border: '8px solid #8b7355', // Wood brown color
+              borderImage: 'linear-gradient(135deg, #8b7355 0%, #6b5344 25%, #8b7355 50%, #6b5344 75%, #8b7355 100%) 1',
+              position: 'relative',
+              // Inner shadow for depth
+              boxShadow: `
+                0 25px 70px rgba(0,0,0,0.25),
+                inset 0 0 0 2px #d4a574,
+                inset 0 0 0 4px #8b7355,
+                inset 0 0 10px rgba(0,0,0,0.2)
+              `
             }}>
               {/* Top buttons - Clear Data (left) and View Mode indicator (right) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -2438,7 +2448,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.106
+                  v2.108
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2461,14 +2471,35 @@
                             boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
                             position: 'relative'
                           }}>
-                            {/* Completed portion (green) */}
-                            <div style={{
-                              width: `${completedPercentage}%`,
-                              height: '100%',
-                              background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-                              transition: 'width 0.5s ease',
-                              borderRadius: '20px'
-                            }} />
+                            {/* Completed portion (green) - clickable */}
+                            <div 
+                              onClick={() => completedItems.length > 0 && setShowCompleted(true)}
+                              style={{
+                                width: `${completedPercentage}%`,
+                                height: '100%',
+                                background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                                transition: 'width 0.5s ease',
+                                borderRadius: '20px',
+                                cursor: completedItems.length > 0 ? 'pointer' : 'default',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative'
+                              }}
+                            >
+                              {/* Completed cases number */}
+                              {completedCases > 0 && (
+                                <div style={{
+                                  color: 'white',
+                                  fontWeight: '800',
+                                  fontSize: '1.1rem',
+                                  textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                  userSelect: 'none'
+                                }}>
+                                  {completedCases} completed
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
                           {/* Remaining info below */}
@@ -2485,21 +2516,6 @@
                               letterSpacing: '0.05em'
                             }}>
                               Remaining
-                              {completedItems.length > 0 && (
-                                <>
-                                  <span>/</span>
-                                  <span 
-                                    onClick={() => setShowCompleted(!showCompleted)}
-                                    style={{
-                                      color: '#10b981',
-                                      cursor: 'pointer',
-                                      textDecoration: 'underline'
-                                    }}
-                                  >
-                                    Completed
-                                  </span>
-                                </>
-                              )}
                             </div>
                             
                             {/* Cases and Items side by side */}
@@ -2557,7 +2573,7 @@
                   </div>
               </div>
               
-              {/* Back to Active button (only shown when viewing completed) */}
+              {/* Back to REMAINING button (only shown when viewing completed) */}
               {showCompleted && (
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                   <button
@@ -2568,13 +2584,13 @@
                       border: 'none',
                       borderRadius: '12px',
                       padding: '1rem 1.5rem',
-                      fontSize: '1rem',
+                      fontSize: '1.2rem',
                       fontWeight: '700',
                       cursor: 'pointer',
                       boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
                     }}
                   >
-                    ← Back to Active
+                    ← Back to REMAINING
                   </button>
                 </div>
               )}
@@ -3782,18 +3798,77 @@
                   boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                   textAlign: 'center'
                 }}>
-                  <h2 style={{
-                    margin: 0,
-                    fontSize: '2rem',
-                    fontWeight: '800',
-                    color: '#1e293b',
-                    marginBottom: '0.5rem'
+                  {/* Cases and Items side by side */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '3rem',
+                    flexWrap: 'wrap',
+                    marginBottom: '1.5rem'
                   }}>
-                    Completed Items
-                  </h2>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '1.1rem' }}>
-                    {completedItems.reduce((sum, item) => sum + item.cases, 0)} cases completed of {originalTotalCases} total cases
-                  </p>
+                    {/* Cases */}
+                    <div>
+                      <div style={{
+                        fontSize: '3.5rem',
+                        fontWeight: '900',
+                        color: '#10b981',
+                        lineHeight: '1',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {completedItems.reduce((sum, item) => sum + item.cases, 0)}
+                      </div>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        color: '#64748b'
+                      }}>
+                        cases
+                      </div>
+                    </div>
+                    
+                    {/* Items */}
+                    <div>
+                      <div style={{
+                        fontSize: '3.5rem',
+                        fontWeight: '900',
+                        color: '#10b981',
+                        lineHeight: '1',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {completedItems.length}
+                      </div>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        color: '#64748b'
+                      }}>
+                        items
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* COMPLETED label with REMAINING link */}
+                  <div style={{
+                    fontSize: '1.5rem',
+                    fontWeight: '700',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    <span 
+                      onClick={() => setShowCompleted(false)}
+                      style={{
+                        color: '#0f766e',
+                        cursor: 'pointer',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Remaining
+                    </span>
+                    <span> / </span>
+                    <span style={{ color: '#10b981' }}>Completed</span>
+                  </div>
                 </div>
 
                 {completedItems.length === 0 ? (

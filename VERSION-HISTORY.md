@@ -1,5 +1,246 @@
 # Version History - Produce Processing App
 
+## v2.108 (2026-02-08)
+**Interactive Progress Bar & Wood Frame Header**
+
+### Changed:
+- **Progress bar shows completed cases number** on green section
+- **Green progress bar is clickable** to view completed items
+- **Wood picture frame border** around header panel for visual distinction
+
+### The Changes:
+
+**1. Progress Bar Enhancement:**
+```
+┌──────────────────────────────────┐
+│ ████████████░░░░░░░░░░░░░░░░░░░ │
+│ [25 completed] ← Clickable!      │
+└──────────────────────────────────┘
+```
+
+**Features:**
+- Shows "X completed" text on green portion
+- White text with shadow for visibility
+- Clickable to open completed view
+- Only clickable if there are completed items
+- Cursor changes to pointer on hover
+
+**2. Wood Frame Header:**
+```
+╔════════════════════════════════╗ ← Wood frame
+║  Date                          ║
+║  Process Mode        View Mode ║
+║                                ║
+║  Produce Processing Report     ║
+║                                ║
+║  ██████████░░░░░░░░░░░░        ║
+║  25 completed (clickable)      ║
+║                                ║
+║  50 cases remaining            ║
+╚════════════════════════════════╝
+```
+
+**Frame Details:**
+- 8px solid border
+- Wood brown color (#8b7355, #6b5344)
+- Gradient effect for depth
+- Inner light border (#d4a574)
+- Inset shadows for 3D effect
+- Gives header solid, framed presence
+
+### Progress Bar States:
+
+**No completed items:**
+```
+┌──────────────────────────────────┐
+│ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ (all gray)
+└──────────────────────────────────┘
+```
+
+**Some completed:**
+```
+┌──────────────────────────────────┐
+│ ██████░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│ [15 completed] ← Click to view   │
+└──────────────────────────────────┘
+```
+
+**All completed:**
+```
+┌──────────────────────────────────┐
+│ ████████████████████████████████ │ (all green)
+│ [75 completed] ← Click to view   │
+└──────────────────────────────────┘
+```
+
+### Technical Details:
+
+**Progress bar completed section:**
+```javascript
+<div 
+  onClick={() => completedItems.length > 0 && setShowCompleted(true)}
+  style={{
+    width: `${completedPercentage}%`,
+    background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+    cursor: completedItems.length > 0 ? 'pointer' : 'default',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}
+>
+  {completedCases > 0 && (
+    <div style={{
+      color: 'white',
+      fontWeight: '800',
+      fontSize: '1.1rem',
+      textShadow: '0 1px 3px rgba(0,0,0,0.3)'
+    }}>
+      {completedCases} completed
+    </div>
+  )}
+</div>
+```
+
+**Wood frame styling:**
+```javascript
+border: '8px solid #8b7355',
+borderImage: 'linear-gradient(135deg, #8b7355 0%, #6b5344 25%, #8b7355 50%, #6b5344 75%, #8b7355 100%) 1',
+boxShadow: `
+  0 25px 70px rgba(0,0,0,0.25),
+  inset 0 0 0 2px #d4a574,
+  inset 0 0 0 4px #8b7355,
+  inset 0 0 10px rgba(0,0,0,0.2)
+`
+```
+
+### Color Scheme - Wood Frame:
+
+**Main border:** #8b7355 (medium brown)
+**Dark accent:** #6b5344 (darker brown)
+**Light accent:** #d4a574 (lighter tan)
+**Gradient:** Alternating light/dark for wood grain effect
+**Inset shadows:** Add depth and dimension
+
+### Benefits:
+
+✅ **Quick access to completed** - Click progress bar  
+✅ **See completed count** - At a glance on progress bar  
+✅ **Visual distinction** - Header stands out from items  
+✅ **Professional look** - Picture frame aesthetic  
+✅ **Better hierarchy** - Clear separation of sections  
+
+### Use Cases:
+
+**Progress monitoring:**
+- Glance at progress bar to see "25 completed"
+- Click to view which items are done
+- Return to remaining with one click
+
+**Visual organization:**
+- Wood frame clearly separates header from work area
+- Gives header importance and permanence
+- Items below are clearly the working list
+
+**Interactive progress bar shows completed count and opens completed view!** 📊✨
+
+---
+
+## v2.107 (2026-02-08)
+**Improved Completed Items View**
+
+### Changed:
+- **Show numbers for completed cases and items** (large display)
+- **"Back to Active" renamed to "Back to REMAINING"** with bigger font
+- **Moved COMPLETED link** from remaining view to under completed numbers
+- **Added REMAINING link** on completed view for easy toggle
+
+### The Changes:
+
+**1. Completed View Header:**
+```
+┌────────────────────────┐
+│        50              │ ← Completed cases (large)
+│       cases            │
+│                        │
+│        12              │ ← Completed items (large)
+│       items            │
+│                        │
+│  REMAINING / Completed │ ← Toggle link
+└────────────────────────┘
+```
+
+**2. Remaining View Header:**
+```
+┌────────────────────────┐
+│     REMAINING          │ ← Simple label (no link)
+│                        │
+│        25              │
+│       cases            │
+│                        │
+│        8               │
+│       items            │
+└────────────────────────┘
+```
+
+**3. Back Button:**
+- Old: "← Back to Active" (1rem font)
+- New: "← Back to REMAINING" (1.2rem font)
+
+### Features:
+
+**Completed View Numbers:**
+- **Cases:** Large green number (3.5rem)
+- **Items:** Large green number (3.5rem)
+- Color: Green (#10b981) to match completed theme
+- Layout: Side by side, same as remaining view
+
+**Toggle Between Views:**
+- **From Remaining:** Click "Back to REMAINING" button at top
+- **From Completed:** Click "REMAINING" link under numbers
+- Symmetrical navigation
+
+**Removed:**
+- "Completed" link from remaining view (was "REMAINING / Completed")
+- Old "Completed Items" header text
+- Old subtitle with "X cases completed of Y total"
+
+### Benefits:
+
+✅ **Clear numbers** - See completed cases and items at a glance  
+✅ **Consistent layout** - Matches remaining view style  
+✅ **Bigger font** - Easier to read button text  
+✅ **Better navigation** - REMAINING link on completed view  
+✅ **Cleaner design** - No redundant text  
+
+### Visual Comparison:
+
+**Before (v2.106):**
+```
+Remaining View:
+  REMAINING / Completed ← Click here to see completed
+  
+Completed View:
+  Completed Items
+  50 cases completed of 75 total cases
+  [← Back to Active]
+```
+
+**After (v2.107):**
+```
+Remaining View:
+  REMAINING ← Just a label
+  50 cases, 12 items
+  
+Completed View:
+  25 cases, 8 items ← Big numbers
+  REMAINING / Completed ← Click REMAINING to go back
+  [← Back to REMAINING] ← Also can use button
+```
+
+**Completed view now shows clear numbers and easy navigation!** ✅
+
+---
+
 ## v2.106 (2026-02-08)
 **Removed Timing Metrics from Item Cards**
 
