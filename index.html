@@ -1616,23 +1616,31 @@
           };
           
           try {
+            console.log('📤 Starting video upload for SKU:', sku);
+            
             // Save to IndexedDB
             await saveVideoToDB(sku, videoData);
-            console.log('Uploaded video saved to IndexedDB');
+            console.log('✅ Uploaded video saved to IndexedDB');
             
-            // Update state to show the video
-            setVideos(prev => ({
-              ...prev,
-              [sku]: videoData
-            }));
-            
-            // Close the upload modal
+            // Close the upload modal first
             setShowVideoUpload(null);
             
-            console.log('Video added for SKU:', sku);
+            // Wait a moment for modal to close
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Update state to show the video
+            setVideos(prev => {
+              console.log('✅ State updated - video added for SKU:', sku);
+              return {
+                ...prev,
+                [sku]: videoData
+              };
+            });
+            
           } catch (error) {
-            console.error('Error saving uploaded video:', error);
+            console.error('❌ Error saving uploaded video:', error);
             alert('Error saving video. Please try again.');
+            setShowVideoUpload(null);
           }
         };
         reader.readAsArrayBuffer(file);  // Changed from readAsDataURL
@@ -1764,25 +1772,31 @@
               };
               
               try {
+                console.log('🎥 Starting video recording save for SKU:', sku);
+                
                 // Save to IndexedDB for persistence
                 await saveVideoToDB(sku, videoData);
+                console.log('✅ Recorded video saved to IndexedDB');
                 
-                console.log('Video saved to IndexedDB successfully');
-                
-                // Update state to show the video
-                setVideos(prev => ({
-                  ...prev,
-                  [sku]: videoData
-                }));
-                
-                // Close recording interface
+                // Close recording interface first
                 setIsRecording(false);
                 setRecordingItemId(null);
                 setShowVideoUpload(null);
                 
-                console.log('Video added for SKU:', sku);
+                // Wait a moment for UI to update
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Update state to show the video
+                setVideos(prev => {
+                  console.log('✅ State updated - recorded video added for SKU:', sku);
+                  return {
+                    ...prev,
+                    [sku]: videoData
+                  };
+                });
+                
               } catch (error) {
-                console.error('Error saving video to IndexedDB:', error);
+                console.error('❌ Error saving recorded video:', error);
                 alert('Error saving video. Please try again.');
                 setIsRecording(false);
                 setRecordingItemId(null);
@@ -2319,26 +2333,32 @@
 
       // Memoize video Blob URL so it doesn't recreate on every render
       const { videoSrc, videoError } = useMemo(() => {
-        if (!playingVideo || !videos[playingVideo]) {
-          return { videoSrc: null, videoError: null };
-        }
-
-        const videoData = videos[playingVideo];
-        let src = null;
-        let error = null;
-        
         try {
-          if (videoData.data instanceof ArrayBuffer) {
-            console.log('🎬 Creating Blob URL from ArrayBuffer (memoized)');
-            const blob = new Blob([videoData.data], { type: videoData.type });
-            src = URL.createObjectURL(blob);
-          } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
-            console.log('🎬 Creating Blob URL from data URL (memoized)');
-            const parts = videoData.data.split(',');
-            if (parts.length !== 2) throw new Error('Invalid data URL format');
-            
-            const base64Data = parts[1];
-            const mimeTypeMatch = parts[0].match(/data:([^;]+)/);
+          if (!playingVideo || !videos[playingVideo]) {
+            return { videoSrc: null, videoError: null };
+          }
+
+          const videoData = videos[playingVideo];
+          if (!videoData || !videoData.data) {
+            console.warn('⚠️ Video data missing for SKU:', playingVideo);
+            return { videoSrc: null, videoError: 'Video data missing' };
+          }
+          
+          let src = null;
+          let error = null;
+          
+          try {
+            if (videoData.data instanceof ArrayBuffer) {
+              console.log('🎬 Creating Blob URL from ArrayBuffer (memoized)');
+              const blob = new Blob([videoData.data], { type: videoData.type });
+              src = URL.createObjectURL(blob);
+            } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
+              console.log('🎬 Creating Blob URL from data URL (memoized)');
+              const parts = videoData.data.split(',');
+              if (parts.length !== 2) throw new Error('Invalid data URL format');
+              
+              const base64Data = parts[1];
+              const mimeTypeMatch = parts[0].match(/data:([^;]+)/);
             if (!mimeTypeMatch) throw new Error('Could not extract MIME type');
             const mimeType = mimeTypeMatch[1];
             
@@ -2359,6 +2379,10 @@
         }
         
         return { videoSrc: src, videoError: error };
+        } catch (outerError) {
+          console.error('❌ Critical error in video Blob URL creation:', outerError);
+          return { videoSrc: null, videoError: 'Failed to create video URL' };
+        }
       }, [playingVideo, videos]);
 
       return (
@@ -2569,7 +2593,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.138
+                  v2.139
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -4250,23 +4274,35 @@
                       {!readOnlyMode && (
                         <button
                           onClick={async () => {
-                            const sku = playingVideo;
-                            console.log('Deleting video for SKU:', sku);
-                            
-                            // Close modal immediately
-                            setPlayingVideo(null);
-                            
-                            // Delete from IndexedDB
-                            await deleteVideoFromDB(sku);
-                            
-                            // Update state to remove video
-                            setVideos(prev => {
-                              const updated = { ...prev };
-                              delete updated[sku];
-                              return updated;
-                            });
-                            
-                            console.log('Video deleted from SKU:', sku);
+                            try {
+                              const sku = playingVideo;
+                              console.log('🗑️ Starting video delete for SKU:', sku);
+                              
+                              // First: Close modal to prevent re-render issues
+                              setPlayingVideo(null);
+                              
+                              // Wait a moment for modal to close
+                              await new Promise(resolve => setTimeout(resolve, 100));
+                              
+                              // Second: Update state to remove video
+                              setVideos(prev => {
+                                const updated = { ...prev };
+                                delete updated[sku];
+                                console.log('✅ State updated - video removed from:', sku);
+                                return updated;
+                              });
+                              
+                              // Third: Delete from IndexedDB (async, don't block)
+                              deleteVideoFromDB(sku).then(() => {
+                                console.log('✅ Video deleted from IndexedDB for SKU:', sku);
+                              }).catch(err => {
+                                console.error('❌ Error deleting from IndexedDB:', err);
+                              });
+                              
+                            } catch (error) {
+                              console.error('❌ Error in delete handler:', error);
+                              alert('Error deleting video. Please refresh the page.');
+                            }
                           }}
                           style={{
                             background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',

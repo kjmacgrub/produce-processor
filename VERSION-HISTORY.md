@@ -1,7 +1,168 @@
 # Version History - Produce Processing App
 
+## v2.139 (2026-02-08)
+**Enhanced Error Handling & Timing for Video Operations on iPad**
+
+### Fixed:
+- **Added comprehensive error handling** to all video operations
+- **Fixed timing issues** - close modals first, wait, then update state
+- **Added defensive checks** to useMemo to prevent crashes
+- **Better logging** with emojis for easier debugging
+- Should resolve blank screen issues on iPad
+
+### The Improvements:
+
+**1. Delete Video - New Flow:**
+```javascript
+try {
+  // 1. Close modal first
+  setPlayingVideo(null);
+  
+  // 2. Wait for modal to close (100ms)
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // 3. Update state
+  setVideos(prev => {
+    const updated = { ...prev };
+    delete updated[sku];
+    return updated;
+  });
+  
+  // 4. Delete from DB (async, don't block)
+  deleteVideoFromDB(sku);
+  
+} catch (error) {
+  console.error('❌ Error:', error);
+  alert('Error deleting video.');
+}
+```
+
+**2. Upload Video - New Flow:**
+```javascript
+try {
+  // 1. Save to IndexedDB
+  await saveVideoToDB(sku, videoData);
+  
+  // 2. Close modal first
+  setShowVideoUpload(null);
+  
+  // 3. Wait for modal to close (100ms)
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // 4. Update state
+  setVideos(prev => ({
+    ...prev,
+    [sku]: videoData
+  }));
+  
+} catch (error) {
+  console.error('❌ Error:', error);
+  alert('Error saving video.');
+}
+```
+
+**3. Record Video - Same Pattern:**
+- Save to DB
+- Close recording interface
+- Wait 100ms
+- Update state
+
+### Enhanced useMemo Safety:
+
+**Added multiple layers of protection:**
+```javascript
+const { videoSrc, videoError } = useMemo(() => {
+  try {
+    // Check if video exists
+    if (!playingVideo || !videos[playingVideo]) {
+      return { videoSrc: null, videoError: null };
+    }
+    
+    // Check if data exists
+    if (!videoData || !videoData.data) {
+      console.warn('⚠️ Video data missing');
+      return { videoSrc: null, videoError: 'Missing' };
+    }
+    
+    // Try to create Blob URL
+    try {
+      // ... create blob ...
+    } catch (err) {
+      console.error('❌ Error creating URL:', err);
+      return { videoSrc: null, videoError: err.message };
+    }
+    
+  } catch (outerError) {
+    console.error('❌ Critical error:', outerError);
+    return { videoSrc: null, videoError: 'Failed' };
+  }
+}, [playingVideo, videos]);
+```
+
+### Why These Changes Help:
+
+**Timing Issue:**
+- Before: Update state immediately → React re-renders → Modal tries to render with stale data → Crash
+- After: Close modal → Wait → Update state → React re-renders clean UI ✅
+
+**Error Handling:**
+- Before: Any error crashes React → Blank screen
+- After: Errors caught and logged → Graceful degradation ✅
+
+**Defensive Checks:**
+- Before: Assumes video data exists
+- After: Checks at every step ✅
+
+### Console Logs for Debugging:
+
+Watch for these emoji-coded logs:
+
+**Success:**
+```
+🗑️ Starting video delete for SKU: 123
+✅ State updated - video removed from: 123
+✅ Video deleted from IndexedDB for SKU: 123
+```
+
+**Upload:**
+```
+📤 Starting video upload for SKU: 123
+✅ Uploaded video saved to IndexedDB
+✅ State updated - video added for SKU: 123
+```
+
+**Record:**
+```
+🎥 Starting video recording save for SKU: 123
+✅ Recorded video saved to IndexedDB
+✅ State updated - recorded video added for SKU: 123
+```
+
+**Warnings:**
+```
+⚠️ Video data missing for SKU: 123
+```
+
+**Errors:**
+```
+❌ Error in delete handler: [error details]
+❌ Critical error in video Blob URL creation: [error]
+```
+
+### Benefits:
+
+✅ **Prevents crashes** - Multiple error handlers  
+✅ **Better timing** - Modals close before state updates  
+✅ **Defensive coding** - Checks data exists before using  
+✅ **Clear debugging** - Emoji-coded console logs  
+✅ **Graceful degradation** - Alerts user on error  
+
+**Video operations should now work reliably on iPad without blank screens!** 🎬✅
+
+---
+
 ## v2.138 (2026-02-08)
-**Fixed: Video Delete/Upload No Longer Causes Blank Screen on iPad**
+**Fixed: Video Delete/Upload No Longer Causes Blank Screen on iPad** (partial fix)
 
 ### Fixed:
 - **Removed window.location.reload()** from all video operations
