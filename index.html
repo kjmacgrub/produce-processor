@@ -1616,30 +1616,25 @@
           };
           
           try {
-            console.log('📤 Starting video upload for SKU:', sku);
+            console.log('📤 Uploading video for SKU:', sku);
             
             // Save to IndexedDB
             await saveVideoToDB(sku, videoData);
-            console.log('✅ Uploaded video saved to IndexedDB');
+            console.log('✅ Video saved to IndexedDB');
             
-            // Close the upload modal first
+            // Close modal
             setShowVideoUpload(null);
             
-            // Wait a moment for modal to close
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Wait to ensure DB transaction completes
+            await new Promise(resolve => setTimeout(resolve, 300));
             
-            // Update state to show the video
-            setVideos(prev => {
-              console.log('✅ State updated - video added for SKU:', sku);
-              return {
-                ...prev,
-                [sku]: videoData
-              };
-            });
+            // Reload page
+            console.log('🔄 Reloading page...');
+            window.location.reload();
             
           } catch (error) {
-            console.error('❌ Error saving uploaded video:', error);
-            alert('Error saving video. Please try again.');
+            console.error('❌ Error saving video:', error);
+            alert('Error saving video. Please try reloading the page manually.');
             setShowVideoUpload(null);
           }
         };
@@ -1772,32 +1767,27 @@
               };
               
               try {
-                console.log('🎥 Starting video recording save for SKU:', sku);
+                console.log('🎥 Recording video save for SKU:', sku);
                 
-                // Save to IndexedDB for persistence
+                // Save to IndexedDB
                 await saveVideoToDB(sku, videoData);
-                console.log('✅ Recorded video saved to IndexedDB');
+                console.log('✅ Video saved to IndexedDB');
                 
-                // Close recording interface first
+                // Close recording interface
                 setIsRecording(false);
                 setRecordingItemId(null);
                 setShowVideoUpload(null);
                 
-                // Wait a moment for UI to update
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Wait to ensure DB transaction completes
+                await new Promise(resolve => setTimeout(resolve, 300));
                 
-                // Update state to show the video
-                setVideos(prev => {
-                  console.log('✅ State updated - recorded video added for SKU:', sku);
-                  return {
-                    ...prev,
-                    [sku]: videoData
-                  };
-                });
+                // Reload page
+                console.log('🔄 Reloading page...');
+                window.location.reload();
                 
               } catch (error) {
-                console.error('❌ Error saving recorded video:', error);
-                alert('Error saving video. Please try again.');
+                console.error('❌ Error saving video:', error);
+                alert('Error saving video. Please try reloading the page manually.');
                 setIsRecording(false);
                 setRecordingItemId(null);
                 setShowVideoUpload(null);
@@ -2593,7 +2583,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.139
+                  v2.141
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -4276,32 +4266,25 @@
                           onClick={async () => {
                             try {
                               const sku = playingVideo;
-                              console.log('🗑️ Starting video delete for SKU:', sku);
+                              console.log('🗑️ Deleting video for SKU:', sku);
                               
-                              // First: Close modal to prevent re-render issues
+                              // Close modal first
                               setPlayingVideo(null);
                               
-                              // Wait a moment for modal to close
-                              await new Promise(resolve => setTimeout(resolve, 100));
+                              // Delete from IndexedDB
+                              await deleteVideoFromDB(sku);
+                              console.log('✅ Video deleted from IndexedDB');
                               
-                              // Second: Update state to remove video
-                              setVideos(prev => {
-                                const updated = { ...prev };
-                                delete updated[sku];
-                                console.log('✅ State updated - video removed from:', sku);
-                                return updated;
-                              });
+                              // Wait to ensure DB transaction completes
+                              await new Promise(resolve => setTimeout(resolve, 300));
                               
-                              // Third: Delete from IndexedDB (async, don't block)
-                              deleteVideoFromDB(sku).then(() => {
-                                console.log('✅ Video deleted from IndexedDB for SKU:', sku);
-                              }).catch(err => {
-                                console.error('❌ Error deleting from IndexedDB:', err);
-                              });
+                              // Reload page
+                              console.log('🔄 Reloading page...');
+                              window.location.reload();
                               
                             } catch (error) {
-                              console.error('❌ Error in delete handler:', error);
-                              alert('Error deleting video. Please refresh the page.');
+                              console.error('❌ Error deleting video:', error);
+                              alert('Error deleting video. Please try reloading the page manually.');
                             }
                           }}
                           style={{
