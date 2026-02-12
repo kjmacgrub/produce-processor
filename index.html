@@ -2386,10 +2386,33 @@
                       transition: 'all 0.2s'
                     }}
                   >
-                    <div style={{ fontSize: '1.5rem' }}>
-                      {readOnlyMode ? '👁️' : '⚙️'}
-                    </div>
-                    <div>{readOnlyMode ? 'View Mode' : 'Process Mode'}</div>
+                    {readOnlyMode ? (
+                      <div style={{ fontSize: '1.5rem' }}>👁️</div>
+                    ) : (
+                      // Green twist tie SVG
+                      <div style={{ 
+                        width: '24px', 
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          {/* Twisted wire shape */}
+                          <path d="M4,12 Q6,8 8,10 Q10,12 12,10 Q14,8 16,10 Q18,12 20,10" 
+                            stroke="#10b981" 
+                            strokeWidth="3" 
+                            fill="none" 
+                            strokeLinecap="round"/>
+                          <path d="M4,12 Q6,16 8,14 Q10,12 12,14 Q14,16 16,14 Q18,12 20,14" 
+                            stroke="#059669" 
+                            strokeWidth="3" 
+                            fill="none" 
+                            strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                    )}
+                    <div>Mode</div>
                   </button>
                 ) : (
                   // iPad: Non-clickable indicator (use keyboard shortcut)
@@ -2412,7 +2435,7 @@
                         cursor: 'help'
                       }}>
                       <div style={{ fontSize: '1.5rem' }}>👁️</div>
-                      <div>View Mode</div>
+                      <div>Mode</div>
                     </div>
                   )
                 )}
@@ -2452,7 +2475,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.116
+                  v2.122
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -2781,31 +2804,31 @@
                       position: 'absolute',
                       top: '8px',
                       left: '8px',
-                      fontSize: '1.8rem',
-                      opacity: 0.3
+                      fontSize: '2.5rem',
+                      opacity: 0.6
                     }}>🥕</div>
                     <div style={{
                       position: 'absolute',
                       top: '8px',
                       right: '8px',
-                      fontSize: '1.8rem',
-                      opacity: 0.3
+                      fontSize: '2.5rem',
+                      opacity: 0.6
                     }}>🍅</div>
                     <div style={{
                       position: 'absolute',
                       bottom: '8px',
                       left: '8px',
-                      fontSize: '1.8rem',
-                      opacity: 0.3
+                      fontSize: '2.5rem',
+                      opacity: 0.6
                     }}>🥒</div>
                     <div style={{
                       position: 'absolute',
                       bottom: '8px',
                       right: '8px',
-                      fontSize: '1.8rem',
-                      opacity: 0.3
+                      fontSize: '2.5rem',
+                      opacity: 0.6
                     }}>🌽</div>
-                    {/* Priority dropdown stretching full width */}
+                    {/* Priority dropdown - yellow on black, 1/3 width, left-justified */}
                     <div style={{ marginBottom: '1rem' }}>
                       {!readOnlyMode ? (
                         // Editable priority dropdown in Edit mode
@@ -2820,14 +2843,14 @@
                             }
                           }}
                           style={{
-                            background: getPriorityColor(item.priority),
-                            color: item.priority === 0 ? '#64748b' : 'white',
-                            border: 'none',
+                            background: '#1e293b',
+                            color: '#fbbf24',
+                            border: '2px solid #fbbf24',
                             borderRadius: '10px',
                             padding: '0.5rem 1rem',
                             fontSize: '1rem',
                             fontWeight: '700',
-                            width: '100%', // Full width
+                            width: '33.33%',
                             textAlign: 'center',
                             cursor: 'pointer'
                           }}
@@ -2852,14 +2875,15 @@
                       ) : (
                         // Read-only priority badge in View mode
                         <div style={{
-                          background: getPriorityColor(item.priority),
-                          color: item.priority === 0 ? '#64748b' : 'white',
+                          background: '#1e293b',
+                          color: '#fbbf24',
+                          border: '2px solid #fbbf24',
                           borderRadius: '10px',
                           padding: '0.4rem 1rem',
                           fontSize: '1rem',
                           fontWeight: '700',
                           textAlign: 'center',
-                          width: '100%' // Full width
+                          width: '33.33%'
                         }}>
                           {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
                         </div>
@@ -2872,10 +2896,12 @@
                       <div style={{ marginBottom: '0.75rem' }}>
                         <h3 style={{
                           margin: 0,
-                          fontSize: '1.8rem',
+                          fontSize: '2rem',
                           fontWeight: '800',
                           color: '#1e293b',
-                          letterSpacing: '-0.01em'
+                          letterSpacing: '-0.01em',
+                          textAlign: 'center',
+                          fontFamily: 'Georgia, "Times New Roman", Times, serif'
                         }}>
                           {getDisplayName(item.name)}
                         </h3>
@@ -4830,8 +4856,51 @@
                       alignItems: 'center',
                       gap: '1rem',
                       minWidth: '280px',
-                      maxWidth: '320px'
+                      maxWidth: '320px',
+                      position: 'relative'
                     }}>
+                        {/* Cancel button at top center */}
+                        <button
+                          onClick={() => {
+                            // Stop timer
+                            setItemsInProcess(prev => ({ ...prev, [timerId]: false }));
+                            setItemsPaused(prev => ({ ...prev, [timerId]: false }));
+                            setElapsedTimes(prev => ({ ...prev, [timerId]: 0 }));
+                            setStartTimes(prev => {
+                              const newTimes = { ...prev };
+                              delete newTimes[timerId];
+                              return newTimes;
+                            });
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '-12px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: '2px solid #dc2626',
+                            borderRadius: '20px',
+                            padding: '0.4rem 1rem',
+                            fontSize: '0.85rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+                            transition: 'all 0.2s',
+                            zIndex: 10
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#dc2626';
+                            e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ef4444';
+                            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+                          }}
+                        >
+                          ✕ Cancel
+                        </button>
+                        
                         {/* Item name */}
                         <div style={{
                           fontSize: '1.1rem',

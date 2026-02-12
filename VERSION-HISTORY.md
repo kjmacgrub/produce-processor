@@ -1,5 +1,506 @@
 # Version History - Produce Processing App
 
+## v2.122 (2026-02-08)
+**Cancel Button on Timers**
+
+### Added:
+- **Red cancel button** at top center of each timer
+- Allows canceling accidentally started timers
+- Completely stops and resets the timer
+
+### The Feature:
+
+**Cancel button:**
+- Position: Top center of timer (floating above)
+- Color: Red (#ef4444)
+- Label: "✕ Cancel"
+- Hover effect: Darkens and scales up slightly
+
+**What it does:**
+- Stops the timer immediately
+- Clears elapsed time
+- Removes timer from active list
+- No confirmation required (quick cancel)
+
+### Visual Design:
+
+```
+      [✕ Cancel]  ← Red button (top center)
+    ┌─────────────┐
+    │             │
+    │  Timer Name │
+    │             │
+    │   05:23     │
+    │             │
+    │  [Pause]    │
+    │  [Done]     │
+    │             │
+    └─────────────┘
+```
+
+**Position:**
+- 12px above timer top edge
+- Centered horizontally
+- Floats above timer box
+
+**Styling:**
+```javascript
+position: 'absolute',
+top: '-12px',
+left: '50%',
+transform: 'translateX(-50%)',
+background: '#ef4444',      // Red
+border: '2px solid #dc2626', // Dark red border
+borderRadius: '20px',
+padding: '0.4rem 1rem',
+fontSize: '0.85rem'
+```
+
+### Button States:
+
+**Normal:**
+- Background: Red (#ef4444)
+- Border: Dark red (#dc2626)
+- Shadow: Red glow
+
+**Hover:**
+- Background: Dark red (#dc2626)
+- Scale: 1.05 (slightly larger)
+- Smooth transition
+
+### Functionality:
+
+**On click:**
+1. Stops timer (sets inProcess to false)
+2. Clears paused state
+3. Resets elapsed time to 0
+4. Removes start time
+5. Timer disappears from screen
+
+**Use cases:**
+- Accidentally clicked "Start Timer"
+- Wrong item selected
+- Need to restart fresh
+- Quick way to abort
+
+### Benefits:
+
+✅ **Prevents mistakes** - Easy to cancel accidental starts  
+✅ **Visible** - Red color stands out clearly  
+✅ **Quick access** - Always at top center  
+✅ **No confirmation** - Fast cancel for efficiency  
+✅ **Clean reset** - Completely clears timer state  
+
+### Technical Details:
+
+**Timer state cleared:**
+```javascript
+setItemsInProcess(prev => ({ ...prev, [timerId]: false }));
+setItemsPaused(prev => ({ ...prev, [timerId]: false }));
+setElapsedTimes(prev => ({ ...prev, [timerId]: 0 }));
+setStartTimes(prev => {
+  const newTimes = { ...prev };
+  delete newTimes[timerId];
+  return newTimes;
+});
+```
+
+**Red cancel button at top of each timer - easy mistake recovery!** 🔴✕
+
+---
+
+## v2.121 (2026-02-08)
+**Item Title: Centered, Larger, Serif Font**
+
+### Changed:
+- **Item title is now centered**
+- **Larger size** (1.8rem → 2rem)
+- **Serif font** (Georgia/Times New Roman)
+
+### The Changes:
+
+**Text alignment:**
+- Before: Left-aligned
+- After: Centered
+
+**Font size:**
+- Before: 1.8rem
+- After: 2rem
+- Increase: ~11% larger
+
+**Font family:**
+- Before: System default (sans-serif)
+- After: Georgia, Times New Roman, serif
+- Classic, elegant serif look
+
+### Visual Comparison:
+
+**Before (v2.120):**
+```
+Bananas - Organic           ← Left-aligned, sans-serif, 1.8rem
+```
+
+**After (v2.121):**
+```
+     Bananas - Organic      ← Centered, serif, 2rem
+```
+
+### Technical Details:
+
+**Updated styling:**
+```javascript
+fontSize: '2rem',                                    // Was 1.8rem
+textAlign: 'center',                                 // Added
+fontFamily: 'Georgia, "Times New Roman", Times, serif'  // Added
+```
+
+**Font stack:**
+- **First choice:** Georgia (widely available, elegant)
+- **Second choice:** Times New Roman (classic serif)
+- **Third choice:** Times (fallback)
+- **Final fallback:** Generic serif
+
+### Benefits:
+
+✅ **More prominent** - Larger, easier to read  
+✅ **Centered focus** - Title stands out  
+✅ **Elegant serif** - Classic, professional look  
+✅ **Better hierarchy** - Clear visual importance  
+✅ **Readable** - Georgia is very legible  
+
+### Design Notes:
+
+**Why Georgia?**
+- Excellent on-screen readability
+- Elegant but not formal
+- Widely available on all platforms
+- Designed for screen display
+
+**Item card layout now:**
+```
+┌─────────────────────────┐
+│ 🥕                  🍅  │
+│                         │
+│ ┌──────────┐            │
+│ │Priority 1│            │
+│ └──────────┘            │
+│                         │
+│  Bananas - Organic      │ ← Centered, serif, 2rem
+│                         │
+│ 50 cases    [Done]      │
+│                         │
+│ 🥒                  🌽  │
+└─────────────────────────┘
+```
+
+**Item titles are now centered, larger, and in an elegant serif font!** 📝
+
+---
+
+## v2.120 (2026-02-08)
+**Centered Priority Dropdown Text**
+
+### Changed:
+- **Priority dropdown text is now centered**
+- Better visual balance within the 1/3 width box
+
+### The Change:
+
+**Text alignment:**
+- Before: Left-aligned
+- After: Centered
+
+### Visual Comparison:
+
+**Before (v2.119):**
+```
+┌──────────┐
+│Priority 1│              ← Text on left
+└──────────┘
+```
+
+**After (v2.120):**
+```
+┌──────────┐
+│Priority 1│              ← Text centered
+└──────────┘
+```
+
+### Technical Details:
+
+**Updated styling:**
+```javascript
+textAlign: 'center'  // Was 'left'
+```
+
+Applied to both:
+- Process Mode: Select dropdown
+- View Mode: Read-only badge
+
+### Benefits:
+
+✅ **Better visual balance** - Centered in the box  
+✅ **More polished** - Looks intentional  
+✅ **Consistent** - Matches typical dropdown styling  
+
+**Priority dropdown text is now centered!** ⚫🟡
+
+---
+
+## v2.119 (2026-02-08)
+**Priority Dropdown: Yellow on Black Theme**
+
+### Changed:
+- **Yellow on black theme** for priority dropdown
+- **1/3 width** instead of full width
+- **Left-justified** instead of centered
+- Matches timer aesthetic
+
+### The Changes:
+
+**Color scheme:**
+- Background: Black (#1e293b)
+- Text: Yellow (#fbbf24)
+- Border: Yellow (#fbbf24, 2px)
+
+**Layout:**
+- Width: 33.33% (1/3 of card)
+- Alignment: Left
+- Previous: 100% width, centered
+
+### Visual Comparison:
+
+**Before (v2.118):**
+```
+┌────────────────────────────┐
+│     Priority 1             │  ← Full width, centered
+│    (various colors)        │
+└────────────────────────────┘
+```
+
+**After (v2.119):**
+```
+┌──────────┐
+│ Priority 1│                   ← 1/3 width, left
+│  (yellow) │
+│  (black)  │
+└──────────┘
+```
+
+### Technical Details:
+
+**Styling:**
+```javascript
+background: '#1e293b',    // Dark gray/black
+color: '#fbbf24',         // Yellow
+border: '2px solid #fbbf24',  // Yellow border
+width: '33.33%',          // 1/3 width
+textAlign: 'left'         // Left-justified
+```
+
+**Applied to:**
+- Process Mode: Dropdown select (editable)
+- View Mode: Badge display (read-only)
+
+### Color Scheme:
+
+**Black background:** #1e293b (dark gray-black)
+**Yellow text:** #fbbf24 (golden yellow)
+**Yellow border:** #fbbf24 (2px solid)
+
+This matches the timer theme:
+- Timers: Black background, yellow text/border
+- Priority: Black background, yellow text/border
+
+### Benefits:
+
+✅ **Consistent theme** - Matches timer colors  
+✅ **High contrast** - Yellow on black is very visible  
+✅ **More compact** - Only takes 1/3 of width  
+✅ **Better layout** - Left-aligned with content  
+✅ **Professional** - Cohesive color scheme  
+
+### Layout:
+
+**Item card now:**
+```
+┌─────────────────────────┐
+│ 🥕                  🍅  │
+│                         │
+│ ┌──────────┐            │ ← Priority 1/3 width
+│ │Priority 1│            │
+│ └──────────┘            │
+│                         │
+│ Bananas - Organic       │
+│ 50 cases                │
+│                         │
+│ 🥒                  🌽  │
+└─────────────────────────┘
+```
+
+**Priority dropdown now yellow on black and matches timer theme!** ⚫🟡
+
+---
+
+## v2.118 (2026-02-08)
+**More Prominent Produce Emojis**
+
+### Changed:
+- **Produce emojis are more visible** on item card corners
+- **Larger size** (1.8rem → 2.5rem)
+- **More opaque** (0.3 → 0.6, doubled)
+
+### The Changes:
+
+**Size increase:**
+- Before: 1.8rem
+- After: 2.5rem
+- Increase: ~39% larger
+
+**Opacity increase:**
+- Before: 0.3 (30%, very faint)
+- After: 0.6 (60%, much more visible)
+- Increase: 2× more opaque
+
+### Visual Comparison:
+
+**Before (v2.117):**
+```
+🥕              🍅
+  (faint)    (faint)
+┌──────────────┐
+│              │
+│  Item Card   │
+│              │
+└──────────────┘
+🥒              🌽
+  (faint)    (faint)
+```
+
+**After (v2.118):**
+```
+🥕              🍅
+ (larger)    (larger)
+ (visible)   (visible)
+┌──────────────┐
+│              │
+│  Item Card   │
+│              │
+└──────────────┘
+🥒              🌽
+ (larger)    (larger)
+ (visible)   (visible)
+```
+
+### Technical Details:
+
+**Updated styling:**
+```javascript
+fontSize: '2.5rem',  // Was 1.8rem
+opacity: 0.6         // Was 0.3
+```
+
+**Emojis:**
+- 🥕 Carrot (top-left)
+- 🍅 Tomato (top-right)
+- 🥒 Cucumber (bottom-left)
+- 🌽 Corn (bottom-right)
+
+### Benefits:
+
+✅ **Much more visible** - Double the opacity  
+✅ **Larger size** - 39% bigger  
+✅ **Better decoration** - Actually noticeable now  
+✅ **Produce theme** - More prominent branding  
+✅ **Still subtle** - At 60% opacity, not overpowering  
+
+**Produce emojis are now larger and much more visible!** 🥕🍅🥒🌽
+
+---
+
+## v2.117 (2026-02-08)
+**Green Twist Tie Icon & Simplified Mode Label**
+
+### Changed:
+- **Green twist tie icon** for Process Mode button
+- **Simplified labels** - both modes now just say "Mode"
+- Custom SVG twist tie replacing gear emoji
+
+### The Changes:
+
+**Button labels:**
+- Before: "Process Mode" / "View Mode"
+- After: "Mode" / "Mode"
+
+**Process Mode icon:**
+- Before: ⚙️ (gear emoji)
+- After: 🟢 (green twist tie SVG)
+
+**View Mode icon:**
+- Still: 👁️ (eye emoji)
+
+### Green Twist Tie Design:
+
+**Visual:**
+```
+    ~~~
+   ~   ~
+  ~     ~
+ ~       ~
+  Green twist tie
+```
+
+**SVG design:**
+- Two twisted curves
+- Light green (#10b981)
+- Dark green (#059669)
+- 24×24px size
+- Rounded ends
+
+**Code:**
+```svg
+<svg width="24" height="24">
+  <!-- Top twist -->
+  <path d="M4,12 Q6,8 8,10 Q10,12 12,10 Q14,8 16,10 Q18,12 20,10" 
+    stroke="#10b981" 
+    strokeWidth="3"/>
+  <!-- Bottom twist -->
+  <path d="M4,12 Q6,16 8,14 Q10,12 12,14 Q14,16 16,14 Q18,12 20,14" 
+    stroke="#059669" 
+    strokeWidth="3"/>
+</svg>
+```
+
+### Benefits:
+
+✅ **Cleaner labels** - "Mode" is simpler  
+✅ **Produce theme** - Twist tie fits produce processing  
+✅ **Green branding** - Matches teal/green color scheme  
+✅ **Unique icon** - Not a generic gear  
+✅ **Visual consistency** - Custom SVG matches app style  
+
+### Visual Comparison:
+
+**Before (v2.116):**
+```
+┌──────────────┐
+│      ⚙️      │
+│ Process Mode │
+└──────────────┘
+```
+
+**After (v2.117):**
+```
+┌──────────────┐
+│      🟢      │  ← Green twist tie
+│     Mode     │
+└──────────────┘
+```
+
+**Green twist tie icon and simplified "Mode" label!** 🟢
+
+---
+
 ## v2.116 (2026-02-08)
 **Larger Date Display**
 
