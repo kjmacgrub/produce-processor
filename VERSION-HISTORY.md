@@ -1,5 +1,129 @@
 # Version History - Produce Processing App
 
+## v2.145 (2026-02-12)
+**Progress Bar - Cleaner Completed Display**
+
+### Changed:
+- **Removed word "completed"** from progress bar
+- **Shows just the number** of completed cases
+- **Green bar still clickable** to view completed list
+
+### Before vs After:
+
+**Before:**
+```
+┌────────────────────────────────────┐
+│  ██████████░░░░░░░░░░░░░░░░░░░░   │
+│    45 completed                    │
+└────────────────────────────────────┘
+```
+
+**After:**
+```
+┌────────────────────────────────────┐
+│  ██████████░░░░░░░░░░░░░░░░░░░░   │
+│    45                              │
+└────────────────────────────────────┘
+```
+
+### What It Shows:
+
+**Completed section (green bar):**
+- Just the number of completed cases
+- No label text
+- Still clickable to view completed list
+
+**Below the bar:**
+- Still shows "Completed" or "Remaining" heading
+- Still shows full case and item counts
+
+### Benefits:
+
+✅ **Cleaner look** - Less visual clutter  
+✅ **More space** - Number has room to display  
+✅ **Still clear** - Context obvious from green color  
+✅ **Still clickable** - Tap green bar to see completed items  
+
+**Progress bar now shows just the number on the completed portion!** 📊✨
+
+---
+
+## v2.144 (2026-02-12)
+**Reload Data Button - Light Orange Style & Work Mode Only**
+
+### Changed:
+- **Button style:** Light orange background (30% opacity) instead of blue
+- **Visibility:** Work Mode only (was available in all modes)
+- **Text color:** Dark text instead of white for better contrast
+- **Border:** Added orange border
+
+### Button Styling:
+
+**New appearance:**
+```
+┌─────────────────┐
+│ 🔄 Reload Data  │ ← Light orange background
+└─────────────────┘    Dark text, orange border
+```
+
+**Style details:**
+- Background: `rgba(249, 115, 22, 0.3)` (light orange, 30% opacity)
+- Text: `#1e293b` (dark gray)
+- Border: `2px solid rgba(249, 115, 22, 0.5)` (orange, 50% opacity)
+- Shadow: Subtle `0 2px 8px rgba(249, 115, 22, 0.2)`
+
+### Visibility Rules:
+
+**Shows when:**
+- Device is NOT iPad ✓
+- AND in Work Mode (readOnlyMode = false) ✓
+
+**Hidden when:**
+- Device is iPad ✗
+- OR in View Mode ✗
+
+### Button States by Mode:
+
+**Work Mode (non-iPad):**
+```
+┌──────────────────────────────────────┐
+│ 🔄 Reload Data       🟢 Work Mode   │
+└──────────────────────────────────────┘
+```
+
+**View Mode (non-iPad):**
+```
+┌──────────────────────────────────────┐
+│ (empty)              👁️ View Mode   │
+└──────────────────────────────────────┘
+```
+
+**Work Mode (iPad):**
+```
+┌──────────────────────────────────────┐
+│ 🗑️ Clear Data*      🟢 Work Mode    │
+└──────────────────────────────────────┘
+  (*only if old data)
+```
+
+### Why Work Mode Only:
+
+- **View Mode:** Read-only, no data modification
+- **Work Mode:** Active processing, data management
+- Reload Data modifies data → Belongs in Work Mode
+- Consistent with other data operations (Clear Data, CSV upload)
+
+### Benefits:
+
+✅ **Clearer visual hierarchy** - Light color indicates secondary action  
+✅ **Better mode consistency** - Data operations only in Work Mode  
+✅ **Improved contrast** - Dark text on light background  
+✅ **More professional look** - Subtle, non-intrusive design  
+
+**Reload Data button now has light orange styling and is Work Mode only!** 🔄🟠
+
+---
+
 ## v2.143 (2026-02-12)
 **Reload Data Button - Load Today's CSV from Firebase Storage**
 
