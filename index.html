@@ -318,6 +318,11 @@
         
         try {
           console.log('📤 Uploading video to Firebase Storage for SKU:', sku);
+          console.log('   Video data type:', typeof videoData.data);
+          console.log('   Video MIME type:', videoData.type);
+          console.log('   Video data size:', videoData.data instanceof ArrayBuffer ? videoData.data.byteLength : 
+                                          videoData.data instanceof Blob ? videoData.data.size :
+                                          typeof videoData.data === 'string' ? videoData.data.length : 'unknown');
           
           // Create filename based on SKU
           const filename = `${sku}.webm`;
@@ -326,17 +331,31 @@
           // Convert videoData to Blob if it's ArrayBuffer
           let blob;
           if (videoData.data instanceof ArrayBuffer) {
+            console.log('   Converting ArrayBuffer to Blob...');
             blob = new Blob([videoData.data], { type: videoData.type || 'video/webm' });
+            console.log('   Blob created:', blob.size, 'bytes, type:', blob.type);
           } else if (typeof videoData.data === 'string' && videoData.data.startsWith('data:')) {
-            // Convert data URL to blob
+            console.log('   Converting data URL to Blob...');
             const response = await fetch(videoData.data);
             blob = await response.blob();
+            console.log('   Blob created:', blob.size, 'bytes, type:', blob.type);
+          } else if (videoData.data instanceof Blob) {
+            console.log('   Data is already a Blob');
+            blob = videoData.data;
+            console.log('   Blob size:', blob.size, 'bytes, type:', blob.type);
           } else {
-            blob = videoData.data; // Assume it's already a Blob
+            console.error('   Unknown video data format!');
+            throw new Error('Unknown video data format');
+          }
+          
+          // Verify blob is valid
+          if (!blob || blob.size === 0) {
+            throw new Error('Video blob is empty or invalid');
           }
           
           // Upload to Firebase Storage
-          await storageRef.put(blob, {
+          console.log('   Starting upload to Firebase Storage...');
+          const uploadTask = await storageRef.put(blob, {
             contentType: videoData.type || 'video/webm',
             customMetadata: {
               sku: sku,
@@ -345,6 +364,7 @@
           });
           
           console.log('✅ Video uploaded to Firebase Storage for SKU:', sku);
+          console.log('   Upload metadata:', uploadTask.metadata);
         } catch (error) {
           console.error('❌ Error uploading video to Firebase Storage:', error);
           throw error;
@@ -1965,7 +1985,7 @@
             }
           };
           
-          recorder.onstop = () => {
+          recorder.onstop = async () => {
             console.log('Recording stopped, processing', chunks.length, 'chunks');
             
             if (chunks.length === 0) {
@@ -1983,52 +2003,39 @@
             const blob = new Blob(chunks, { type: mimeType });
             console.log('Created blob:', blob.size, 'bytes', 'Type:', blob.type);
             
-            // Read as ArrayBuffer instead of data URL to avoid base64 corruption
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-              console.log('Video data read as ArrayBuffer, saving for SKU:', sku);
-              const videoData = {
-                data: reader.result,  // ArrayBuffer
-                name: `recording-${Date.now()}.webm`,
-                type: blob.type
-              };
-              
-              try {
-                console.log('🎥 Recording video save for SKU:', sku);
-                
-                // Save to Firebase Storage
-                await saveVideoToDB(sku, videoData);
-                console.log('✅ Video saved to Firebase Storage');
-                
-                // Close recording interface
-                setIsRecording(false);
-                setRecordingItemId(null);
-                setShowVideoUpload(null);
-                
-                // Wait to ensure upload completes
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                // Reload page
-                console.log('🔄 Reloading page...');
-                window.location.reload();
-                
-              } catch (error) {
-                console.error('❌ Error saving video:', error);
-                alert('Error saving video. Please try reloading the page manually.');
-                setIsRecording(false);
-                setRecordingItemId(null);
-                setShowVideoUpload(null);
-              }
+            // Pass the blob directly instead of converting to ArrayBuffer
+            const videoData = {
+              data: blob,  // Blob (not ArrayBuffer)
+              name: `recording-${Date.now()}.webm`,
+              type: blob.type
             };
             
-            reader.onerror = (error) => {
-              console.error('FileReader error:', error);
-              alert('Error saving video. Please try again.');
+            try {
+              console.log('🎥 Recording video save for SKU:', sku);
+              
+              // Save to Firebase Storage
+              await saveVideoToDB(sku, videoData);
+              console.log('✅ Video saved to Firebase Storage');
+              
+              // Close recording interface
               setIsRecording(false);
               setRecordingItemId(null);
-            };
-            
-            reader.readAsArrayBuffer(blob);  // Changed from readAsDataURL
+              setShowVideoUpload(null);
+              
+              // Wait to ensure upload completes
+              await new Promise(resolve => setTimeout(resolve, 300));
+              
+              // Reload page
+              console.log('🔄 Reloading page...');
+              window.location.reload();
+              
+            } catch (error) {
+              console.error('❌ Error saving video:', error);
+              alert('Error saving video. Please try reloading the page manually.');
+              setIsRecording(false);
+              setRecordingItemId(null);
+              setShowVideoUpload(null);
+            }
           };
           
           recorder.onerror = (error) => {
@@ -2551,12 +2558,14 @@
       // Fetch video URL from Firebase Storage when user wants to watch
       const [videoSrc, setVideoSrc] = useState(null);
       const [videoError, setVideoError] = useState(null);
+      const [videoLoading, setVideoLoading] = useState(false);
       
       useEffect(() => {
         const loadVideoURL = async () => {
           if (!playingVideo || !videos[playingVideo]) {
             setVideoSrc(null);
             setVideoError(null);
+            setVideoLoading(false);
             return;
           }
 
@@ -2565,25 +2574,38 @@
             console.warn('⚠️ Video not found for SKU:', playingVideo);
             setVideoSrc(null);
             setVideoError('Video not found');
+            setVideoLoading(false);
             return;
           }
           
           try {
+            setVideoLoading(true);
+            setVideoError(null);
             console.log('🎬 Fetching video URL from Firebase Storage for SKU:', playingVideo);
             const url = await getVideoURL(playingVideo);
             
             if (url) {
+              console.log('✅ Video URL fetched successfully:');
+              console.log('   URL:', url);
+              console.log('   Length:', url.length);
               setVideoSrc(url);
               setVideoError(null);
-              console.log('✅ Video URL fetched successfully');
             } else {
+              console.error('❌ Video URL is null - video not found in Firebase Storage');
               setVideoSrc(null);
-              setVideoError('Video not found');
+              setVideoError('Video not found in storage');
             }
           } catch (error) {
             console.error('❌ Error fetching video URL:', error);
+            console.error('   Error details:', {
+              message: error.message,
+              code: error.code,
+              name: error.name
+            });
             setVideoSrc(null);
             setVideoError(error.message);
+          } finally {
+            setVideoLoading(false);
           }
         };
 
@@ -2872,7 +2894,7 @@
                   marginTop: '0.5rem',
                   letterSpacing: '0.05em'
                 }}>
-                  v2.148
+                  v2.152
                 </div>
                 
                 {/* Progress Bar and Metrics - Always shown */}
@@ -4560,9 +4582,9 @@
                               // Close modal first
                               setPlayingVideo(null);
                               
-                              // Delete from IndexedDB
+                              // Delete from Firebase Storage
                               await deleteVideoFromDB(sku);
-                              console.log('✅ Video deleted from IndexedDB');
+                              console.log('✅ Video deleted from Firebase Storage');
                               
                               // Wait to ensure DB transaction completes
                               await new Promise(resolve => setTimeout(resolve, 300));
@@ -4618,45 +4640,76 @@
                       marginBottom: '1.5rem'
                     }}>
                       <div style={{ fontWeight: '700', color: '#dc2626', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-                        ⚠️ Video File Corrupted
+                        ⚠️ Video Error
                       </div>
                       <div style={{ color: '#991b1b', fontSize: '1rem', marginBottom: '1rem' }}>
-                        This video was recorded with an older version and cannot be played. 
+                        Could not load video from Firebase Storage. 
                       </div>
                       <div style={{ color: '#7f1d1d', fontSize: '0.95rem' }}>
-                        <strong>Solution:</strong> Delete this video (🗑️ button above) and record a new one.
+                        <strong>Solution:</strong> Try reloading the page, or delete and re-upload this video.
                       </div>
                       <div style={{ color: '#7f1d1d', fontSize: '0.9rem', marginTop: '0.5rem', fontStyle: 'italic' }}>
                         Error: {videoError}
                       </div>
                     </div>
                   )}
-                  <video
-                    ref={playbackVideoRef}
-                    key={playingVideo}
-                    controls
-                    autoPlay
-                    playsInline
-                    loop="false"
-                    onLoadedMetadata={(e) => {
-                      e.target.loop = false;
-                      console.log('🔴 Video metadata loaded, loop set to:', e.target.loop);
-                    }}
-                    onLoadedData={() => console.log('Video loaded successfully!')}
-                    onError={(e) => console.error('Video error:', e.target.error)}
-                    onEnded={(e) => {
-                      console.log('🔴 Video ended event fired');
-                      e.target.pause();
-                      e.target.currentTime = e.target.duration;
-                    }}
-                    style={{
-                      width: '100%',
+                  {videoLoading && (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '3rem',
+                      background: '#f8fafc',
                       borderRadius: '16px',
-                      maxHeight: 'calc(90vh - 150px)',
-                      background: '#000'
-                    }}
-                    src={videoSrc}
-                  />
+                      marginBottom: '1.5rem'
+                    }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎬</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#64748b' }}>
+                        Loading video from cloud...
+                      </div>
+                    </div>
+                  )}
+                  {!videoLoading && videoSrc && !videoError && (
+                    <video
+                      ref={playbackVideoRef}
+                      key={playingVideo}
+                      controls
+                      autoPlay
+                      playsInline
+                      crossOrigin="anonymous"
+                      loop="false"
+                      onLoadedMetadata={(e) => {
+                        e.target.loop = false;
+                        console.log('🔴 Video metadata loaded, loop set to:', e.target.loop);
+                      }}
+                      onLoadedData={() => console.log('✅ Video loaded successfully!')}
+                      onError={(e) => {
+                        const error = e.target.error;
+                        console.error('❌ Video playback error:', {
+                          code: error?.code,
+                          message: error?.message,
+                          videoSrc: videoSrc,
+                          mediaErrorCode: error ? 
+                            ['MEDIA_ERR_ABORTED', 'MEDIA_ERR_NETWORK', 'MEDIA_ERR_DECODE', 'MEDIA_ERR_SRC_NOT_SUPPORTED'][error.code - 1] 
+                            : 'unknown'
+                        });
+                        setVideoError(`Media error: ${error?.code || 'unknown'} - Check if video file is valid webm format`);
+                      }}
+                      onEnded={(e) => {
+                        console.log('🔴 Video ended event fired');
+                        e.target.pause();
+                        e.target.currentTime = e.target.duration;
+                      }}
+                      style={{
+                        width: '100%',
+                        borderRadius: '16px',
+                        maxHeight: 'calc(90vh - 150px)',
+                        background: '#000'
+                      }}
+                      src={videoSrc}
+                    />
+                  )}
                 </div>
               </div>
             )}
