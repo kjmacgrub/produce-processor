@@ -1,26 +1,18 @@
-import { initializeApp } from 'firebase/app'
-import { getDatabase } from 'firebase/database'
-import { getStorage } from 'firebase/storage'
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-}
+  apiKey: "AIzaSyAOtKt-nDBvAod23fAX04nXpCxmA7FnWKk",
+  authDomain: "process-6d2dc.firebaseapp.com",
+  databaseURL: "https://process-6d2dc-default-rtdb.firebaseio.com",
+  projectId: "process-6d2dc",
+  storageBucket: "process-6d2dc.firebasestorage.app",
+  messagingSenderId: "955601669952",
+  appId: "1:955601669952:web:871e3dd2c562c8aa6274a5",
+  measurementId: "G-X5Z5CC3Q44",
+};
 
-let app, db, storage
-
-try {
-  app = initializeApp(firebaseConfig)
-  db = getDatabase(app)
-  storage = getStorage(app)
-} catch (error) {
-  console.error('Firebase initialization error:', error)
-}
-
-export { db, storage }
+const app = initializeApp(firebaseConfig);
+export const db = getDatabase(app);
+export const storage = getStorage(app);
