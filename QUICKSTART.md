@@ -1,92 +1,121 @@
-# Quick Start Guide - Produce Processor
+# Quick Start Guide
 
-## Get Running in 5 Minutes
+## Get Running in 60 Seconds
 
-### Step 1: Get the App on Your iPad
-1. Download `produce-processor.html` to your iPad
-2. Open it in Safari
-3. Done! The app is ready to use
+### 1. Open the Application
 
-**Alternative:** Email the file to yourself and open the attachment in Safari
+**Option A: Double-click `index.html`**
+- Works in most browsers
+- May have CORS limitations
 
-### Step 2: Add to Home Screen (Optional but Recommended)
-1. Open the app in Safari
-2. Tap the Share button (square with arrow)
-3. Scroll and tap "Add to Home Screen"
-4. Name it "Produce Processor"
-5. Tap "Add"
-
-Now it appears as an app icon on your home screen!
-
-### Step 3: Create Your First CSV
-
-Option A: **Edit the Sample File**
-1. Open `sample-produce.csv` in Numbers or Excel
-2. Replace with your produce items
-3. Save as CSV
-4. Upload to the app
-
-Option B: **Create from Scratch**
-Create a file with these columns:
+**Option B: Use Python HTTP Server (Recommended)**
+```bash
+cd produce-processor-project
+python3 -m http.server 8000
 ```
-name,priority,cases,location
-Your Item,1,10,Storage Area
+Then open: http://localhost:8000
+
+**Option C: Use VS Code Live Server**
+```bash
+code .
 ```
-
-### Step 4: Start Processing
-1. Upload your CSV
-2. Tap "Start Timer" on an item
-3. Process the case
-4. Tap "Complete Case"
-5. Your time is recorded!
-
-## First Day Checklist
-
-- [ ] Upload your produce list
-- [ ] Test the timer on one item
-- [ ] Add a video for your most complex item
-- [ ] Complete 3-4 cases to see stats appear
-- [ ] Add app to home screen for easy access
-
-## Tips for Success
-
-**Day 1:** Just get familiar with the timer
-**Week 1:** Add videos for complex items  
-**Week 2:** Start comparing times with team
-**Month 1:** Use data to optimize workflows
-
-## Common Questions
-
-**Q: Where is my data stored?**  
-A: Locally on your iPad in Safari. Nothing is sent to the internet.
-
-**Q: Can multiple people use the same iPad?**  
-A: Yes! Everyone's times are combined to show overall statistics.
-
-**Q: What happens if I close the app?**  
-A: All data is saved automatically. Just reopen and continue.
-
-**Q: Can I use this on multiple iPads?**  
-A: Yes, but each iPad keeps its own data. Upload the same CSV to each.
-
-**Q: How do I update my produce list?**  
-A: Just upload a new CSV. Timing data for matching items is preserved.
-
-## Need Help?
-
-1. Check the full README.md for detailed instructions
-2. Try the sample CSV to test functionality
-3. Make sure you're using Safari browser
-4. Verify the CSV format matches the example
-
-## Technical Notes
-
-- Works completely offline after first load
-- Maximum ~5MB per video
-- Unlimited timing records
-- Data survives app/browser closes
-- Compatible with iOS 14+
+Right-click `index.html` → "Open with Live Server"
 
 ---
 
-🎉 **You're ready to start improving processing efficiency!**
+### 2. Test the Application
+
+**On Desktop/Laptop:**
+1. You'll see "Work Mode" by default
+2. Click "🔄 Reload Data" button (top left)
+3. If no CSV files in Firebase Storage, you'll see date picker
+4. Upload `example-data.csv` to Firebase Storage first (see below)
+
+**On iPad:**
+1. Opens in "Work Mode" automatically
+2. No Reload Data button (field processing only)
+3. Click items to start processing
+4. Take completion photos
+
+---
+
+### 3. Upload Sample Data to Firebase
+
+**Go to Firebase Console:**
+1. Visit: https://console.firebase.google.com
+2. Select project: **process-6d2dc**
+3. Click **Storage** in left sidebar
+4. Navigate to (or create) `produce-pdfs/` folder
+5. Upload `example-data.csv`
+6. Rename to: `2026-02-16.csv` (today's date)
+
+**Back in the app:**
+1. Click "🔄 Reload Data" button
+2. Data loads automatically!
+
+---
+
+### 4. Record Your First Video
+
+1. Click on any item (e.g., "Broccoli Crowns #1000230")
+2. Click "Make Video" button
+3. Allow camera access
+4. Record instructions (press ⏺️ Record)
+5. Stop recording (press ⏹️ Stop)
+6. Click "Save Video"
+7. Page reloads - video uploaded to Firebase Storage
+
+**Watch the video:**
+1. Find the same item again
+2. Click "▶ Watch" button (appears after recording)
+3. Video streams from Firebase Storage!
+
+---
+
+### 5. Complete Your First Item
+
+1. Click on an item
+2. Click "Start Processing" button
+3. Timer starts
+4. Click "Done" button when finished
+5. Camera opens for completion photo
+6. Take photo → Click "Accept Photo"
+7. Item moves to "Completed" section!
+
+---
+
+## Common Issues
+
+**"No data files available"**
+→ Upload a CSV to Firebase Storage > produce-pdfs/
+
+**Video won't play**
+→ Delete old video, record new one (v2.151+ fixed corruption)
+
+**Can't see Reload Data button**
+→ Only shows on non-iPad devices in Work Mode
+
+**Data not syncing**
+→ Check internet connection and Firebase console
+
+---
+
+## Next Steps
+
+1. **Read README.md** for complete documentation
+2. **Check VERSION-HISTORY.md** for all features
+3. **Explore Firebase Console** to see your data
+4. **Deploy to Netlify** for team access
+
+---
+
+## Need Help?
+
+1. **Browser Console (F12)** - See detailed logs
+2. **Firebase Console** - View data, storage, usage
+3. **README.md** - Full documentation
+4. **VERSION-HISTORY.md** - Feature details
+
+---
+
+**You're ready to go! 🚀**
