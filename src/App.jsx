@@ -56,6 +56,9 @@ const ProduceProcessorApp = () => {
   const [videoSrc, setVideoSrc] = useState(null);
   const [videoError, setVideoError] = useState(null);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [commits, setCommits] = useState([]);
+  const [commitsLoading, setCommitsLoading] = useState(false);
 
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -866,6 +869,25 @@ const ProduceProcessorApp = () => {
     return { average, fastest, totalCases };
   };
 
+  const fetchCommits = async () => {
+    setCommitsLoading(true);
+    try {
+      const res = await fetch('https://api.github.com/repos/kjmacgrub/produce-processor/commits?per_page=30');
+      if (res.ok) {
+        const data = await res.json();
+        setCommits(data.map(c => ({
+          sha: c.sha.substring(0, 7),
+          message: c.commit.message.split('\n')[0],
+          date: new Date(c.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          author: c.commit.author.name
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching commits:', error);
+    }
+    setCommitsLoading(false);
+  };
+
   const formatTime = (seconds) => { const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60); return `${mins}:${secs.toString().padStart(2, '0')}`; };
   const formatTimeWithUnits = (seconds) => { if (seconds < 60) return `${Math.floor(seconds)} sec`; const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60); return secs > 0 ? `${mins} min ${secs} sec` : `${mins} min`; };
   const getDisplayName = (fullName) => fullName.split('#')[0].trim();
@@ -994,13 +1016,20 @@ const ProduceProcessorApp = () => {
               Produce Processing
             </h1>
 
-            <div style={{
-              fontSize: '0.9rem',
-              color: '#64748b',
-              fontWeight: '700',
-              marginTop: '0.5rem',
-              letterSpacing: '0.05em'
-            }}>
+            <div
+              onClick={() => { setShowChangelog(true); fetchCommits(); }}
+              style={{
+                fontSize: '0.9rem',
+                color: '#64748b',
+                fontWeight: '700',
+                marginTop: '0.5rem',
+                letterSpacing: '0.05em',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                textDecorationStyle: 'dotted',
+                textUnderlineOffset: '3px'
+              }}
+            >
               v2.152
             </div>
 
@@ -3043,6 +3072,117 @@ const ProduceProcessorApp = () => {
             </div>
           );
         })()}
+
+        {/* Changelog Modal */}
+        {showChangelog && (
+          <div
+            onClick={() => setShowChangelog(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '2rem'
+            }}
+          >
+            <div
+              style={{
+                background: 'white',
+                borderRadius: '24px',
+                padding: '2rem',
+                maxWidth: '700px',
+                width: '100%',
+                maxHeight: '80vh',
+                overflow: 'auto',
+                boxShadow: '0 30px 100px rgba(0,0,0,0.5)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.6rem', fontWeight: '800', color: '#1e293b' }}>
+                  Changelog
+                </h3>
+                <button
+                  onClick={() => setShowChangelog(false)}
+                  style={{
+                    background: 'white',
+                    color: '#64748b',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '0.5rem 1rem',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '0.95rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.15rem'
+                  }}
+                >
+                  <span style={{ color: '#dc2626', fontSize: '1rem', fontWeight: '800', lineHeight: 1 }}>✕</span>
+                  <span>Close</span>
+                </button>
+              </div>
+
+              {commitsLoading ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '1.1rem' }}>
+                  Loading commits...
+                </div>
+              ) : commits.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '1.1rem' }}>
+                  No commits found
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '0.75rem' }}>
+                  {commits.map((commit, index) => (
+                    <div
+                      key={commit.sha}
+                      style={{
+                        background: index === 0 ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                        borderRadius: '12px',
+                        padding: '1rem 1.25rem',
+                        border: index === 0 ? '2px solid #6ee7b7' : '1px solid #e2e8f0'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '1rem', fontWeight: '700', color: '#1e293b', lineHeight: 1.4 }}>
+                            {commit.message}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.4rem', display: 'flex', gap: '1rem' }}>
+                            <span style={{ fontFamily: 'monospace', fontWeight: '600' }}>{commit.sha}</span>
+                            <span>{commit.date}</span>
+                          </div>
+                        </div>
+                        {index === 0 && (
+                          <span style={{
+                            background: '#10b981',
+                            color: 'white',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '6px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            Latest
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Timing Events Modal */}
         {showTimingEvents && timingEventsBySKU[showTimingEvents] && (
