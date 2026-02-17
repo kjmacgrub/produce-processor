@@ -13,10 +13,7 @@ const ProduceProcessorApp = () => {
   const [startTime, setStartTime] = useState(null);
   const [showVideoUpload, setShowVideoUpload] = useState(null);
   const [playingVideo, setPlayingVideo] = useState(null);
-  const [readOnlyMode, setReadOnlyMode] = useState(() => {
-    const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
-    return !isIPad;
-  });
+  const readOnlyMode = false;
   const [isIPad] = useState(() => /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -25,7 +22,7 @@ const ProduceProcessorApp = () => {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recordedChunks, setRecordedChunks] = useState([]);
   const [completedItems, setCompletedItems] = useState([]);
-  const [showCompleted, setShowCompleted] = useState(false);
+
   const [showTimingEvents, setShowTimingEvents] = useState(null);
   const [pdfDate, setPdfDate] = useState('');
   const [originalTotalCases, setOriginalTotalCases] = useState(0);
@@ -136,7 +133,7 @@ const ProduceProcessorApp = () => {
       if (e.key === 'Shift') { shiftHeld = true; keySequence = []; return; }
       if (shiftHeld && (e.key.toLowerCase() === 'v' || e.key.toLowerCase() === 'm')) {
         keySequence.push(e.key.toLowerCase());
-        if (keySequence.length === 2 && keySequence[0] === 'v' && keySequence[1] === 'm') { e.preventDefault(); setReadOnlyMode(prev => !prev); keySequence = []; }
+        if (keySequence.length === 2 && keySequence[0] === 'v' && keySequence[1] === 'm') { e.preventDefault(); keySequence = []; }
         if (keySequence.length > 2) keySequence = [];
       }
     };
@@ -870,6 +867,7 @@ const ProduceProcessorApp = () => {
   };
 
   const formatTime = (seconds) => { const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60); return `${mins}:${secs.toString().padStart(2, '0')}`; };
+  const formatTimeWithUnits = (seconds) => { if (seconds < 60) return `${Math.floor(seconds)} sec`; const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60); return secs > 0 ? `${mins} min ${secs} sec` : `${mins} min`; };
   const getDisplayName = (fullName) => fullName.split('#')[0].trim();
   const getSKU = (fullName) => { const match = fullName.match(/#(\d+)/); return match ? match[1] : null; };
 
@@ -970,169 +968,6 @@ const ProduceProcessorApp = () => {
           backgroundClip: 'padding-box, border-box, border-box',
           backgroundOrigin: 'padding-box, border-box, border-box'
         }}>
-          {/* Top buttons - Reload Data (left) and Mode (right) */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            {/* Left side - Reload Data button (non-iPad, Work Mode only) */}
-            {!isIPad && !readOnlyMode ? (
-              <button
-                onClick={async () => {
-                  if (!storage || !db) {
-                    alert('Firebase not connected');
-                    return;
-                  }
-
-                  try {
-                    console.log('🔄 Reload Data clicked');
-
-                    await remove(ref(db, 'items'));
-                    await remove(ref(db, 'completedItems'));
-                    await remove(ref(db, 'pdfDate'));
-                    await remove(ref(db, 'totalCases'));
-
-                    setItems([]);
-                    setCompletedItems([]);
-                    setPdfDate('');
-                    setOriginalTotalCases(0);
-                    setActiveItem(null);
-                    setIsProcessing(false);
-                    setStartTime(null);
-                    setItemsInProcess({});
-                    setItemsPaused({});
-                    setPausedElapsedTime({});
-                    setElapsedTimes({});
-
-                    console.log('✅ Data cleared, loading files from Storage...');
-
-                    const today = new Date();
-                    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-                    const files = await listAvailableCSVs();
-
-                    if (files.length === 0) {
-                      alert('No data files available');
-                      return;
-                    }
-
-                    const todayFile = files.find(f => f.date === todayStr);
-
-                    if (todayFile) {
-                      console.log(`📥 Found today's file: ${todayFile.filename}`);
-                      await loadCSVFromStorage(todayFile);
-                      alert('Today\'s data loaded successfully!');
-                    } else {
-                      console.log('📅 No file for today, showing date picker');
-                      setAvailableDates(files);
-                      setShowStoragePicker(true);
-                      alert('No data for today, pick the day you want to use.');
-                    }
-
-                  } catch (error) {
-                    console.error('❌ Error reloading data:', error);
-                    alert('Error reloading data: ' + error.message);
-                  }
-                }}
-                style={{
-                  background: 'rgba(249, 115, 22, 0.3)',
-                  color: '#1e293b',
-                  border: '2px solid rgba(249, 115, 22, 0.5)',
-                  borderRadius: '12px',
-                  padding: '0.75rem 1.5rem',
-                  fontSize: '0.95rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(249, 115, 22, 0.2)'
-                }}
-              >
-                🔄 Reload Data
-              </button>
-            ) : (
-              <div />
-            )}
-
-            {/* Mode indicator (top-right) */}
-            {!isIPad ? (
-              <button
-                onClick={() => setReadOnlyMode(!readOnlyMode)}
-                title="Click to toggle between View Mode and Work Mode"
-                style={{
-                  background: readOnlyMode
-                    ? 'rgba(59, 130, 246, 0.15)'
-                    : 'rgba(15, 118, 110, 0.15)',
-                  color: '#1e293b',
-                  border: readOnlyMode
-                    ? '2px solid rgba(59, 130, 246, 0.3)'
-                    : '2px solid rgba(15, 118, 110, 0.3)',
-                  borderRadius: '12px',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.9rem',
-                  fontWeight: '700',
-                  boxShadow: readOnlyMode
-                    ? '0 4px 15px rgba(59, 130, 246, 0.1)'
-                    : '0 4px 15px rgba(15, 118, 110, 0.1)',
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {readOnlyMode ? (
-                  <>
-                    <div style={{ fontSize: '1.3rem' }}>👁️</div>
-                    <div>View Mode</div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{
-                      width: '20px',
-                      height: '20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4,12 Q6,8 8,10 Q10,12 12,10 Q14,8 16,10 Q18,12 20,10"
-                          stroke="#10b981"
-                          strokeWidth="3"
-                          fill="none"
-                          strokeLinecap="round"/>
-                        <path d="M4,12 Q6,16 8,14 Q10,12 12,14 Q14,16 16,14 Q18,12 20,14"
-                          stroke="#059669"
-                          strokeWidth="3"
-                          fill="none"
-                          strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                    <div>Work Mode</div>
-                  </>
-                )}
-              </button>
-            ) : (
-              readOnlyMode && (
-                <div
-                  title="Hold Shift, then press V then M to toggle modes"
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.15)',
-                    color: '#1e293b',
-                    border: '2px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '12px',
-                    padding: '0.75rem 1rem',
-                    fontSize: '0.9rem',
-                    fontWeight: '700',
-                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    cursor: 'help'
-                  }}>
-                  <div style={{ fontSize: '1.3rem' }}>👁️</div>
-                  <div>View Mode</div>
-                </div>
-              )
-            )}
-          </div>
 
           {/* Date display */}
           <div style={{
@@ -1189,14 +1024,13 @@ const ProduceProcessorApp = () => {
                         position: 'relative'
                       }}>
                         <div
-                          onClick={() => completedItems.length > 0 && setShowCompleted(true)}
                           style={{
                             width: `${completedPercentage}%`,
                             height: '100%',
                             background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
                             transition: 'width 0.5s ease',
                             borderRadius: '20px',
-                            cursor: completedItems.length > 0 ? 'pointer' : 'default',
+                            cursor: 'default',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -1229,7 +1063,7 @@ const ProduceProcessorApp = () => {
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em'
                         }}>
-                          {showCompleted ? 'Completed' : 'Remaining'}
+                          Remaining
                         </div>
 
                         <div style={{
@@ -1243,11 +1077,11 @@ const ProduceProcessorApp = () => {
                             <div style={{
                               fontSize: '3.5rem',
                               fontWeight: '900',
-                              color: showCompleted ? '#10b981' : '#0f766e',
+                              color: '#0f766e',
                               lineHeight: '1',
                               marginBottom: '0.25rem'
                             }}>
-                              {showCompleted ? completedCases : remainingCases}
+                              {remainingCases}
                             </div>
                             <div style={{
                               fontSize: '1.5rem',
@@ -1262,18 +1096,18 @@ const ProduceProcessorApp = () => {
                             <div style={{
                               fontSize: '3.5rem',
                               fontWeight: '900',
-                              color: showCompleted ? '#10b981' : '#0f766e',
+                              color: '#0f766e',
                               lineHeight: '1',
                               marginBottom: '0.25rem'
                             }}>
-                              {showCompleted ? completedItems.length : remainingItems}
+                              {remainingItems}
                             </div>
                             <div style={{
                               fontSize: '1.5rem',
                               fontWeight: '700',
                               color: '#64748b'
                             }}>
-                              {(showCompleted ? completedItems.length : remainingItems) === 1 ? 'item' : 'items'}
+                              {remainingItems === 1 ? 'item' : 'items'}
                             </div>
                           </div>
                         </div>
@@ -1284,27 +1118,6 @@ const ProduceProcessorApp = () => {
               </div>
           </div>
 
-          {/* Back to REMAINING WORK button */}
-          {showCompleted && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-              <button
-                onClick={() => setShowCompleted(false)}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '1rem 1.5rem',
-                  fontSize: '1.2rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
-                }}
-              >
-                ← Back to REMAINING WORK
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Firebase Config Warning */}
@@ -1327,7 +1140,7 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* No items message - Work mode */}
-        {items.length === 0 && !readOnlyMode && !showCompleted && (
+        {items.length === 0 && !readOnlyMode && (
           <div style={{
             background: 'white',
             borderRadius: '24px',
@@ -1366,7 +1179,7 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* No items message - View mode */}
-        {items.length === 0 && readOnlyMode && !showCompleted && (
+        {items.length === 0 && readOnlyMode && (
           <div style={{
             background: 'white',
             borderRadius: '24px',
@@ -1384,7 +1197,7 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* Active Processing Timer */}
-        {isProcessing && activeItem && !showCompleted && (
+        {isProcessing && activeItem && (
           <div style={{
             background: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
             borderRadius: '24px',
@@ -1430,7 +1243,7 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* Add Item Button */}
-        {!readOnlyMode && items.length > 0 && !showCompleted && (
+        {!readOnlyMode && items.length > 0 && (
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
             <button
               onClick={() => setShowAddItem(true)}
@@ -1455,9 +1268,8 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* Items List */}
-        {!showCompleted && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
-            {items.sort((a, b) => {
+            {[...items].sort((a, b) => {
               const priorityA = a.priority === 'missing' ? 9999 : a.priority;
               const priorityB = b.priority === 'missing' ? 9999 : b.priority;
               return priorityA - priorityB;
@@ -1576,28 +1388,51 @@ const ProduceProcessorApp = () => {
                     )}
 
                     {!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                      <button
-                        onClick={() => handleBeginProcessing(item.id)}
-                        style={{
-                          background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '12px',
-                          padding: '1.2rem 2rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.6rem',
-                          fontWeight: '700',
-                          fontSize: '1.1rem',
-                          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-                          flex: '0 0 auto',
-                          minWidth: '180px',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        Start Timer
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleBeginProcessing(item.id)}
+                          style={{
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '1.2rem 2rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                            flex: '0 0 auto',
+                            minWidth: '180px',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          Start Timer
+                        </button>
+                        {(() => {
+                          const sku = getSKU(item.name);
+                          const stats = sku ? getStats(sku) : null;
+                          return stats ? (
+                            <span
+                              onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined}
+                              style={{
+                                fontSize: '1.1rem',
+                                color: '#0f766e',
+                                fontWeight: '700',
+                                whiteSpace: 'nowrap',
+                                cursor: !isIPad ? 'pointer' : 'default',
+                                textDecoration: !isIPad ? 'underline' : 'none',
+                                textDecorationStyle: 'dotted',
+                                textUnderlineOffset: '3px'
+                              }}
+                            >
+                              avg {formatTimeWithUnits(stats.average)}/case
+                            </span>
+                          ) : null;
+                        })()}
+                      </>
                     )}
                   </div>
 
@@ -1823,8 +1658,141 @@ const ProduceProcessorApp = () => {
               </div>
             );
           })}
+
+            {/* Completed Items Section */}
+            {completedItems.length > 0 && (
+              <>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '1rem 0',
+                  color: '#94a3b8',
+                  fontWeight: '700',
+                  fontSize: '1.1rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  borderTop: '2px dashed #e2e8f0',
+                  marginTop: '0.5rem'
+                }}>
+                  Completed
+                </div>
+
+                {[...completedItems].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)).map(item => {
+                  const sku = getSKU(item.name);
+                  const photo = sku ? completionPhotos[sku] : null;
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        background: '#f0fdf4',
+                        borderRadius: '16px',
+                        padding: '1.5rem',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '1rem',
+                        opacity: 0.75,
+                        border: '2px solid #d1fae5'
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: 'white',
+                            borderRadius: '8px',
+                            padding: '0.25rem 0.75rem',
+                            fontSize: '0.9rem',
+                            fontWeight: '700'
+                          }}>
+                            ✓
+                          </div>
+                          <h3 style={{
+                            margin: 0,
+                            fontSize: '1.3rem',
+                            fontWeight: '700',
+                            color: '#1e293b'
+                          }}>
+                            {getDisplayName(item.name)}
+                          </h3>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', color: '#64748b' }}>
+                          <strong>{item.cases}</strong> cases • {item.location}
+                        </div>
+                      </div>
+
+                      {/* Completion Photo */}
+                      {photo && (
+                        <div style={{
+                          width: '200px',
+                          flexShrink: 0
+                        }}>
+                          <img
+                            src={photo.data}
+                            style={{
+                              width: '100%',
+                              height: '150px',
+                              objectFit: 'cover',
+                              borderRadius: '12px',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => {
+                              const modal = document.createElement('div');
+                              modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 2rem;';
+                              modal.onclick = () => modal.remove();
+
+                              const img = document.createElement('img');
+                              img.src = photo.data;
+                              img.style.cssText = 'max-width: 100%; max-height: 100%; border-radius: 16px;';
+                              modal.appendChild(img);
+
+                              document.body.appendChild(modal);
+                            }}
+                          />
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: '#94a3b8',
+                            textAlign: 'center',
+                            marginTop: '0.5rem'
+                          }}>
+                            📸 Completion photo
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: '0.9rem', color: '#94a3b8', textAlign: 'right' }}>
+                          {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        {!readOnlyMode && (
+                          <button
+                            onClick={() => undoComplete(item)}
+                            style={{
+                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '10px',
+                              padding: '0.75rem 1.5rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '0.95rem',
+                              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            ↶ Undo
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
-        )}
 
         {/* Add Item Dialog */}
         {showAddItem && (
@@ -2499,143 +2467,6 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {/* Completed Items View */}
-        {showCompleted && (
-          <div>
-            {completedItems.length === 0 ? (
-              <div style={{
-                background: 'white',
-                borderRadius: '20px',
-                padding: '4rem 2rem',
-                textAlign: 'center',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                color: '#64748b'
-              }}>
-                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📦</div>
-                <h3 style={{ marginBottom: '0.5rem', color: '#1e293b' }}>No Completed Items Yet</h3>
-                <p>Items marked as complete will appear here</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {completedItems.map(item => (
-                  <div
-                    key={item.id}
-                    style={{
-                      background: 'white',
-                      borderRadius: '16px',
-                      padding: '1.5rem',
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: '1rem'
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                        <div style={{
-                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                          color: 'white',
-                          borderRadius: '8px',
-                          padding: '0.25rem 0.75rem',
-                          fontSize: '0.9rem',
-                          fontWeight: '700'
-                        }}>
-                          ✓
-                        </div>
-                        <h3 style={{
-                          margin: 0,
-                          fontSize: '1.3rem',
-                          fontWeight: '700',
-                          color: '#1e293b'
-                        }}>
-                          {getDisplayName(item.name)}
-                        </h3>
-                      </div>
-                      <div style={{ fontSize: '1.52rem', color: '#64748b' }}>
-                        <strong>{item.cases}</strong> cases • {item.location}
-                      </div>
-                    </div>
-
-                    {/* Completion Photo */}
-                    {(() => {
-                      const sku = getSKU(item.name);
-                      const photo = completionPhotos[sku];
-                      if (photo) {
-                        return (
-                          <div style={{
-                            width: '200px',
-                            flexShrink: 0
-                          }}>
-                            <img
-                              src={photo.data}
-                              style={{
-                                width: '100%',
-                                height: '150px',
-                                objectFit: 'cover',
-                                borderRadius: '12px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => {
-                                const modal = document.createElement('div');
-                                modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 2rem;';
-                                modal.onclick = () => modal.remove();
-
-                                const img = document.createElement('img');
-                                img.src = photo.data;
-                                img.style.cssText = 'max-width: 100%; max-height: 100%; border-radius: 16px;';
-                                modal.appendChild(img);
-
-                                document.body.appendChild(modal);
-                              }}
-                            />
-                            <div style={{
-                              fontSize: '0.75rem',
-                              color: '#94a3b8',
-                              textAlign: 'center',
-                              marginTop: '0.5rem'
-                            }}>
-                              📸 Completion photo
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div style={{ fontSize: '0.9rem', color: '#94a3b8', textAlign: 'right' }}>
-                        {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                      {!readOnlyMode && (
-                        <button
-                          onClick={() => undoComplete(item)}
-                          style={{
-                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '10px',
-                            padding: '0.75rem 1.5rem',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            fontSize: '0.95rem',
-                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          ↶ Undo
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Storage Date Picker Modal */}
         {showStoragePicker && (
           <div
@@ -3275,7 +3106,7 @@ const ProduceProcessorApp = () => {
                         </div>
                       </div>
                     </div>
-                    {!readOnlyMode && (
+                    {!isIPad && (
                       <button
                         onClick={() => deleteTimingEvent(showTimingEvents, index)}
                         style={{
@@ -3311,7 +3142,7 @@ const ProduceProcessorApp = () => {
                   <div>
                     <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.25rem' }}>Average</div>
                     <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f766e', fontVariantNumeric: 'tabular-nums' }}>
-                      {formatTime(getStats(showTimingEvents)?.average || 0)}
+                      {formatTimeWithUnits(getStats(showTimingEvents)?.average || 0)}
                     </div>
                   </div>
                   <div>
