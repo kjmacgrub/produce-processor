@@ -2124,6 +2124,28 @@ const ProduceProcessorApp = () => {
                         >
                           🗑️ Delete
                         </button>
+
+                        <button
+                          onClick={() => setShowPhotoChoice(null)}
+                          style={{
+                            background: 'white',
+                            color: '#64748b',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '16px',
+                            padding: '0.75rem 1.5rem',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            minWidth: '80px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                        >
+                          <span style={{ color: '#dc2626', fontSize: '1.2rem', fontWeight: '800', lineHeight: 1 }}>✕</span>
+                          <span>Cancel</span>
+                        </button>
                       </div>
                     </>
                   );
@@ -2179,6 +2201,28 @@ const ProduceProcessorApp = () => {
                           }}
                         >
                           Skip
+                        </button>
+
+                        <button
+                          onClick={() => setShowPhotoChoice(null)}
+                          style={{
+                            background: 'white',
+                            color: '#64748b',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '16px',
+                            padding: '0.75rem 1.5rem',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            minWidth: '80px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                        >
+                          <span style={{ color: '#dc2626', fontSize: '1.2rem', fontWeight: '800', lineHeight: 1 }}>✕</span>
+                          <span>Cancel</span>
                         </button>
                       </div>
                     </>
