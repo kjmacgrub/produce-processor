@@ -1111,25 +1111,6 @@ const ProduceProcessorApp = () => {
                             </div>
                           </div>
 
-                          <div>
-                            <div style={{
-                              fontSize: '3.5rem',
-                              fontWeight: '900',
-                              color: '#0f766e',
-                              lineHeight: '1',
-                              marginBottom: '0.25rem'
-                            }}>
-                              {remainingItems}
-                            </div>
-                            <div style={{
-                              fontSize: '1.5rem',
-                              fontWeight: '700',
-                              color: '#64748b'
-                            }}>
-                              {remainingItems === 1 ? 'item' : 'items'}
-                            </div>
-                          </div>
-
                           {completedItems.length > 0 && (
                             <div
                               onClick={() => document.getElementById('completed-section')?.scrollIntoView({ behavior: 'smooth' })}
@@ -1142,7 +1123,7 @@ const ProduceProcessorApp = () => {
                                 lineHeight: '1',
                                 marginBottom: '0.25rem'
                               }}>
-                                {completedItems.length}
+                                {completedCases}
                               </div>
                               <div style={{
                                 fontSize: '1.5rem',
@@ -1393,11 +1374,11 @@ const ProduceProcessorApp = () => {
                         }}
                       >
                         <option value={item.priority}>
-                          {item.priority === 'missing' ? 'No pri' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
+                          {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
                         </option>
                         {historicalPriorities.filter(p => p !== item.priority).map(p => (
                           <option key={p} value={p}>
-                            {p === 'missing' ? 'No pri' : p === 0 ? 'Floor' : `P${p}`}
+                            {p === 'missing' ? 'None' : p === 0 ? 'Floor' : `P${p}`}
                           </option>
                         ))}
                         <option value="EDIT">Edit...</option>
@@ -1412,7 +1393,7 @@ const ProduceProcessorApp = () => {
                         fontWeight: '700',
                         flexShrink: 0
                       }}>
-                        {item.priority === 'missing' ? 'No pri' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
+                        {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
                       </div>
                     )}
 
