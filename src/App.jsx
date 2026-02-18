@@ -1253,23 +1253,6 @@ const ProduceProcessorApp = () => {
               Produce Processing
             </h1>
 
-            <div
-              onClick={() => { setShowChangelog(true); fetchCommits(); }}
-              style={{
-                fontSize: '0.9rem',
-                color: '#64748b',
-                fontWeight: '700',
-                marginTop: '0.5rem',
-                letterSpacing: '0.05em',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                textDecorationStyle: 'dotted',
-                textUnderlineOffset: '3px'
-              }}
-            >
-              v2.15
-            </div>
-
             {/* Progress Bar and Metrics */}
             <div style={{ marginTop: '1.5rem', width: '100%', maxWidth: '600px', margin: '1.5rem auto 0' }}>
               {(() => {
@@ -1370,6 +1353,20 @@ const ProduceProcessorApp = () => {
                   );
                 })()}
               </div>
+          </div>
+
+          <div
+            onClick={() => { setShowChangelog(true); fetchCommits(); }}
+            style={{
+              textAlign: 'right',
+              fontSize: '0.75rem',
+              color: '#c0c8d4',
+              fontWeight: '600',
+              marginTop: '0.5rem',
+              cursor: 'pointer'
+            }}
+          >
+            v2.15
           </div>
 
         </div>
