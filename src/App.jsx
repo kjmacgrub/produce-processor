@@ -57,6 +57,7 @@ const ProduceProcessorApp = () => {
   const [videoError, setVideoError] = useState(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
   const [commits, setCommits] = useState([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
 
@@ -296,6 +297,20 @@ const ProduceProcessorApp = () => {
     };
     migrateAndLoad();
   }, []);
+
+  // Load available files when landing is shown
+  useEffect(() => {
+    if (showLanding && storage) {
+      listAvailableCSVs().then(dates => setAvailableDates(dates));
+    }
+  }, [showLanding]);
+
+  // Auto-show landing when no data loaded
+  useEffect(() => {
+    if (items.length === 0 && completedItems.length === 0 && !pdfDate && !showLanding) {
+      setShowLanding(true);
+    }
+  }, [items, completedItems, pdfDate]);
 
   // Pull-to-refresh detection
   useEffect(() => {
@@ -647,6 +662,17 @@ const ProduceProcessorApp = () => {
     } catch (error) { console.error('Error syncing data:', error); setRefreshMessage('Error syncing data'); setTimeout(() => setRefreshMessage(''), 3000); }
   };
 
+  const clearCurrentFile = async () => {
+    if (!db) return;
+    await remove(ref(db, 'items'));
+    await remove(ref(db, 'completedItems'));
+    await remove(ref(db, 'pdfDate'));
+    await remove(ref(db, 'totalCases'));
+    setItems([]); setCompletedItems([]); setPdfDate(''); setOriginalTotalCases(0);
+    setActiveItem(null); setIsProcessing(false); setStartTime(null);
+    setItemsInProcess({}); setItemsPaused({}); setPausedElapsedTime({}); setElapsedTimes({});
+  };
+
   // HANDLER FUNCTIONS
   const handlePDFUpload = async (event) => {
     if (readOnlyMode || !db) return;
@@ -977,6 +1003,199 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
+        {/* Landing Page */}
+        {showLanding && (
+          <div style={{
+            background: 'white',
+            borderRadius: '24px',
+            padding: '2.5rem',
+            boxShadow: '0 25px 70px rgba(0,0,0,0.25)'
+          }}>
+            <h1 style={{
+              textAlign: 'center',
+              fontSize: '2.2rem',
+              fontWeight: '800',
+              color: '#1e293b',
+              marginBottom: '2rem'
+            }}>
+              Produce Processor
+            </h1>
+
+            {/* Current File Status */}
+            {pdfDate ? (
+              <div style={{
+                background: items.length > 0 ? '#f0fdf4' : '#eff6ff',
+                border: items.length > 0 ? '2px solid #10b981' : '2px solid #3b82f6',
+                borderRadius: '12px',
+                padding: '1.2rem 1.5rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div>
+                  <div style={{
+                    display: 'inline-block',
+                    background: items.length > 0 ? '#10b981' : '#3b82f6',
+                    color: 'white',
+                    borderRadius: '6px',
+                    padding: '0.2rem 0.6rem',
+                    fontSize: '0.8rem',
+                    fontWeight: '700',
+                    marginBottom: '0.4rem'
+                  }}>
+                    {items.length > 0 ? 'IN PROGRESS' : 'COMPLETED'}
+                  </div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: '700', color: '#1e293b' }}>
+                    {formatDateWithDay(pdfDate)}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setShowLanding(false)}
+                    style={{
+                      background: items.length > 0 ? '#10b981' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '0.6rem 1.5rem',
+                      fontSize: '1rem',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {items.length > 0 ? 'Continue' : 'View'}
+                  </button>
+                  {!isIPad && (
+                    <button
+                      onClick={async () => {
+                        await clearCurrentFile();
+                        const dates = await listAvailableCSVs();
+                        setAvailableDates(dates);
+                      }}
+                      style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '0.6rem 1.5rem',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                background: '#f8fafc',
+                border: '2px dashed #cbd5e1',
+                borderRadius: '12px',
+                padding: '1.2rem 1.5rem',
+                marginBottom: '1.5rem',
+                textAlign: 'center',
+                color: '#94a3b8',
+                fontWeight: '600',
+                fontSize: '1.1rem'
+              }}>
+                No file loaded — select a date below
+              </div>
+            )}
+
+            {/* Available Files */}
+            <h2 style={{
+              fontSize: '1.3rem',
+              fontWeight: '700',
+              color: '#64748b',
+              marginBottom: '0.75rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              Available Files
+            </h2>
+
+            {availableDates.length === 0 ? (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                Loading files...
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {availableDates.map(fileInfo => {
+                  const isCurrentFile = pdfDate === fileInfo.date;
+                  const fileInProgress = items.length > 0 && pdfDate;
+                  const disabled = fileInProgress && !isCurrentFile;
+
+                  return (
+                    <button
+                      key={fileInfo.filename}
+                      onClick={!disabled ? async () => {
+                        if (isCurrentFile) {
+                          setShowLanding(false);
+                        } else {
+                          await loadCSVFromStorage(fileInfo);
+                          setShowLanding(false);
+                        }
+                      } : undefined}
+                      style={{
+                        padding: '0.8rem 1.2rem',
+                        background: isCurrentFile
+                          ? (items.length > 0 ? '#f0fdf4' : '#eff6ff')
+                          : disabled ? '#f8fafc' : 'white',
+                        border: isCurrentFile
+                          ? (items.length > 0 ? '2px solid #10b981' : '2px solid #3b82f6')
+                          : '2px solid #e2e8f0',
+                        borderRadius: '10px',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        textAlign: 'left',
+                        fontWeight: '600',
+                        fontSize: '1.05rem',
+                        color: disabled ? '#cbd5e1' : '#1e293b',
+                        opacity: disabled ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <span>{formatDateWithDay(fileInfo.date)}</span>
+                      {isCurrentFile && (
+                        <span style={{
+                          background: items.length > 0 ? '#10b981' : '#3b82f6',
+                          color: 'white',
+                          borderRadius: '6px',
+                          padding: '0.15rem 0.5rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '700'
+                        }}>
+                          {items.length > 0 ? 'IN PROGRESS' : 'COMPLETED'}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {items.length > 0 && pdfDate && (
+              <div style={{
+                textAlign: 'center',
+                marginTop: '1rem',
+                color: '#94a3b8',
+                fontSize: '0.9rem'
+              }}>
+                Clear current file to load a different date
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Main Work View */}
+        {!showLanding && (
+        <>
         {/* Header */}
         <div style={{
           background: 'white',
@@ -999,13 +1218,24 @@ const ProduceProcessorApp = () => {
         }}>
 
           {/* Date display */}
-          <div style={{
-            fontSize: '2.2rem',
-            fontWeight: '700',
-            color: '#64748b',
-            textAlign: 'center',
-            marginBottom: '0.75rem'
-          }}>
+          <div
+            onClick={!isIPad && pdfDate ? async () => {
+              const dates = await listAvailableCSVs();
+              setAvailableDates(dates);
+              setShowLanding(true);
+            } : undefined}
+            style={{
+              fontSize: '2.2rem',
+              fontWeight: '700',
+              color: '#64748b',
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              cursor: !isIPad && pdfDate ? 'pointer' : 'default',
+              textDecoration: !isIPad && pdfDate ? 'underline' : 'none',
+              textDecorationStyle: 'dotted',
+              textUnderlineOffset: '6px'
+            }}
+          >
             {pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
           </div>
 
@@ -1163,44 +1393,6 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {/* No items message - Work mode */}
-        {items.length === 0 && !readOnlyMode && (
-          <div style={{
-            background: 'white',
-            borderRadius: '24px',
-            padding: '5rem 2rem',
-            textAlign: 'center',
-            boxShadow: '0 25px 70px rgba(0,0,0,0.25)'
-          }}>
-            <Upload size={72} style={{ color: '#0f766e', marginBottom: '1.5rem' }} />
-            <h2 style={{ marginBottom: '1rem', color: '#1e293b', fontSize: '2rem', fontWeight: '700' }}>
-              Load File to Begin
-            </h2>
-            <p style={{ color: '#64748b', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
-              Select a date to load processing data
-            </p>
-            <button
-              onClick={async () => {
-                const dates = await listAvailableCSVs();
-                setAvailableDates(dates);
-                setShowStoragePicker(true);
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '16px',
-                padding: '1.25rem 3.5rem',
-                fontSize: '1.2rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 8px 25px rgba(15, 118, 110, 0.4)'
-              }}
-            >
-              📋 Load New Day
-            </button>
-          </div>
-        )}
 
         {/* No items message - View mode */}
         {items.length === 0 && readOnlyMode && (
@@ -1802,6 +1994,9 @@ const ProduceProcessorApp = () => {
               </>
             )}
           </div>
+
+        </>
+        )}
 
         {/* Add Item Dialog */}
         {showAddItem && (
