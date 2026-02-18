@@ -1030,7 +1030,7 @@ const ProduceProcessorApp = () => {
                 textUnderlineOffset: '3px'
               }}
             >
-              v2.152
+              v2.15
             </div>
 
             {/* Progress Bar and Metrics */}
@@ -1058,33 +1058,16 @@ const ProduceProcessorApp = () => {
                             height: '100%',
                             background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
                             transition: 'width 0.5s ease',
-                            borderRadius: '20px',
-                            cursor: 'default',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative'
+                            borderRadius: '20px'
                           }}
-                        >
-                          {completedCases > 0 && (
-                            <div style={{
-                              color: 'white',
-                              fontWeight: '800',
-                              fontSize: '1.1rem',
-                              textShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                              userSelect: 'none'
-                            }}>
-                              {completedCases}
-                            </div>
-                          )}
-                        </div>
+                        />
                       </div>
 
                       <div style={{
                         marginTop: '1.5rem',
                         textAlign: 'center'
                       }}>
-                        <div style={{
+                        <div id="remaining-section" style={{
                           fontSize: '1.5rem',
                           fontWeight: '700',
                           color: '#64748b',
@@ -1092,7 +1075,7 @@ const ProduceProcessorApp = () => {
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em'
                         }}>
-                          Remaining
+                          Remaining Work
                         </div>
 
                         <div style={{
@@ -1139,6 +1122,30 @@ const ProduceProcessorApp = () => {
                               {remainingItems === 1 ? 'item' : 'items'}
                             </div>
                           </div>
+
+                          {completedItems.length > 0 && (
+                            <div
+                              onClick={() => document.getElementById('completed-section')?.scrollIntoView({ behavior: 'smooth' })}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div style={{
+                                fontSize: '3.5rem',
+                                fontWeight: '900',
+                                color: '#10b981',
+                                lineHeight: '1',
+                                marginBottom: '0.25rem'
+                              }}>
+                                {completedItems.length}
+                              </div>
+                              <div style={{
+                                fontSize: '1.5rem',
+                                fontWeight: '700',
+                                color: '#10b981'
+                              }}>
+                                done ↓
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1297,7 +1304,7 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* Items List */}
-          <div style={{ display: 'grid', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
             {[...items].sort((a, b) => {
               const priorityA = a.priority === 'missing' ? 9999 : a.priority;
               const priorityB = b.priority === 'missing' ? 9999 : b.priority;
@@ -1312,104 +1319,111 @@ const ProduceProcessorApp = () => {
                 key={item.id}
                 style={{
                   background: 'white',
-                  borderRadius: '20px',
-                  padding: '2rem',
+                  borderRadius: '12px',
+                  padding: '1rem 1.2rem',
                   boxShadow: activeItem?.id === item.id
-                    ? '0 8px 35px rgba(15, 118, 110, 0.3)'
-                    : '0 4px 20px rgba(0,0,0,0.1)',
-                  transition: 'all 0.3s ease',
-                  border: activeItem?.id === item.id ? '3px solid #0f766e' : '3px solid transparent',
-                  transform: activeItem?.id === item.id ? 'scale(1.02)' : 'scale(1)',
+                    ? '0 4px 20px rgba(15, 118, 110, 0.25)'
+                    : '0 2px 8px rgba(0,0,0,0.08)',
+                  transition: 'all 0.2s ease',
+                  border: activeItem?.id === item.id ? '2px solid #0f766e' : '2px solid transparent',
                   position: 'relative'
                 }}
               >
-                {/* Vegetable/Fruit corner decorations */}
-                {(() => {
-                  const produceEmojis = ['🍅', '🥒', '🌽', '🍆', '🥬', '🥦', '🫑', '🌶️', '🥕', '🧅', '🧄', '🥔', '🍠', '🫘', '🍄', '🥜', '🫚'];
-
-                  const getEmojiForPosition = (position) => {
-                    const str = item.id + position;
-                    let hash = 0;
-                    for (let i = 0; i < str.length; i++) {
-                      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-                      hash = hash & hash;
-                    }
-                    return produceEmojis[Math.abs(hash) % produceEmojis.length];
-                  };
-
-                  return (
-                    <>
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        fontSize: '2.5rem',
-                        opacity: 0.6
-                      }}>{getEmojiForPosition('top-right')}</div>
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        left: '8px',
-                        fontSize: '2.5rem',
-                        opacity: 0.6
-                      }}>{getEmojiForPosition('bottom-left')}</div>
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        right: '8px',
-                        fontSize: '2.5rem',
-                        opacity: 0.6
-                      }}>{getEmojiForPosition('bottom-right')}</div>
-                    </>
-                  );
-                })()}
-
-                {/* Header Info */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ marginBottom: '0.75rem' }}>
+                {/* Line 1: Cases badge + Item name + Done/Timer buttons */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <div style={{
+                      background: '#0f766e',
+                      color: 'white',
+                      borderRadius: '8px',
+                      padding: '0.3rem 0.7rem',
+                      fontSize: '1.1rem',
+                      fontWeight: '700',
+                      flexShrink: 0,
+                      minWidth: '3.5rem',
+                      textAlign: 'center'
+                    }}>
+                      {item.cases}
+                    </div>
                     <h3 style={{
                       margin: 0,
-                      fontSize: '2rem',
-                      fontWeight: '800',
+                      fontSize: '1.4rem',
+                      fontWeight: '700',
                       color: '#1e293b',
-                      letterSpacing: '-0.01em',
-                      textAlign: 'left',
-                      fontFamily: 'Georgia, "Times New Roman", Times, serif'
+                      flex: 1,
+                      lineHeight: 1.2
                     }}>
                       {getDisplayName(item.name)}
                     </h3>
-                  </div>
 
-                  {/* Line 2: Cases + Done button + Start Timer button */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.6rem', color: '#64748b', flexShrink: 0 }}>
-                      <Package size={26} />
-                      <span style={{ fontWeight: '600' }}>{item.cases} cases</span>
-                    </div>
+                    {!readOnlyMode ? (
+                      <select
+                        value={item.priority}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'EDIT') {
+                            setShowPriorityEditor(true);
+                          } else {
+                            updatePriority(item.id, val);
+                          }
+                        }}
+                        style={{
+                          background: '#64748b',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '0.4rem 0.6rem',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 0.4rem center',
+                          paddingRight: '1.4rem'
+                        }}
+                      >
+                        <option value={item.priority}>
+                          {item.priority === 'missing' ? 'No pri' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
+                        </option>
+                        {historicalPriorities.filter(p => p !== item.priority).map(p => (
+                          <option key={p} value={p}>
+                            {p === 'missing' ? 'No pri' : p === 0 ? 'Floor' : `P${p}`}
+                          </option>
+                        ))}
+                        <option value="EDIT">Edit...</option>
+                      </select>
+                    ) : (
+                      <div style={{
+                        background: '#64748b',
+                        color: 'white',
+                        borderRadius: '8px',
+                        padding: '0.4rem 0.6rem',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        flexShrink: 0
+                      }}>
+                        {item.priority === 'missing' ? 'No pri' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
+                      </div>
+                    )}
 
                     {!readOnlyMode && (
                       <button
                         onClick={() => markComplete(item)}
                         style={{
                           background: (itemsInProcess[item.id] || itemsPaused[item.id])
-                            ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
-                            : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            ? '#1e293b'
+                            : '#10b981',
                           color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
                           border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
-                          borderRadius: '12px',
-                          padding: '1.2rem 2rem',
+                          borderRadius: '8px',
+                          padding: '0.4rem 1.2rem',
                           cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.6rem',
                           fontWeight: '700',
-                          fontSize: '1.1rem',
-                          boxShadow: (itemsInProcess[item.id] || itemsPaused[item.id])
-                            ? '0 4px 15px rgba(251, 191, 36, 0.3)'
-                            : '0 4px 15px rgba(16, 185, 129, 0.3)',
-                          flex: '0 0 auto',
-                          minWidth: '180px',
-                          justifyContent: 'center'
+                          fontSize: '0.95rem',
+                          flexShrink: 0
                         }}
                       >
                         {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
@@ -1421,24 +1435,18 @@ const ProduceProcessorApp = () => {
                         <button
                           onClick={() => handleBeginProcessing(item.id)}
                           style={{
-                            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                            background: '#3b82f6',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '12px',
-                            padding: '1.2rem 2rem',
+                            borderRadius: '8px',
+                            padding: '0.4rem 1.2rem',
                             cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
                             fontWeight: '700',
-                            fontSize: '1.1rem',
-                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-                            flex: '0 0 auto',
-                            minWidth: '180px',
-                            justifyContent: 'center'
+                            fontSize: '0.95rem',
+                            flexShrink: 0
                           }}
                         >
-                          Start Timer
+                          Timer
                         </button>
                         {(() => {
                           const sku = getSKU(item.name);
@@ -1447,9 +1455,9 @@ const ProduceProcessorApp = () => {
                             <span
                               onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined}
                               style={{
-                                fontSize: '1.1rem',
+                                fontSize: '0.85rem',
                                 color: '#0f766e',
-                                fontWeight: '700',
+                                fontWeight: '600',
                                 whiteSpace: 'nowrap',
                                 cursor: !isIPad ? 'pointer' : 'default',
                                 textDecoration: !isIPad ? 'underline' : 'none',
@@ -1457,7 +1465,7 @@ const ProduceProcessorApp = () => {
                                 textUnderlineOffset: '3px'
                               }}
                             >
-                              avg {formatTimeWithUnits(stats.average)}/case
+                              {formatTimeWithUnits(stats.average)}/cs
                             </span>
                           ) : null;
                         })()}
@@ -1465,38 +1473,34 @@ const ProduceProcessorApp = () => {
                     )}
                   </div>
 
-                  {/* Line 3: Instructions on left, Buttons on right */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'stretch' }}>
-                    {/* Instructions panel - editable */}
+                  {/* Line 2: Instructions + Video */}
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch', marginTop: '0.75rem' }}>
                     <div style={{
-                      background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                      borderRadius: '12px',
-                      padding: '1rem',
-                      border: '2px solid #fbbf24',
+                      background: '#fef3c7',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.75rem',
+                      border: '1px solid #fbbf24',
                       flex: '1 1 auto',
-                      minWidth: '200px',
                       display: 'flex',
-                      flexDirection: 'column'
+                      alignItems: 'center',
+                      gap: '0.5rem'
                     }}>
-                      <div style={{
-                        textAlign: 'center',
-                        fontSize: '0.9rem',
+                      <span style={{
+                        fontSize: '0.7rem',
                         fontWeight: '700',
                         color: '#92400e',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
-                        marginBottom: '0.75rem'
+                        flexShrink: 0
                       }}>
                         Instructions
-                      </div>
+                      </span>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.8rem',
+                        fontSize: '1.2rem',
                         color: '#78350f',
-                        flex: '1',
-                        position: 'relative'
+                        flex: '1'
                       }}>
                         {editingLocation === item.id ? (
                           <input
@@ -1517,13 +1521,13 @@ const ProduceProcessorApp = () => {
                             }}
                             autoFocus
                             style={{
-                              fontSize: '1.8rem',
+                              fontSize: '1.2rem',
                               fontWeight: '600',
                               color: '#78350f',
                               background: 'white',
-                              border: '2px solid #fbbf24',
-                              borderRadius: '8px',
-                              padding: '0.5rem',
+                              border: '1px solid #fbbf24',
+                              borderRadius: '6px',
+                              padding: '0.3rem',
                               textAlign: 'center',
                               width: '100%'
                             }}
@@ -1541,15 +1545,14 @@ const ProduceProcessorApp = () => {
                               cursor: readOnlyMode ? 'default' : 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.5rem',
-                              padding: '0.5rem'
+                              gap: '0.3rem'
                             }}
                           >
                             <span>{item.location}</span>
                             {!readOnlyMode && (
                               <svg
-                                width="20"
-                                height="20"
+                                width="16"
+                                height="16"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -1567,122 +1570,58 @@ const ProduceProcessorApp = () => {
                       </div>
                     </div>
 
-                    {/* Video button */}
                     {!readOnlyMode && (
-                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'nowrap', alignItems: 'stretch' }}>
+                      <>
                         {hasVideo ? (
                           <button
                             onClick={() => {
-                              console.log('Video button clicked. SKU:', sku);
-                              console.log('Video data exists:', !!videos[sku]);
-                              console.log('Video data:', videos[sku]);
                               setPlayingVideo(sku);
                             }}
                             style={{
-                              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                              background: '#059669',
                               color: 'white',
                               border: 'none',
-                              borderRadius: '12px',
-                              padding: '1rem 1.5rem',
+                              borderRadius: '8px',
+                              padding: '0.4rem 1rem',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.6rem',
+                              gap: '0.4rem',
                               fontWeight: '700',
-                              fontSize: '1.1rem',
-                              boxShadow: '0 4px 15px rgba(5, 150, 105, 0.3)',
-                              minWidth: '180px',
-                              minHeight: '100%'
+                              fontSize: '0.85rem',
+                              flexShrink: 0
                             }}
                           >
-                            <Play size={22} />
+                            <Play size={16} />
                             Watch
                           </button>
                         ) : (
                           <button
                             onClick={() => setShowVideoUpload(item.id)}
                             style={{
-                              background: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)',
+                              background: '#94a3b8',
                               color: 'white',
                               border: 'none',
-                              borderRadius: '12px',
-                              padding: '1rem 1.5rem',
+                              borderRadius: '8px',
+                              padding: '0.4rem 1rem',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.6rem',
+                              gap: '0.4rem',
                               fontWeight: '700',
-                              fontSize: '1.1rem',
-                              boxShadow: '0 4px 15px rgba(100, 116, 139, 0.2)',
-                              minWidth: '180px',
-                              minHeight: '100%'
+                              fontSize: '0.85rem',
+                              flexShrink: 0
                             }}
                           >
-                            <Video size={22} />
-                            Make video
+                            <Video size={16} />
+                            Video
                           </button>
                         )}
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>
 
-                {/* Priority dropdown */}
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
-                  {!readOnlyMode ? (
-                    <select
-                      value={item.priority}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'EDIT') {
-                          setShowPriorityEditor(true);
-                        } else {
-                          updatePriority(item.id, val);
-                        }
-                      }}
-                      style={{
-                        background: '#1e293b',
-                        color: '#fbbf24',
-                        border: '2px solid #fbbf24',
-                        borderRadius: '10px',
-                        padding: '0.5rem 1rem',
-                        fontSize: '1rem',
-                        fontWeight: '700',
-                        width: '33.33%',
-                        textAlign: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <option value={item.priority}>
-                        {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
-                      </option>
-                      {historicalPriorities.filter(p => p !== item.priority).map(p => (
-                        <option key={p} value={p}>
-                          {p === 'missing' ? 'Priority missing' : p === 0 ? 'Shopping floor' : `Priority ${p}`}
-                        </option>
-                      ))}
-                      <option value="EDIT" style={{ fontStyle: 'italic', borderTop: '1px solid #ccc' }}>
-                        ✏️ Edit priorities...
-                      </option>
-                    </select>
-                  ) : (
-                    <div style={{
-                      background: '#1e293b',
-                      color: '#fbbf24',
-                      border: '2px solid #fbbf24',
-                      borderRadius: '10px',
-                      padding: '0.4rem 1rem',
-                      fontSize: '1rem',
-                      fontWeight: '700',
-                      textAlign: 'center',
-                      width: '33.33%'
-                    }}>
-                      {item.priority === 'missing' ? 'Priority missing' : item.priority === 0 ? 'Shopping floor' : `Priority ${item.priority}`}
-                    </div>
-                  )}
-                </div>
 
               </div>
             );
@@ -1691,15 +1630,15 @@ const ProduceProcessorApp = () => {
             {/* Completed Items Section */}
             {completedItems.length > 0 && (
               <>
-                <div style={{
+                <div id="completed-section" style={{
                   textAlign: 'center',
                   padding: '1rem 0',
-                  color: '#94a3b8',
-                  fontWeight: '700',
-                  fontSize: '1.1rem',
+                  color: '#10b981',
+                  fontWeight: '800',
+                  fontSize: '1.3rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
-                  borderTop: '2px dashed #e2e8f0',
+                  borderTop: '2px dashed #10b981',
                   marginTop: '0.5rem'
                 }}>
                   Completed
@@ -1708,28 +1647,29 @@ const ProduceProcessorApp = () => {
                 {[...completedItems].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)).map(item => {
                   const sku = getSKU(item.name);
                   const photo = sku ? completionPhotos[sku] : null;
+                  const completedStats = sku ? getStats(sku) : null;
 
                   return (
                     <div
                       key={item.id}
                       style={{
                         background: '#f0fdf4',
-                        borderRadius: '16px',
-                        padding: '1.5rem',
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                        borderRadius: '12px',
+                        padding: '1rem 1.2rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         flexWrap: 'wrap',
-                        gap: '1rem',
+                        gap: '0.75rem',
                         opacity: 0.75,
                         border: '2px solid #d1fae5'
                       }}
                     >
                       <div style={{ flex: 1, minWidth: '200px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
                           <div style={{
-                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            background: '#10b981',
                             color: 'white',
                             borderRadius: '8px',
                             padding: '0.25rem 0.75rem',
@@ -1742,10 +1682,28 @@ const ProduceProcessorApp = () => {
                             margin: 0,
                             fontSize: '1.3rem',
                             fontWeight: '700',
-                            color: '#1e293b'
+                            color: '#1e293b',
+                            flex: 1
                           }}>
                             {getDisplayName(item.name)}
                           </h3>
+                          {completedStats && (
+                            <div
+                              onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined}
+                              style={{
+                                background: '#0f766e',
+                                color: 'white',
+                                borderRadius: '8px',
+                                padding: '0.3rem 0.8rem',
+                                fontSize: '1rem',
+                                fontWeight: '700',
+                                flexShrink: 0,
+                                cursor: !isIPad ? 'pointer' : 'default'
+                              }}
+                            >
+                              {formatTimeWithUnits(completedStats.average)}/case
+                            </div>
+                          )}
                         </div>
                         <div style={{ fontSize: '1.1rem', color: '#64748b' }}>
                           <strong>{item.cases}</strong> cases • {item.location}
@@ -1770,13 +1728,29 @@ const ProduceProcessorApp = () => {
                             }}
                             onClick={() => {
                               const modal = document.createElement('div');
-                              modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 2rem;';
-                              modal.onclick = () => modal.remove();
+                              modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 1.5rem;';
+                              modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
                               const img = document.createElement('img');
                               img.src = photo.data;
-                              img.style.cssText = 'max-width: 100%; max-height: 100%; border-radius: 16px;';
+                              img.style.cssText = 'max-width: 100%; max-height: 80%; border-radius: 16px;';
                               modal.appendChild(img);
+
+                              const deleteBtn = document.createElement('button');
+                              deleteBtn.textContent = 'Delete Photo';
+                              deleteBtn.style.cssText = 'background: #ef4444; color: white; border: none; border-radius: 10px; padding: 0.75rem 2rem; font-size: 1.1rem; font-weight: 700; cursor: pointer;';
+                              deleteBtn.onclick = async () => {
+                                modal.remove();
+                                if (db) {
+                                  await remove(ref(db, `completionPhotos/${sku}`));
+                                }
+                                setCompletionPhotos(prev => {
+                                  const updated = {...prev};
+                                  delete updated[sku];
+                                  return updated;
+                                });
+                              };
+                              modal.appendChild(deleteBtn);
 
                               document.body.appendChild(modal);
                             }}
@@ -1819,6 +1793,24 @@ const ProduceProcessorApp = () => {
                     </div>
                   );
                 })}
+
+                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                  <span
+                    onClick={() => document.getElementById('remaining-section')?.scrollIntoView({ behavior: 'smooth' })}
+                    style={{
+                      display: 'inline-block',
+                      padding: '0.8rem 2rem',
+                      background: '#3b82f6',
+                      color: 'white',
+                      fontWeight: '800',
+                      fontSize: '1.2rem',
+                      cursor: 'pointer',
+                      borderRadius: '12px'
+                    }}
+                  >
+                    ↑ Return to Remaining Work
+                  </span>
+                </div>
               </>
             )}
           </div>
