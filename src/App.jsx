@@ -850,6 +850,13 @@ const ProduceProcessorApp = () => {
     const events = timingEventsBySKU[sku] || [];
     await deleteTimingEventFromDB(sku, eventIndex);
     const updatedEvents = events.filter((_, index) => index !== eventIndex);
+    if (db) {
+      if (updatedEvents.length > 0) {
+        await set(ref(db, `timingEvents/${sku}`), updatedEvents);
+      } else {
+        await remove(ref(db, `timingEvents/${sku}`));
+      }
+    }
     setTimingEventsBySKU(prev => ({ ...prev, [sku]: updatedEvents }));
     if (updatedEvents.length > 0) {
       const avg = updatedEvents.reduce((sum, e) => sum + e.timePerCase, 0) / updatedEvents.length;
