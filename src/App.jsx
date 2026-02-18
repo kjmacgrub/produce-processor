@@ -953,6 +953,13 @@ const ProduceProcessorApp = () => {
 
   // SECTION:JSX
   return (
+    <>
+    <style>{`
+      @keyframes pulse-badge {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+    `}</style>
     <div style={{
       minHeight: '100vh',
       background: readOnlyMode
@@ -1044,7 +1051,8 @@ const ProduceProcessorApp = () => {
                     padding: '0.2rem 0.6rem',
                     fontSize: '0.8rem',
                     fontWeight: '700',
-                    marginBottom: '0.4rem'
+                    marginBottom: '0.4rem',
+                    animation: items.length > 0 ? 'pulse-badge 1.5s ease-in-out infinite' : 'none'
                   }}>
                     {items.length > 0 ? 'IN PROGRESS' : 'COMPLETED'}
                   </div>
@@ -1071,6 +1079,7 @@ const ProduceProcessorApp = () => {
                   {!isIPad && (
                     <button
                       onClick={async () => {
+                        if (!window.confirm('This will clear the current session. Are you sure?')) return;
                         await clearCurrentFile();
                         const dates = await listAvailableCSVs();
                         setAvailableDates(dates);
@@ -1108,77 +1117,58 @@ const ProduceProcessorApp = () => {
             )}
 
             {/* Available Files */}
-            <h2 style={{
-              fontSize: '1.3rem',
-              fontWeight: '700',
-              color: '#64748b',
-              marginBottom: '0.75rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              Available Files
-            </h2>
+            {(() => {
+              const fileInProgress = items.length > 0 && !!pdfDate;
+              return (
+                <div style={{ opacity: fileInProgress ? 0.4 : 1, pointerEvents: fileInProgress ? 'none' : 'auto' }}>
+                  <h2 style={{
+                    fontSize: '1.3rem',
+                    fontWeight: '700',
+                    color: '#64748b',
+                    marginBottom: '0.75rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    Available Files
+                  </h2>
 
-            {availableDates.length === 0 ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#94a3b8' }}>
-                Loading files...
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {availableDates.map(fileInfo => {
-                  const isCurrentFile = pdfDate === fileInfo.date;
-                  const fileInProgress = items.length > 0 && pdfDate;
-                  const disabled = fileInProgress && !isCurrentFile;
-
-                  return (
-                    <button
-                      key={fileInfo.filename}
-                      onClick={!disabled ? async () => {
-                        if (isCurrentFile) {
-                          setShowLanding(false);
-                        } else {
-                          await loadCSVFromStorage(fileInfo);
-                          setShowLanding(false);
-                        }
-                      } : undefined}
-                      style={{
-                        padding: '0.8rem 1.2rem',
-                        background: isCurrentFile
-                          ? (items.length > 0 ? '#f0fdf4' : '#eff6ff')
-                          : disabled ? '#f8fafc' : 'white',
-                        border: isCurrentFile
-                          ? (items.length > 0 ? '2px solid #10b981' : '2px solid #3b82f6')
-                          : '2px solid #e2e8f0',
-                        borderRadius: '10px',
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        textAlign: 'left',
-                        fontWeight: '600',
-                        fontSize: '1.05rem',
-                        color: disabled ? '#cbd5e1' : '#1e293b',
-                        opacity: disabled ? 0.6 : 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}
-                    >
-                      <span>{formatDateWithDay(fileInfo.date)}</span>
-                      {isCurrentFile && (
-                        <span style={{
-                          background: items.length > 0 ? '#10b981' : '#3b82f6',
-                          color: 'white',
-                          borderRadius: '6px',
-                          padding: '0.15rem 0.5rem',
-                          fontSize: '0.75rem',
-                          fontWeight: '700'
-                        }}>
-                          {items.length > 0 ? 'IN PROGRESS' : 'COMPLETED'}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                  {availableDates.length === 0 ? (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                      Loading files...
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {availableDates.map(fileInfo => (
+                        <button
+                          key={fileInfo.filename}
+                          onClick={async () => {
+                            if (pdfDate === fileInfo.date) {
+                              setShowLanding(false);
+                            } else {
+                              await loadCSVFromStorage(fileInfo);
+                              setShowLanding(false);
+                            }
+                          }}
+                          style={{
+                            padding: '0.8rem 1.2rem',
+                            background: 'white',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontWeight: '600',
+                            fontSize: '1.05rem',
+                            color: '#1e293b'
+                          }}
+                        >
+                          {formatDateWithDay(fileInfo.date)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {items.length > 0 && pdfDate && (
               <div style={{
@@ -3918,6 +3908,7 @@ const ProduceProcessorApp = () => {
 
       </div>
     </div>
+    </>
   );
 };
 
