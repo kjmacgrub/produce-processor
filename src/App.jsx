@@ -1628,21 +1628,28 @@ const ProduceProcessorApp = () => {
                       background: '#fef3c7',
                       borderRadius: '8px',
                       padding: '0.5rem 0.75rem',
+                      paddingBottom: '0.85rem',
                       border: '1px solid #fbbf24',
                       flex: '1 1 auto',
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: '0.5rem',
-                      flexWrap: 'wrap'
+                      flexWrap: 'wrap',
+                      position: 'relative'
                     }}>
                       <span style={{
-                        fontSize: '0.7rem',
+                        fontSize: '0.6rem',
                         fontWeight: '700',
                         color: '#92400e',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
-                        flexShrink: 0,
-                        paddingTop: '0.15rem'
+                        position: 'absolute',
+                        bottom: '-0.45rem',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: '#fef3c7',
+                        padding: '0 0.4rem',
+                        whiteSpace: 'nowrap'
                       }}>
                         Instructions
                       </span>
