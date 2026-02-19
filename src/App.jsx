@@ -966,7 +966,10 @@ const ProduceProcessorApp = () => {
         ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
         : 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
       padding: 'clamp(0.5rem, 3vw, 2rem)',
-      fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      maxWidth: '100vw',
+      overflowX: 'hidden',
+      boxSizing: 'border-box'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
@@ -1464,7 +1467,7 @@ const ProduceProcessorApp = () => {
               >
                 {/* Line 1: Cases badge + Item name + Done/Timer buttons */}
                 <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{
                       background: '#0f766e',
                       color: 'white',
