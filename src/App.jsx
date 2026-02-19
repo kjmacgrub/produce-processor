@@ -717,7 +717,12 @@ const ProduceProcessorApp = () => {
     const sku = getSKU(item.name);
     if (!sku) { alert('Cannot record video: item has no SKU number.'); return; }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+      } catch (audioErr) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      }
       setMediaStream(stream); setRecordingItemId(item.id); setIsRecording(true);
       setTimeout(async () => {
         if (videoPreviewRef.current) {
@@ -738,9 +743,9 @@ const ProduceProcessorApp = () => {
         const blob = new Blob(chunks, { type: mimeType });
         try {
           await saveVideoToDB(sku, { data: blob, name: `recording-${Date.now()}.webm`, type: blob.type });
+          const refreshedVideos = await loadAllVideosFromDB();
+          setVideos(refreshedVideos);
           setIsRecording(false); setRecordingItemId(null); setShowVideoUpload(null);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          window.location.reload();
         } catch (error) { console.error('Error saving video:', error); alert('Error saving video.'); setIsRecording(false); setRecordingItemId(null); setShowVideoUpload(null); }
       };
       recorder.onerror = () => { alert('Recording error occurred.'); setIsRecording(false); setRecordingItemId(null); };
@@ -2008,6 +2013,13 @@ const ProduceProcessorApp = () => {
                               img.src = photo.data;
                               img.style.cssText = 'max-width:100%;max-height:85vh;border-radius:12px;';
                               wrapper.appendChild(img);
+                              const btnRow = document.createElement('div');
+                              btnRow.style.cssText = 'display:flex;gap:0.75rem;align-items:center;';
+                              const closeBtn = document.createElement('button');
+                              closeBtn.textContent = 'Close';
+                              closeBtn.style.cssText = 'background:#64748b;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                              closeBtn.onclick = () => modal.remove();
+                              btnRow.appendChild(closeBtn);
                               if (!isIPad) {
                                 const delBtn = document.createElement('button');
                                 delBtn.textContent = 'Delete Photo';
@@ -2018,8 +2030,9 @@ const ProduceProcessorApp = () => {
                                   setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
                                   modal.remove();
                                 };
-                                wrapper.appendChild(delBtn);
+                                btnRow.appendChild(delBtn);
                               }
+                              wrapper.appendChild(btnRow);
                               modal.appendChild(wrapper);
                               document.body.appendChild(modal);
                             }}
