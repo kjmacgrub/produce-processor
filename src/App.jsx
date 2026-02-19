@@ -965,7 +965,7 @@ const ProduceProcessorApp = () => {
       background: readOnlyMode
         ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
         : 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
-      padding: '2rem',
+      padding: 'clamp(0.5rem, 3vw, 2rem)',
       fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -1194,7 +1194,7 @@ const ProduceProcessorApp = () => {
           marginBottom: '1rem',
           position: 'relative',
           boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
-          border: '14px solid #3a6b1e',
+          border: 'clamp(4px, 1.5vw, 14px) solid #3a6b1e',
           backgroundImage: `
             linear-gradient(white, white),
             url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q20,30 30,50 T50,50 T70,50 T90,50' stroke='%23543b2c' stroke-width='3' fill='none'/%3E%3Cpath d='M15,45 Q20,38 25,35 Q22,40 20,45 Q18,42 15,45 Z' fill='%234a8526'/%3E%3Cpath d='M35,55 Q40,48 45,45 Q42,50 40,55 Q38,52 35,55 Z' fill='%233a6b1e'/%3E%3Cpath d='M55,45 Q60,38 65,35 Q62,40 60,45 Q58,42 55,45 Z' fill='%234a8526'/%3E%3Cpath d='M75,55 Q80,48 85,45 Q82,50 80,55 Q78,52 75,55 Z' fill='%232d5016'/%3E%3C/svg%3E"),
@@ -1413,7 +1413,7 @@ const ProduceProcessorApp = () => {
         {/* Items List - Two Column Layout */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
           {/* Left column: Todo items */}
-          <div style={{ flex: '1 1 0', minWidth: 0, display: 'grid', gap: '0.75rem' }}>
+          <div style={{ flex: '1 1 650px', minWidth: 0, display: 'grid', gap: '0.75rem' }}>
             {/* Add New Item Button */}
             {!readOnlyMode && items.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1907,7 +1907,7 @@ const ProduceProcessorApp = () => {
 
           {/* Right column: Completed items */}
             {completedItems.length > 0 && (
-            <div style={{ flex: '1 1 300px', minWidth: 0, display: 'grid', gap: '0.5rem' }}>
+            <div style={{ flex: '0 0 300px', minWidth: 0, display: 'grid', gap: '0.5rem' }}>
                 <div id="completed-section" style={{
                   textAlign: 'center',
                   padding: '0.5rem 0',
