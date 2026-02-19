@@ -1411,7 +1411,7 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* Items List - Two Column Layout */}
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
           {/* Left column: Todo items */}
           <div style={{ flex: '1 1 0', minWidth: 0, display: 'grid', gap: '0.75rem' }}>
             {/* Add New Item Button */}
@@ -1907,7 +1907,7 @@ const ProduceProcessorApp = () => {
 
           {/* Right column: Completed items */}
             {completedItems.length > 0 && (
-            <div style={{ flex: '0 0 300px', minWidth: 0, display: 'grid', gap: '0.5rem' }}>
+            <div style={{ flex: '1 1 300px', minWidth: 0, display: 'grid', gap: '0.5rem' }}>
                 <div id="completed-section" style={{
                   textAlign: 'center',
                   padding: '0.5rem 0',
