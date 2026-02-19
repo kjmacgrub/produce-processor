@@ -1473,18 +1473,89 @@ const ProduceProcessorApp = () => {
                 {/* Line 1: Cases badge + Item name + Done/Timer buttons */}
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div style={{
-                      background: '#0f766e',
-                      color: 'white',
-                      borderRadius: '8px',
-                      padding: '0.3rem 0.7rem',
-                      fontSize: '1.1rem',
-                      fontWeight: '700',
-                      flexShrink: 0,
-                      minWidth: '3.5rem',
-                      textAlign: 'center'
-                    }}>
-                      {item.cases}
+                    <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                      <div style={{
+                        fontSize: '0.55rem',
+                        fontWeight: '700',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        marginBottom: '0.1rem'
+                      }}>
+                        Cases
+                      </div>
+                      <div style={{
+                        background: '#0f766e',
+                        color: 'white',
+                        borderRadius: '8px',
+                        padding: '0.3rem 0.7rem',
+                        fontSize: '1.1rem',
+                        fontWeight: '700',
+                        minWidth: '3.5rem',
+                        textAlign: 'center'
+                      }}>
+                        {item.cases}
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                      <div style={{
+                        fontSize: '0.55rem',
+                        fontWeight: '700',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        marginBottom: '0.1rem'
+                      }}>
+                        Priority
+                      </div>
+                      {!readOnlyMode ? (
+                        <select
+                          value={item.priority}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'EDIT') {
+                              setShowPriorityEditor(true);
+                            } else {
+                              updatePriority(item.id, val);
+                            }
+                          }}
+                          style={{
+                            background: '#64748b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.4rem 0.6rem',
+                            fontSize: '0.85rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            textAlign: 'center',
+                            textAlignLast: 'center'
+                          }}
+                        >
+                          <option value={item.priority}>
+                            {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
+                          </option>
+                          {historicalPriorities.filter(p => p !== item.priority).map(p => (
+                            <option key={p} value={p}>
+                              {p === 'missing' ? 'None' : p === 0 ? 'Floor' : `P${p}`}
+                            </option>
+                          ))}
+                          <option value="EDIT">Edit...</option>
+                        </select>
+                      ) : (
+                        <div style={{
+                          background: '#64748b',
+                          color: 'white',
+                          borderRadius: '8px',
+                          padding: '0.4rem 0.6rem',
+                          fontSize: '0.85rem',
+                          fontWeight: '700'
+                        }}>
+                          {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
+                        </div>
+                      )}
                     </div>
                     <h3 style={{
                       margin: 0,
@@ -1496,59 +1567,6 @@ const ProduceProcessorApp = () => {
                     }}>
                       {getDisplayName(item.name)}
                     </h3>
-
-                    {!readOnlyMode ? (
-                      <select
-                        value={item.priority}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === 'EDIT') {
-                            setShowPriorityEditor(true);
-                          } else {
-                            updatePriority(item.id, val);
-                          }
-                        }}
-                        style={{
-                          background: '#64748b',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '0.4rem 0.6rem',
-                          fontSize: '0.85rem',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          appearance: 'none',
-                          WebkitAppearance: 'none',
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 0.4rem center',
-                          paddingRight: '1.4rem'
-                        }}
-                      >
-                        <option value={item.priority}>
-                          {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
-                        </option>
-                        {historicalPriorities.filter(p => p !== item.priority).map(p => (
-                          <option key={p} value={p}>
-                            {p === 'missing' ? 'None' : p === 0 ? 'Floor' : `P${p}`}
-                          </option>
-                        ))}
-                        <option value="EDIT">Edit...</option>
-                      </select>
-                    ) : (
-                      <div style={{
-                        background: '#64748b',
-                        color: 'white',
-                        borderRadius: '8px',
-                        padding: '0.4rem 0.6rem',
-                        fontSize: '0.85rem',
-                        fontWeight: '700',
-                        flexShrink: 0
-                      }}>
-                        {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
-                      </div>
-                    )}
 
                     {!readOnlyMode && (
                       <button
