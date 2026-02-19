@@ -1413,7 +1413,7 @@ const ProduceProcessorApp = () => {
         {/* Items List - Two Column Layout */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
           {/* Left column: Todo items */}
-          <div style={{ flex: '1 1 650px', minWidth: 0, display: 'grid', gap: '0.75rem' }}>
+          <div style={{ flex: '1 1 0', minWidth: 'min(650px, 100%)', display: 'grid', gap: '0.75rem' }}>
             {/* Add New Item Button */}
             {!readOnlyMode && items.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
