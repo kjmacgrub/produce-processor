@@ -1190,8 +1190,8 @@ const ProduceProcessorApp = () => {
         <div style={{
           background: 'white',
           borderRadius: '24px',
-          padding: '2.5rem',
-          marginBottom: '2rem',
+          padding: '1.2rem 1.5rem',
+          marginBottom: '1rem',
           position: 'relative',
           boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
           border: '14px solid #3a6b1e',
@@ -1215,11 +1215,11 @@ const ProduceProcessorApp = () => {
               setShowLanding(true);
             } : undefined}
             style={{
-              fontSize: '2.2rem',
+              fontSize: '1.6rem',
               fontWeight: '700',
               color: '#64748b',
               textAlign: 'center',
-              marginBottom: '0.75rem',
+              marginBottom: '0.5rem',
               cursor: !isIPad && pdfDate ? 'pointer' : 'default',
               textDecoration: !isIPad && pdfDate ? 'underline' : 'none',
               textDecorationStyle: 'dotted',
@@ -1229,22 +1229,10 @@ const ProduceProcessorApp = () => {
             {pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
           </div>
 
-          {/* Centered title */}
-          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <h1 style={{
-              margin: 0,
-              fontSize: '3rem',
-              fontWeight: '900',
-              background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.02em'
-            }}>
-              Produce Processing
-            </h1>
-
+          {/* Progress Bar and Metrics */}
+          <div style={{ textAlign: 'center' }}>
             {/* Progress Bar and Metrics */}
-            <div style={{ marginTop: '1.5rem', width: '100%', maxWidth: '600px', margin: '1.5rem auto 0' }}>
+            <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
               {(() => {
                 const completedCases = completedItems.reduce((sum, item) => sum + item.cases, 0);
                 const remainingCases = originalTotalCases - completedCases;
@@ -1255,9 +1243,9 @@ const ProduceProcessorApp = () => {
                     <div>
                       <div style={{
                         width: '100%',
-                        height: '40px',
+                        height: '24px',
                         background: '#e2e8f0',
-                        borderRadius: '20px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
                         boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
                         position: 'relative'
@@ -1274,14 +1262,14 @@ const ProduceProcessorApp = () => {
                       </div>
 
                       <div style={{
-                        marginTop: '1.5rem',
+                        marginTop: '0.75rem',
                         textAlign: 'center'
                       }}>
                         <div id="remaining-section" style={{
-                          fontSize: '1.5rem',
+                          fontSize: '1rem',
                           fontWeight: '700',
                           color: '#64748b',
-                          marginBottom: '0.75rem',
+                          marginBottom: '0.4rem',
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em'
                         }}>
@@ -1292,21 +1280,21 @@ const ProduceProcessorApp = () => {
                           display: 'flex',
                           justifyContent: 'center',
                           alignItems: 'center',
-                          gap: '3rem',
+                          gap: '2rem',
                           flexWrap: 'wrap'
                         }}>
                           <div>
                             <div style={{
-                              fontSize: '3.5rem',
+                              fontSize: '2.2rem',
                               fontWeight: '900',
                               color: '#0f766e',
                               lineHeight: '1',
-                              marginBottom: '0.25rem'
+                              marginBottom: '0.15rem'
                             }}>
                               {remainingCases}
                             </div>
                             <div style={{
-                              fontSize: '1.5rem',
+                              fontSize: '1rem',
                               fontWeight: '700',
                               color: '#64748b'
                             }}>
@@ -1314,29 +1302,6 @@ const ProduceProcessorApp = () => {
                             </div>
                           </div>
 
-                          {completedItems.length > 0 && (
-                            <div
-                              onClick={() => document.getElementById('completed-section')?.scrollIntoView({ behavior: 'smooth' })}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              <div style={{
-                                fontSize: '3.5rem',
-                                fontWeight: '900',
-                                color: '#10b981',
-                                lineHeight: '1',
-                                marginBottom: '0.25rem'
-                              }}>
-                                {completedCases}
-                              </div>
-                              <div style={{
-                                fontSize: '1.5rem',
-                                fontWeight: '700',
-                                color: '#10b981'
-                              }}>
-                                done ↓
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1445,33 +1410,34 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {/* Add Item Button */}
-        {!readOnlyMode && items.length > 0 && (
-          <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setShowAddItem(true)}
-              style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '0.75rem 1.5rem',
-                fontSize: '1rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <span style={{ fontSize: '1.2rem' }}>+</span> Add Item
-            </button>
-          </div>
-        )}
-
-        {/* Items List */}
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
+        {/* Items List - Two Column Layout */}
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+          {/* Left column: Todo items */}
+          <div style={{ flex: '1 1 0', minWidth: 0, display: 'grid', gap: '0.75rem' }}>
+            {/* Add New Item Button */}
+            {!readOnlyMode && items.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setShowAddItem(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '1rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>+</span> Add New Item
+                </button>
+              </div>
+            )}
             {[...items].sort((a, b) => {
               const priorityA = a.priority === 'missing' ? 9999 : a.priority;
               const priorityB = b.priority === 'missing' ? 9999 : b.priority;
@@ -1622,17 +1588,30 @@ const ProduceProcessorApp = () => {
                             <span
                               onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined}
                               style={{
-                                fontSize: '0.85rem',
+                                background: 'rgba(15, 118, 110, 0.08)',
+                                border: '1px solid rgba(15, 118, 110, 0.25)',
+                                borderRadius: '6px',
+                                padding: '0.15rem 0.5rem',
+                                fontSize: '0.8rem',
                                 color: '#0f766e',
                                 fontWeight: '600',
                                 whiteSpace: 'nowrap',
                                 cursor: !isIPad ? 'pointer' : 'default',
-                                textDecoration: !isIPad ? 'underline' : 'none',
-                                textDecorationStyle: 'dotted',
-                                textUnderlineOffset: '3px'
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                lineHeight: 1.3
                               }}
                             >
-                              {formatTimeWithUnits(stats.average)}/cs
+                              <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
+                                Avg Time per Case
+                              </span>
+                              <span>
+                                {formatTimeWithUnits(stats.average)}
+                              </span>
+                              <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>
+                                {stats.totalCases} cases timed
+                              </span>
                             </span>
                           ) : null;
                         })()}
@@ -1649,8 +1628,9 @@ const ProduceProcessorApp = () => {
                       border: '1px solid #fbbf24',
                       flex: '1 1 auto',
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
+                      alignItems: 'flex-start',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap'
                     }}>
                       <span style={{
                         fontSize: '0.7rem',
@@ -1658,7 +1638,8 @@ const ProduceProcessorApp = () => {
                         color: '#92400e',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
-                        flexShrink: 0
+                        flexShrink: 0,
+                        paddingTop: '0.15rem'
                       }}>
                         Instructions
                       </span>
@@ -1667,7 +1648,8 @@ const ProduceProcessorApp = () => {
                         alignItems: 'center',
                         fontSize: '1.2rem',
                         color: '#78350f',
-                        flex: '1'
+                        flex: '1',
+                        minWidth: 0
                       }}>
                         {editingLocation === item.id ? (
                           <input
@@ -1711,11 +1693,13 @@ const ProduceProcessorApp = () => {
                               fontWeight: '600',
                               cursor: readOnlyMode ? 'default' : 'pointer',
                               display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
+                              alignItems: 'flex-start',
+                              gap: '0.3rem',
+                              flexWrap: 'wrap',
+                              wordBreak: 'break-word'
                             }}
                           >
-                            <span>{item.location}</span>
+                            <span style={{ whiteSpace: 'normal' }}>{item.location}</span>
                             {!readOnlyMode && (
                               <svg
                                 width="16"
@@ -1789,24 +1773,150 @@ const ProduceProcessorApp = () => {
                   </div>
                 </div>
 
+                {/* Inline Timer Overlay */}
+                {(itemsInProcess[item.id] || itemsPaused[item.id]) && (() => {
+                  const isPaused = itemsPaused[item.id];
+                  const elapsed = elapsedTimes[item.id] || 0;
+                  return (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      width: '33%',
+                      minWidth: '140px',
+                      background: isPaused
+                        ? 'linear-gradient(135deg, #334155 0%, #1e293b 100%)'
+                        : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                      border: isPaused ? '2px solid #64748b' : '2px solid #fbbf24',
+                      borderRadius: '0 12px 12px 0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.5rem',
+                      zIndex: 5
+                    }}>
+                      {/* Elapsed time */}
+                      <div style={{
+                        fontSize: '1.6rem',
+                        fontWeight: '900',
+                        fontVariantNumeric: 'tabular-nums',
+                        color: '#fbbf24',
+                        lineHeight: 1
+                      }}>
+                        {formatTime(elapsed)}
+                      </div>
+
+                      {/* Per case + avg row */}
+                      <div style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        fontSize: '0.65rem',
+                        color: '#94a3b8',
+                        textAlign: 'center'
+                      }}>
+                        <div>
+                          <div style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>Per Case</div>
+                          <div style={{ fontWeight: '700', color: '#fbbf24', fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
+                            {formatTime(Math.floor(elapsed / item.cases))}
+                          </div>
+                        </div>
+                        {stats && (
+                          <div>
+                            <div style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg</div>
+                            <div style={{ fontWeight: '700', color: '#0f766e', fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
+                              {formatTime(stats.average)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Pause/Resume + Done buttons */}
+                      <div style={{ display: 'flex', gap: '0.3rem', width: '100%' }}>
+                        <button
+                          onClick={() => handleBeginProcessing(item.id)}
+                          style={{
+                            background: isPaused ? '#fbbf24' : 'transparent',
+                            color: isPaused ? '#1e293b' : '#fbbf24',
+                            border: isPaused ? 'none' : '2px solid #fbbf24',
+                            borderRadius: '8px',
+                            padding: '0.35rem 0.4rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            flex: 1
+                          }}
+                        >
+                          {isPaused ? 'Restart' : 'Pause'}
+                        </button>
+                        <button
+                          onClick={() => markComplete(item)}
+                          style={{
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.35rem 0.4rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            flex: 1
+                          }}
+                        >
+                          Done
+                        </button>
+                      </div>
+
+                      {/* Cancel link */}
+                      <button
+                        onClick={() => {
+                          setItemsInProcess(prev => ({ ...prev, [item.id]: false }));
+                          setItemsPaused(prev => ({ ...prev, [item.id]: false }));
+                          setElapsedTimes(prev => ({ ...prev, [item.id]: 0 }));
+                          setStartTimes(prev => {
+                            const newTimes = { ...prev };
+                            delete newTimes[item.id];
+                            return newTimes;
+                          });
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          padding: '0.1rem 0.3rem',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: '2px'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  );
+                })()}
 
               </div>
             );
           })}
 
-            {/* Completed Items Section */}
+          </div>
+
+          {/* Right column: Completed items */}
             {completedItems.length > 0 && (
-              <>
+            <div style={{ flex: '0 0 300px', minWidth: 0, display: 'grid', gap: '0.5rem' }}>
                 <div id="completed-section" style={{
                   textAlign: 'center',
-                  padding: '1rem 0',
+                  padding: '0.5rem 0',
                   color: '#10b981',
                   fontWeight: '800',
-                  fontSize: '1.3rem',
+                  fontSize: '1.1rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
-                  borderTop: '2px dashed #10b981',
-                  marginTop: '0.5rem'
+                  borderBottom: '2px dashed #10b981'
                 }}>
                   Completed
                 </div>
@@ -1821,122 +1931,103 @@ const ProduceProcessorApp = () => {
                       key={item.id}
                       style={{
                         background: '#f0fdf4',
-                        borderRadius: '12px',
-                        padding: '1rem 1.2rem',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '0.75rem',
-                        opacity: 0.75,
-                        border: '2px solid #d1fae5'
+                        borderRadius: '10px',
+                        padding: '0.6rem 0.8rem',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                        opacity: 0.85,
+                        border: '1px solid #d1fae5'
                       }}
                     >
-                      <div style={{ flex: 1, minWidth: '200px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                          <div style={{
-                            background: '#10b981',
-                            color: 'white',
-                            borderRadius: '8px',
-                            padding: '0.25rem 0.75rem',
-                            fontSize: '0.9rem',
-                            fontWeight: '700'
-                          }}>
-                            ✓
-                          </div>
-                          <h3 style={{
-                            margin: 0,
-                            fontSize: '1.3rem',
-                            fontWeight: '700',
-                            color: '#1e293b',
-                            flex: 1
-                          }}>
-                            {getDisplayName(item.name)}
-                          </h3>
-                          {completedStats && (
-                            <div
-                              onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined}
-                              style={{
-                                background: '#0f766e',
-                                color: 'white',
-                                borderRadius: '8px',
-                                padding: '0.3rem 0.8rem',
-                                fontSize: '1rem',
-                                fontWeight: '700',
-                                flexShrink: 0,
-                                cursor: !isIPad ? 'pointer' : 'default'
-                              }}
-                            >
-                              {formatTimeWithUnits(completedStats.average)}/case
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '1.1rem', color: '#64748b' }}>
-                          <strong>{item.cases}</strong> cases • {item.location}
-                        </div>
-                      </div>
-
-                      {/* Completion Photo */}
-                      {photo && (
-                        <div style={{
-                          width: '200px',
+                      {/* Line 1: checkmark + item name */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
+                        <span style={{
+                          background: '#10b981',
+                          color: 'white',
+                          borderRadius: '6px',
+                          padding: '0.1rem 0.5rem',
+                          fontSize: '0.8rem',
+                          fontWeight: '700',
                           flexShrink: 0
                         }}>
-                          <img
-                            src={photo.data}
+                          ✓
+                        </span>
+                        <span style={{
+                          fontSize: '1rem',
+                          fontWeight: '700',
+                          color: '#1e293b',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {getDisplayName(item.name)}
+                        </span>
+                      </div>
+                      {/* Line 2: cases + time + stats */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                          <strong>{item.cases}</strong> cases
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                          {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {completedStats && (
+                          <span
+                            onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined}
                             style={{
-                              width: '100%',
-                              height: '150px',
-                              objectFit: 'cover',
-                              borderRadius: '12px',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                              cursor: 'pointer'
+                              background: '#0f766e',
+                              color: 'white',
+                              borderRadius: '6px',
+                              padding: '0.1rem 0.5rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              cursor: !isIPad ? 'pointer' : 'default'
                             }}
+                          >
+                            {formatTimeWithUnits(completedStats.average)}/cs
+                          </span>
+                        )}
+                        {photo && (
+                          <button
                             onClick={() => {
                               const modal = document.createElement('div');
-                              modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 1.5rem;';
+                              modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;';
                               modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
+                              const wrapper = document.createElement('div');
+                              wrapper.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;gap:0.75rem;max-width:100%;max-height:95%;';
                               const img = document.createElement('img');
                               img.src = photo.data;
-                              img.style.cssText = 'max-width: 100%; max-height: 80%; border-radius: 16px;';
-                              modal.appendChild(img);
-
-                              const deleteBtn = document.createElement('button');
-                              deleteBtn.textContent = 'Delete Photo';
-                              deleteBtn.style.cssText = 'background: #ef4444; color: white; border: none; border-radius: 10px; padding: 0.75rem 2rem; font-size: 1.1rem; font-weight: 700; cursor: pointer;';
-                              deleteBtn.onclick = async () => {
-                                modal.remove();
-                                if (db) {
-                                  await remove(ref(db, `completionPhotos/${sku}`));
-                                }
-                                setCompletionPhotos(prev => {
-                                  const updated = {...prev};
-                                  delete updated[sku];
-                                  return updated;
-                                });
-                              };
-                              modal.appendChild(deleteBtn);
-
+                              img.style.cssText = 'max-width:100%;max-height:85vh;border-radius:12px;';
+                              wrapper.appendChild(img);
+                              if (!isIPad) {
+                                const delBtn = document.createElement('button');
+                                delBtn.textContent = 'Delete Photo';
+                                delBtn.style.cssText = 'background:#ef4444;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                                delBtn.onclick = async () => {
+                                  if (!confirm('Delete this photo?')) return;
+                                  if (db) await remove(ref(db, `completionPhotos/${sku}`));
+                                  setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
+                                  modal.remove();
+                                };
+                                wrapper.appendChild(delBtn);
+                              }
+                              modal.appendChild(wrapper);
                               document.body.appendChild(modal);
                             }}
-                          />
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: '#94a3b8',
-                            textAlign: 'center',
-                            marginTop: '0.5rem'
-                          }}>
-                            📸 Completion photo
-                          </div>
-                        </div>
-                      )}
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                        <div style={{ fontSize: '0.9rem', color: '#94a3b8', textAlign: 'right' }}>
-                          {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
+                            style={{
+                              background: '#6366f1',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '0.2rem 0.5rem',
+                              cursor: 'pointer',
+                              fontWeight: '700',
+                              fontSize: '0.7rem',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Photo
+                          </button>
+                        )}
                         {!readOnlyMode && (
                           <button
                             onClick={() => undoComplete(item)}
@@ -1944,12 +2035,11 @@ const ProduceProcessorApp = () => {
                               background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                               color: 'white',
                               border: 'none',
-                              borderRadius: '10px',
-                              padding: '0.75rem 1.5rem',
+                              borderRadius: '6px',
+                              padding: '0.2rem 0.6rem',
                               cursor: 'pointer',
                               fontWeight: '700',
-                              fontSize: '0.95rem',
-                              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                              fontSize: '0.75rem',
                               whiteSpace: 'nowrap'
                             }}
                           >
@@ -1960,25 +2050,7 @@ const ProduceProcessorApp = () => {
                     </div>
                   );
                 })}
-
-                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                  <span
-                    onClick={() => document.getElementById('remaining-section')?.scrollIntoView({ behavior: 'smooth' })}
-                    style={{
-                      display: 'inline-block',
-                      padding: '0.8rem 2rem',
-                      background: '#3b82f6',
-                      color: 'white',
-                      fontWeight: '800',
-                      fontSize: '1.2rem',
-                      cursor: 'pointer',
-                      borderRadius: '12px'
-                    }}
-                  >
-                    ↑ Return to Remaining Work
-                  </span>
-                </div>
-              </>
+            </div>
             )}
           </div>
 
@@ -3620,291 +3692,6 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {/* Floating Timers - Multiple Support, Bottom-Right */}
-        {(() => {
-          const activeTimerIds = [
-            ...Object.keys(itemsInProcess).filter(id => itemsInProcess[id]),
-            ...Object.keys(itemsPaused).filter(id => itemsPaused[id])
-          ];
-
-          if (activeTimerIds.length === 0) return null;
-
-          const bottomTimers = activeTimerIds.slice(0, 2);
-          const stackedTimers = activeTimerIds.slice(2, 4);
-
-          const renderTimer = (timerId) => {
-            const timerItem = [...items, ...completedItems].find(i => i.id === timerId);
-            if (!timerItem) return null;
-
-            const isPaused = itemsPaused[timerId];
-            const elapsed = elapsedTimes[timerId] || 0;
-
-            return (
-              <div
-                key={timerId}
-                style={{
-                  background: isPaused
-                    ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
-                    : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                  color: '#fbbf24',
-                  border: isPaused ? '3px solid #64748b' : '3px solid #fbbf24',
-                  borderRadius: '20px',
-                  padding: '1.5rem 2rem',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  minWidth: '280px',
-                  maxWidth: '320px',
-                  position: 'relative'
-                }}>
-                  {/* Cancel button at top center */}
-                  <button
-                    onClick={() => {
-                      setItemsInProcess(prev => ({ ...prev, [timerId]: false }));
-                      setItemsPaused(prev => ({ ...prev, [timerId]: false }));
-                      setElapsedTimes(prev => ({ ...prev, [timerId]: 0 }));
-                      setStartTimes(prev => {
-                        const newTimes = { ...prev };
-                        delete newTimes[timerId];
-                        return newTimes;
-                      });
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '-12px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: '#ef4444',
-                      color: 'white',
-                      border: '2px solid #dc2626',
-                      borderRadius: '20px',
-                      padding: '0.4rem 1rem',
-                      fontSize: '0.85rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
-                      transition: 'all 0.2s',
-                      zIndex: 10
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#dc2626';
-                      e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#ef4444';
-                      e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
-                    }}
-                  >
-                    ✕ Cancel
-                  </button>
-
-                  {/* Item name */}
-                  <div style={{
-                    fontSize: '1.1rem',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    color: '#fbbf24',
-                    maxWidth: '250px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {getDisplayName(timerItem.name)}
-                  </div>
-
-                  {/* Timer display */}
-                  <div style={{
-                    fontSize: '3.5rem',
-                    fontWeight: '900',
-                    fontVariantNumeric: 'tabular-nums',
-                    lineHeight: '1',
-                    letterSpacing: '-0.02em',
-                    color: '#fbbf24'
-                  }}>
-                    {formatTime(elapsed)}
-                  </div>
-
-                  {/* Time per case and historic average */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '1rem',
-                    alignItems: 'center',
-                    fontSize: '0.9rem',
-                    color: '#94a3b8'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center'
-                    }}>
-                      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
-                        Per Case
-                      </div>
-                      <div style={{
-                        fontSize: '1.1rem',
-                        fontWeight: '700',
-                        color: '#fbbf24',
-                        fontVariantNumeric: 'tabular-nums'
-                      }}>
-                        {formatTime(Math.floor(elapsed / timerItem.cases))}
-                      </div>
-                    </div>
-
-                    {(() => {
-                      const sku = getSKU(timerItem.name);
-                      const stats = sku ? getStats(sku) : null;
-                      if (!stats) return null;
-
-                      return (
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center'
-                        }}>
-                          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
-                            Avg
-                          </div>
-                          <div style={{
-                            fontSize: '1.1rem',
-                            fontWeight: '700',
-                            color: '#0f766e',
-                            fontVariantNumeric: 'tabular-nums'
-                          }}>
-                            {formatTime(stats.average)}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Status and buttons */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    flexDirection: 'column',
-                    width: '100%'
-                  }}>
-                    {isPaused && (
-                      <div style={{
-                        fontSize: '0.9rem',
-                        fontWeight: '700',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                        color: '#94a3b8'
-                      }}>
-                        Paused
-                      </div>
-                    )}
-
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      width: '100%'
-                    }}>
-                      <button
-                        onClick={() => handleBeginProcessing(timerId)}
-                        style={{
-                          background: isPaused ? '#fbbf24' : 'transparent',
-                          color: isPaused ? '#1e293b' : '#fbbf24',
-                          border: isPaused ? 'none' : '2px solid #fbbf24',
-                          borderRadius: '12px',
-                          padding: '0.75rem 1rem',
-                          fontSize: '0.9rem',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          flex: '1'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (isPaused) {
-                            e.currentTarget.style.background = '#f59e0b';
-                          } else {
-                            e.currentTarget.style.background = '#fbbf24';
-                            e.currentTarget.style.color = '#1e293b';
-                          }
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (isPaused) {
-                            e.currentTarget.style.background = '#fbbf24';
-                          } else {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#fbbf24';
-                          }
-                          e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                      >
-                        {isPaused ? 'Restart' : 'Pause'}
-                      </button>
-
-                      <button
-                        onClick={() => markComplete(timerItem)}
-                        style={{
-                          background: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '12px',
-                          padding: '0.75rem 1rem',
-                          fontSize: '0.9rem',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          flex: '1'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#059669';
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#10b981';
-                          e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                      >
-                        Done
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            };
-
-          return (
-            <>
-              {/* Bottom row: First 2 timers side by side */}
-              <div style={{
-                position: 'fixed',
-                bottom: '2rem',
-                right: '2rem',
-                zIndex: 999,
-                display: 'flex',
-                flexDirection: 'row-reverse',
-                gap: '1rem',
-                alignItems: 'flex-end'
-              }}>
-                {bottomTimers.map(timerId => renderTimer(timerId))}
-              </div>
-
-              {/* Stacked timers: 3rd and 4th stack vertically on right */}
-              {stackedTimers.length > 0 && (
-                <div style={{
-                  position: 'fixed',
-                  bottom: 'calc(2rem + 280px + 1rem)',
-                  right: '2rem',
-                  zIndex: 999,
-                  display: 'flex',
-                  flexDirection: 'column-reverse',
-                  gap: '1rem',
-                  alignItems: 'flex-end'
-                }}>
-                  {stackedTimers.map(timerId => renderTimer(timerId))}
-                </div>
-              )}
-            </>
-          );
-        })()}
 
       </div>
     </div>
