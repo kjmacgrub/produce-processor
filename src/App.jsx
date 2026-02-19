@@ -2924,7 +2924,7 @@ const ProduceProcessorApp = () => {
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 1000,
-              padding: '2rem',
+              padding: 'clamp(0.5rem, 2vw, 2rem)',
               backdropFilter: 'blur(10px)'
             }}
             onClick={() => setPlayingVideo(null)}
@@ -2934,7 +2934,7 @@ const ProduceProcessorApp = () => {
               style={{
                 background: 'white',
                 borderRadius: '24px',
-                padding: '2rem',
+                padding: 'clamp(1rem, 3vw, 2rem)',
                 maxWidth: '1000px',
                 width: '100%',
                 maxHeight: '90vh',
@@ -2943,11 +2943,11 @@ const ProduceProcessorApp = () => {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', color: '#1e293b' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <h3 style={{ margin: 0, fontSize: 'clamp(1.2rem, 4vw, 1.8rem)', fontWeight: '800', color: '#1e293b' }}>
                   Processing Instructions
                 </h3>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
                   {!readOnlyMode && (
                     <button
                       onClick={async () => {
