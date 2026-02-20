@@ -1,0 +1,23 @@
+#!/bin/bash
+# Auto-increment version patch on every push
+
+CURRENT=$(node -p "require('./package.json').version")
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+NEW_PATCH=$(printf "%02d" $((10#$PATCH + 1)))
+NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+
+echo "Bumping version: $CURRENT → $NEW_VERSION"
+
+# Update package.json
+node -e "
+  const fs = require('fs');
+  const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+  pkg.version = '$NEW_VERSION';
+  fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+"
+
+# Update version display in App.jsx
+sed -i '' "s/v$MAJOR\.$MINOR\.[0-9]*/v$NEW_VERSION/" src/App.jsx
+
+git add package.json src/App.jsx
+git commit -m "Bump version to $NEW_VERSION"

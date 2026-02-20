@@ -1348,7 +1348,7 @@ const ProduceProcessorApp = () => {
               cursor: 'pointer'
             }}
           >
-            v2.15
+            v2.15.00
           </div>
 
         </div>
