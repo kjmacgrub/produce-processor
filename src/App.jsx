@@ -232,6 +232,17 @@ const ProduceProcessorApp = () => {
     return () => unsub();
   }, []);
 
+  // Load video index from Firebase (real-time sync across devices)
+  useEffect(() => {
+    if (!db) return;
+    const videoIndexRef = ref(db, 'videoIndex');
+    const unsub = onValue(videoIndexRef, (snapshot) => {
+      const data = snapshot.val();
+      setVideos(data || {});
+    });
+    return () => unsub();
+  }, []);
+
   // Load historical priorities from Firebase
   useEffect(() => {
     if (!db) return;
@@ -278,8 +289,16 @@ const ProduceProcessorApp = () => {
   useEffect(() => {
     const migrateAndLoad = async () => {
       try { const oldVideos = localStorage.getItem('produceVideos'); if (oldVideos) localStorage.removeItem('produceVideos'); } catch (error) {}
-      const loadedVideos = await loadAllVideosFromDB();
-      setVideos(loadedVideos);
+      // Migrate existing Storage videos into the Realtime DB index (one-time, for pre-existing videos)
+      if (db) {
+        try {
+          const snapshot = await get(ref(db, 'videoIndex'));
+          if (!snapshot.exists()) {
+            const storageVideos = await listAllVideosFromStorage();
+            if (Object.keys(storageVideos).length > 0) await set(ref(db, 'videoIndex'), storageVideos);
+          }
+        } catch (error) { console.error('Error migrating video index:', error); }
+      }
       const loadedPhotos = await loadAllCompletionPhotosFromDB();
       setCompletionPhotos(loadedPhotos);
       if (db) {
@@ -429,6 +448,7 @@ const ProduceProcessorApp = () => {
       else throw new Error('Unknown video data format');
       if (!blob || blob.size === 0) throw new Error('Video blob is empty or invalid');
       await uploadBytes(storageRef, blob, { contentType: videoData.type || 'video/webm', customMetadata: { sku, uploadedAt: new Date().toISOString() } });
+      if (db) await set(ref(db, `videoIndex/${sku}`), { exists: true, filename, storageRef: `produce-videos/${filename}` });
     } catch (error) { console.error('Error uploading video:', error); throw error; }
   };
 
@@ -436,6 +456,7 @@ const ProduceProcessorApp = () => {
     if (!storage) return;
     try {
       await deleteObject(sRef(storage, `produce-videos/${sku}.webm`));
+      if (db) await remove(ref(db, `videoIndex/${sku}`));
     } catch (error) { if (error.code !== 'storage/object-not-found') console.error('Error deleting video:', error); }
   };
 
@@ -698,8 +719,6 @@ const ProduceProcessorApp = () => {
       try {
         await saveVideoToDB(sku, { data: e.target.result, name: file.name, type: file.type });
         setShowVideoUpload(null);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        window.location.reload();
       } catch (error) { console.error('Error saving video:', error); alert('Error saving video.'); setShowVideoUpload(null); }
     };
     reader.readAsArrayBuffer(file);

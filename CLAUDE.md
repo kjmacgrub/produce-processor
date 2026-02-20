@@ -28,6 +28,7 @@ Realtime Database paths:
 - `items` — active produce items to process
 - `completedItems` — finished items (auto-cleaned after 10 days)
 - `completionPhotos` — base64 photos stored in DB
+- `videoIndex` — metadata index of videos in Storage (enables real-time sync; actual files are in Storage)
 - `timingData`, `timingEvents`, `historicalTimes` — processing metrics
 - `pdfDate`, `totalCases` — metadata from loaded CSV
 
