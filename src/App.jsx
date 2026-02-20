@@ -1348,7 +1348,7 @@ const ProduceProcessorApp = () => {
               cursor: 'pointer'
             }}
           >
-            v2.15.00
+            v2.15 · {__COMMIT_HASH__}
           </div>
 
         </div>
