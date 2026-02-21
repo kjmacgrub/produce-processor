@@ -60,6 +60,7 @@ const ProduceProcessorApp = () => {
   const [showLanding, setShowLanding] = useState(true);
   const [commits, setCommits] = useState([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -487,21 +488,31 @@ const ProduceProcessorApp = () => {
   const listAvailableCSVs = async () => {
     if (!storage) return [];
     try {
-      const result = await listAll(sRef(storage, 'produce-pdfs'));
+      const result = await listAll(sRef(storage, 'produce-csv'));
       const csvFiles = result.items.filter(item => item.name.toLowerCase().endsWith('.csv'));
+      console.log(`📂 Found ${csvFiles.length} CSV files in produce-csv:`, csvFiles.map(f => f.name));
       const filesWithDates = await Promise.all(csvFiles.map(async (fileRef) => {
         try {
           const url = await getDownloadURL(fileRef);
           const response = await fetch(url);
           const text = await response.text();
+          // Try first line for date
           const firstLine = text.split(/\r?\n/)[0];
           const dateMatch = firstLine.match(/(\d{4}-\d{2}-\d{2})/);
           if (dateMatch) return { filename: fileRef.name, date: dateMatch[1], fileType: 'csv' };
+          // Fallback: try filename for date
+          const filenameMatch = fileRef.name.match(/(\d{4}-\d{2}-\d{2})/);
+          if (filenameMatch) return { filename: fileRef.name, date: filenameMatch[1], fileType: 'csv' };
+          // Fallback: try any line in the file for a date
+          const anyDateMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
+          if (anyDateMatch) return { filename: fileRef.name, date: anyDateMatch[1], fileType: 'csv' };
+          console.warn(`⚠️ No date found in file: ${fileRef.name}`);
           return null;
-        } catch (error) { return null; }
+        } catch (error) { console.error(`❌ Error reading file ${fileRef.name}:`, error); return null; }
       }));
       const validFiles = filesWithDates.filter(Boolean);
       validFiles.sort((a, b) => b.date.localeCompare(a.date));
+      console.log(`✅ Valid files with dates:`, validFiles);
       return validFiles;
     } catch (error) { console.error('Error listing files:', error); return []; }
   };
@@ -509,7 +520,7 @@ const ProduceProcessorApp = () => {
   const loadCSVFromStorage = async (fileInfo) => {
     if (!storage || !db || readOnlyMode) return;
     try {
-      const storageRef = sRef(storage, `produce-pdfs/${fileInfo.filename}`);
+      const storageRef = sRef(storage, `produce-csv/${fileInfo.filename}`);
       const url = await getDownloadURL(storageRef);
       const response = await fetch(url);
       const text = await response.text();
@@ -1148,16 +1159,37 @@ const ProduceProcessorApp = () => {
               const fileInProgress = items.length > 0 && !!pdfDate;
               return (
                 <div style={{ opacity: fileInProgress ? 0.4 : 1, pointerEvents: fileInProgress ? 'none' : 'auto' }}>
-                  <h2 style={{
-                    fontSize: '1.3rem',
-                    fontWeight: '700',
-                    color: '#64748b',
-                    marginBottom: '0.75rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}>
-                    Available Files
-                  </h2>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <h2 style={{
+                      fontSize: '1.3rem',
+                      fontWeight: '700',
+                      color: '#64748b',
+                      margin: 0,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Available Files
+                    </h2>
+                    <button
+                      onClick={async () => {
+                        setAvailableDates([]);
+                        const dates = await listAvailableCSVs();
+                        setAvailableDates(dates);
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.4rem 1rem',
+                        fontSize: '0.9rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🔄 Refresh
+                    </button>
+                  </div>
 
                   {availableDates.length === 0 ? (
                     <div style={{ padding: '1.5rem', textAlign: 'center', color: '#94a3b8' }}>
@@ -1233,6 +1265,30 @@ const ProduceProcessorApp = () => {
           backgroundClip: 'padding-box, border-box, border-box',
           backgroundOrigin: 'padding-box, border-box, border-box'
         }}>
+
+          {/* Hamburger Menu Button */}
+          {!isIPad && (
+            <button
+              onClick={() => setShowMenu(true)}
+              aria-label="Menu"
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.5rem',
+                zIndex: 10
+              }}
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          )}
 
           {/* Date display */}
           <div
@@ -1441,30 +1497,6 @@ const ProduceProcessorApp = () => {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
           {/* Left column: Todo items */}
           <div style={{ flex: '1 1 0', minWidth: 'min(650px, 100%)', display: 'grid', gap: '0.75rem' }}>
-            {/* Add New Item Button */}
-            {!readOnlyMode && items.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={() => setShowAddItem(true)}
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '12px',
-                    padding: '0.75rem 1.5rem',
-                    fontSize: '1rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <span style={{ fontSize: '1.2rem' }}>+</span> Add New Item
-                </button>
-              </div>
-            )}
             {[...items].sort((a, b) => {
               const priorityA = a.priority === 'missing' ? 9999 : a.priority;
               const priorityB = b.priority === 'missing' ? 9999 : b.priority;
@@ -2871,7 +2903,7 @@ const ProduceProcessorApp = () => {
               {availableDates.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                   <p style={{ marginBottom: '1rem' }}>No data files found in Storage.</p>
-                  <p style={{ fontSize: '0.9rem' }}>Upload CSV files to Firebase Storage in folder: <code>produce-pdfs/</code></p>
+                  <p style={{ fontSize: '0.9rem' }}>Upload CSV files to Firebase Storage in folder: <code>produce-csv/</code></p>
                   <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Files can have any name ending in <code>.csv</code></p>
                   <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', fontStyle: 'italic' }}>The date will be read from the first line of each file</p>
                 </div>
@@ -3366,6 +3398,136 @@ const ProduceProcessorApp = () => {
             </div>
           );
         })()}
+
+        {/* Hamburger Menu Modal */}
+        {showMenu && (
+          <div
+            onClick={() => setShowMenu(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.4)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center'
+            }}
+          >
+            <div
+              style={{
+                background: 'white',
+                borderRadius: '24px 24px 0 0',
+                padding: '1.5rem',
+                maxWidth: '600px',
+                width: '90%',
+                maxHeight: '60vh',
+                overflow: 'auto',
+                boxShadow: '0 -10px 40px rgba(0,0,0,0.2)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#1e293b' }}>Menu</h2>
+                <button
+                  onClick={() => setShowMenu(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.8rem',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    padding: '0.25rem'
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowAddItem(true);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add New Item
+                </button>
+
+                <button
+                  onClick={async () => {
+                    setShowMenu(false);
+                    const dates = await listAvailableCSVs();
+                    setAvailableDates(dates);
+                    setShowLanding(true);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                  Import New Day
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowChangelog(true);
+                    fetchCommits();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                  Changelog
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Changelog Modal */}
         {showChangelog && (
