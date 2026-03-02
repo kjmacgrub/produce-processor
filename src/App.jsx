@@ -861,6 +861,29 @@ const ProduceProcessorApp = () => {
     await update(ref(db), updates);
   };
 
+  const moveItemDown = async (itemId) => {
+    if (!db) return;
+    const sorted = [...items].sort((a, b) => {
+      const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
+      if (ao !== bo) return ao - bo;
+      const pa = a.priority === 'missing' ? 9999 : (a.priority ?? 9999);
+      const pb = b.priority === 'missing' ? 9999 : (b.priority ?? 9999);
+      if (pa !== pb) return pa - pb;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    const idx = sorted.findIndex(i => i.id === itemId);
+    if (idx < 0 || idx >= sorted.length - 1) return;
+    const item = sorted[idx];
+    const below = sorted[idx + 1];
+    const belowSortOrder = below.sortOrder ?? idx + 1;
+    const itemSortOrder = item.sortOrder ?? idx;
+    const updates = {};
+    updates[`items/${item.id}/sortOrder`] = belowSortOrder;
+    updates[`items/${item.id}/priority`] = below.priority;
+    updates[`items/${below.id}/sortOrder`] = itemSortOrder;
+    await update(ref(db), updates);
+  };
+
   const updateLocation = async (itemId, newLocation) => { if (readOnlyMode || !db) return; await set(ref(db, `items/${itemId}/location`), newLocation); };
 
   const addNewItem = async () => {
@@ -1646,24 +1669,30 @@ const ProduceProcessorApp = () => {
                         </div>
                       )}
                     </div>
-                    {idx > 0 && (
-                      <div
-                        onClick={() => moveItemUp(item.id)}
-                        title="Move up"
-                        style={{
-                          flexShrink: 0,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '0 2px',
-                          userSelect: 'none',
-                        }}
-                      >
-                        <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <polygon points="11,0 22,13 15,13 15,26 7,26 7,13 0,13" fill="#1e293b"/>
-                        </svg>
-                      </div>
-                    )}
+                    <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'center' }}>
+                      {idx > 0 && (
+                        <div
+                          onClick={() => moveItemUp(item.id)}
+                          title="Move up"
+                          style={{ cursor: 'pointer', display: 'flex', userSelect: 'none' }}
+                        >
+                          <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="11,0 22,13 15,13 15,26 7,26 7,13 0,13" fill="#1e293b"/>
+                          </svg>
+                        </div>
+                      )}
+                      {idx < sortedArr.length - 1 && (
+                        <div
+                          onClick={() => moveItemDown(item.id)}
+                          title="Move down"
+                          style={{ cursor: 'pointer', display: 'flex', userSelect: 'none' }}
+                        >
+                          <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="11,26 22,13 15,13 15,0 7,0 7,13 0,13" fill="#1e293b"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                     <h3 style={{
                       margin: 0,
                       fontSize: '1.4rem',
