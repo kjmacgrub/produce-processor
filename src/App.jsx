@@ -560,7 +560,13 @@ const ProduceProcessorApp = () => {
         parsedItems.push({ name: item.trim(), priority, cases, location });
       }
       const totalCases = parsedItems.reduce((sum, item) => sum + item.cases, 0);
-      const itemsWithIds = parsedItems.map((item, index) => ({ id: `item-${Date.now()}-${index}`, ...item }));
+      const sortedForOrder = [...parsedItems].sort((a, b) => {
+        const pa = a.priority === 'missing' ? 9999 : a.priority;
+        const pb = b.priority === 'missing' ? 9999 : b.priority;
+        if (pa !== pb) return pa - pb;
+        return a.name.localeCompare(b.name);
+      });
+      const itemsWithIds = sortedForOrder.map((item, index) => ({ id: `item-${Date.now()}-${index}`, sortOrder: index, ...item }));
       const itemsObject = {};
       itemsWithIds.forEach(item => { itemsObject[item.id] = item; });
       await set(ref(db, 'items'), itemsObject);
@@ -648,8 +654,14 @@ const ProduceProcessorApp = () => {
       const totalCases = parsedItems.reduce((sum, item) => sum + item.cases, 0);
       const itemsRef2 = ref(db, 'items');
       await remove(itemsRef2);
+      const sortedForOrderPdf = [...parsedItems].sort((a, b) => {
+        const pa = a.priority === 'missing' ? 9999 : a.priority;
+        const pb = b.priority === 'missing' ? 9999 : b.priority;
+        if (pa !== pb) return pa - pb;
+        return a.name.localeCompare(b.name);
+      });
       const newItems = {};
-      parsedItems.forEach(item => { const key = push(child(ref(db), 'items')).key; newItems[key] = item; });
+      sortedForOrderPdf.forEach((item, index) => { const key = push(child(ref(db), 'items')).key; newItems[key] = { ...item, sortOrder: index }; });
       await update(itemsRef2, newItems);
       await remove(ref(db, 'completedItems'));
       if (dateMatch) await set(ref(db, 'pdfDate'), dateMatch[1]);
@@ -824,6 +836,29 @@ const ProduceProcessorApp = () => {
       });
       await set(ref(db, 'historicalPriorities'), updated);
     }
+  };
+
+  const moveItemUp = async (itemId) => {
+    if (!db) return;
+    const sorted = [...items].sort((a, b) => {
+      const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
+      if (ao !== bo) return ao - bo;
+      const pa = a.priority === 'missing' ? 9999 : (a.priority ?? 9999);
+      const pb = b.priority === 'missing' ? 9999 : (b.priority ?? 9999);
+      if (pa !== pb) return pa - pb;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    const idx = sorted.findIndex(i => i.id === itemId);
+    if (idx <= 0) return;
+    const item = sorted[idx];
+    const above = sorted[idx - 1];
+    const aboveSortOrder = above.sortOrder ?? idx - 1;
+    const itemSortOrder = item.sortOrder ?? idx;
+    const updates = {};
+    updates[`items/${item.id}/sortOrder`] = aboveSortOrder;
+    updates[`items/${item.id}/priority`] = above.priority;
+    updates[`items/${above.id}/sortOrder`] = itemSortOrder;
+    await update(ref(db), updates);
   };
 
   const updateLocation = async (itemId, newLocation) => { if (readOnlyMode || !db) return; await set(ref(db, `items/${itemId}/location`), newLocation); };
@@ -1498,10 +1533,13 @@ const ProduceProcessorApp = () => {
           {/* Left column: Todo items */}
           <div style={{ flex: '1 1 0', minWidth: 'min(650px, 100%)', display: 'grid', gap: '0.75rem' }}>
             {[...items].sort((a, b) => {
-              const priorityA = a.priority === 'missing' ? 9999 : a.priority;
-              const priorityB = b.priority === 'missing' ? 9999 : b.priority;
-              return priorityA - priorityB;
-            }).map(item => {
+              const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
+              if (ao !== bo) return ao - bo;
+              const pa = a.priority === 'missing' ? 9999 : (a.priority ?? 9999);
+              const pb = b.priority === 'missing' ? 9999 : (b.priority ?? 9999);
+              if (pa !== pb) return pa - pb;
+              return (a.name || '').localeCompare(b.name || '');
+            }).map((item, idx, sortedArr) => {
             const sku = getSKU(item.name);
             const stats = sku ? getStats(sku) : null;
             const hasVideo = sku ? videos[sku] : null;
@@ -1607,6 +1645,23 @@ const ProduceProcessorApp = () => {
                           {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
                         </div>
                       )}
+                    </div>
+                    <div
+                      onClick={() => idx > 0 && moveItemUp(item.id)}
+                      title={idx > 0 ? 'Move up' : ''}
+                      style={{
+                        flexShrink: 0,
+                        cursor: idx > 0 ? 'pointer' : 'default',
+                        opacity: idx > 0 ? 1 : 0.15,
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 2px',
+                        userSelect: 'none',
+                      }}
+                    >
+                      <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="11,0 22,13 15,13 15,26 7,26 7,13 0,13" fill="#1e293b"/>
+                      </svg>
                     </div>
                     <h3 style={{
                       margin: 0,

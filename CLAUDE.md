@@ -34,7 +34,7 @@ Realtime Database paths:
 
 Storage paths:
 - `produce-videos/{SKU}.webm` — instruction videos
-- `produce-pdfs/{YYYY-MM-DD}.csv` — daily produce data files
+- `produce-csv/{YYYY-MM-DD}.csv` — daily produce data files
 
 ## Device Modes
 

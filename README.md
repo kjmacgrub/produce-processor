@@ -23,7 +23,7 @@ A browser-based iPad application for processing produce items with real-time syn
 
 **2. Firebase Storage**
 - Video files: `produce-videos/{SKU}.webm`
-- CSV data files: `produce-pdfs/{date}.csv`
+- CSV data files: `produce-csv/{date}.csv`
 - Free tier: 5 GB storage, 1 GB/day downloads
 
 **3. Firebase Hosting** (optional)
@@ -150,7 +150,7 @@ firebase deploy
 **Manager uploads CSV files the night before:**
 
 1. Go to Firebase Console → Storage
-2. Navigate to `produce-pdfs/` folder
+2. Navigate to `produce-csv/` folder
 3. Upload CSV file with format: `YYYY-MM-DD.csv`
    - Example: `2026-02-12.csv`
 4. Workers click "Reload Data" button next morning
