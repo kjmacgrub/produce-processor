@@ -1579,9 +1579,28 @@ const ProduceProcessorApp = () => {
                     : '0 2px 8px rgba(0,0,0,0.08)',
                   transition: 'all 0.2s ease',
                   border: activeItem?.id === item.id ? '2px solid #0f766e' : '2px solid transparent',
-                  position: 'relative'
+                  position: 'relative',
+                  paddingLeft: '2.8rem',
                 }}
               >
+                {/* Up/down arrows — left margin */}
+                <div style={{
+                  position: 'absolute', left: '0.5rem', top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center',
+                }}>
+                  {idx > 0 && (
+                    <div onClick={() => moveItemUp(item.id)} title="Move up" style={{ cursor: 'pointer', display: 'flex', userSelect: 'none' }}>
+                      <svg width="20" height="24" viewBox="0 0 22 26" fill="none"><polygon points="11,0 22,13 15,13 15,26 7,26 7,13 0,13" fill="#94a3b8"/></svg>
+                    </div>
+                  )}
+                  {idx < sortedArr.length - 1 && (
+                    <div onClick={() => moveItemDown(item.id)} title="Move down" style={{ cursor: 'pointer', display: 'flex', userSelect: 'none' }}>
+                      <svg width="20" height="24" viewBox="0 0 22 26" fill="none"><polygon points="11,26 22,13 15,13 15,0 7,0 7,13 0,13" fill="#94a3b8"/></svg>
+                    </div>
+                  )}
+                </div>
+
                 {/* Line 1: Cases badge + Item name + Done/Timer buttons */}
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1666,30 +1685,6 @@ const ProduceProcessorApp = () => {
                           fontWeight: '700'
                         }}>
                           {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'center' }}>
-                      {idx > 0 && (
-                        <div
-                          onClick={() => moveItemUp(item.id)}
-                          title="Move up"
-                          style={{ cursor: 'pointer', display: 'flex', userSelect: 'none' }}
-                        >
-                          <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <polygon points="11,0 22,13 15,13 15,26 7,26 7,13 0,13" fill="#1e293b"/>
-                          </svg>
-                        </div>
-                      )}
-                      {idx < sortedArr.length - 1 && (
-                        <div
-                          onClick={() => moveItemDown(item.id)}
-                          title="Move down"
-                          style={{ cursor: 'pointer', display: 'flex', userSelect: 'none' }}
-                        >
-                          <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <polygon points="11,26 22,13 15,13 15,0 7,0 7,13 0,13" fill="#1e293b"/>
-                          </svg>
                         </div>
                       )}
                     </div>
