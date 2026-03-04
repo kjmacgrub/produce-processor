@@ -45,6 +45,7 @@ const ProduceProcessorApp = () => {
   const [editingLocation, setEditingLocation] = useState(null);
   const [locationEditText, setLocationEditText] = useState('');
   const [showAddItem, setShowAddItem] = useState(false);
+  const [displayCount, setDisplayCount] = useState(3);
   const [newItemName, setNewItemName] = useState('');
   const [newItemLocation, setNewItemLocation] = useState('');
   const [newItemCases, setNewItemCases] = useState('1');
@@ -884,6 +885,44 @@ const ProduceProcessorApp = () => {
     await update(ref(db), updates);
   };
 
+  const moveItemToTop = async (itemId) => {
+    if (!db) return;
+    const sorted = [...items].sort((a, b) => {
+      const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
+      if (ao !== bo) return ao - bo;
+      const pa = a.priority === 'missing' ? 9999 : (a.priority ?? 9999);
+      const pb = b.priority === 'missing' ? 9999 : (b.priority ?? 9999);
+      if (pa !== pb) return pa - pb;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    const idx = sorted.findIndex(i => i.id === itemId);
+    if (idx <= 0) return;
+    const updates = {};
+    const topSortOrder = sorted[0].sortOrder ?? 0;
+    updates[`items/${itemId}/sortOrder`] = topSortOrder - 1;
+    updates[`items/${itemId}/priority`] = sorted[0].priority;
+    await update(ref(db), updates);
+  };
+
+  const moveItemToBottom = async (itemId) => {
+    if (!db) return;
+    const sorted = [...items].sort((a, b) => {
+      const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
+      if (ao !== bo) return ao - bo;
+      const pa = a.priority === 'missing' ? 9999 : (a.priority ?? 9999);
+      const pb = b.priority === 'missing' ? 9999 : (b.priority ?? 9999);
+      if (pa !== pb) return pa - pb;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    const idx = sorted.findIndex(i => i.id === itemId);
+    if (idx < 0 || idx >= sorted.length - 1) return;
+    const last = sorted[sorted.length - 1];
+    const updates = {};
+    updates[`items/${itemId}/sortOrder`] = (last.sortOrder ?? sorted.length - 1) + 1;
+    updates[`items/${itemId}/priority`] = last.priority;
+    await update(ref(db), updates);
+  };
+
   const updateLocation = async (itemId, newLocation) => { if (readOnlyMode || !db) return; await set(ref(db, `items/${itemId}/location`), newLocation); };
 
   const addNewItem = async () => {
@@ -1370,85 +1409,57 @@ const ProduceProcessorApp = () => {
             {pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
           </div>
 
-          {/* Progress Bar and Metrics */}
+          {/* Progress Bar and Welcome */}
           <div style={{ textAlign: 'center' }}>
-            {/* Progress Bar and Metrics */}
             <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
               {(() => {
                 const completedCases = completedItems.reduce((sum, item) => sum + item.cases, 0);
-                const remainingCases = originalTotalCases - completedCases;
-                const remainingItems = items.length;
                 const completedPercentage = originalTotalCases > 0 ? (completedCases / originalTotalCases) * 100 : 0;
-
-                  return (
-                    <div>
+                return (
+                  <div>
+                    <div style={{
+                      width: '100%',
+                      height: '24px',
+                      background: '#e2e8f0',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                      position: 'relative'
+                    }}>
                       <div style={{
-                        width: '100%',
-                        height: '24px',
-                        background: '#e2e8f0',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                        position: 'relative'
-                      }}>
-                        <div
-                          style={{
-                            width: `${completedPercentage}%`,
-                            height: '100%',
-                            background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-                            transition: 'width 0.5s ease',
-                            borderRadius: '20px'
-                          }}
-                        />
-                      </div>
-
+                        width: `${completedPercentage}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                        transition: 'width 0.5s ease',
+                        borderRadius: '20px'
+                      }} />
                       <div style={{
-                        marginTop: '0.75rem',
-                        textAlign: 'center'
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        color: 'rgba(255,255,255,0.75)',
+                        mixBlendMode: 'overlay',
+                        pointerEvents: 'none'
                       }}>
-                        <div id="remaining-section" style={{
-                          fontSize: '1rem',
-                          fontWeight: '700',
-                          color: '#64748b',
-                          marginBottom: '0.4rem',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em'
-                        }}>
-                          Remaining Work
-                        </div>
-
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          gap: '2rem',
-                          flexWrap: 'wrap'
-                        }}>
-                          <div>
-                            <div style={{
-                              fontSize: '2.2rem',
-                              fontWeight: '900',
-                              color: '#0f766e',
-                              lineHeight: '1',
-                              marginBottom: '0.15rem'
-                            }}>
-                              {remainingCases}
-                            </div>
-                            <div style={{
-                              fontSize: '1rem',
-                              fontWeight: '700',
-                              color: '#64748b'
-                            }}>
-                              cases
-                            </div>
-                          </div>
-
-                        </div>
+                        total cases done today
                       </div>
                     </div>
-                  );
-                })()}
-              </div>
+                    <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
+                      Welcome to produce processing!
+                    </div>
+                    <div style={{ marginTop: '0.4rem', fontSize: '1.8rem', color: '#64748b' }}>
+                      Here are the next items to work on...
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
           <div
@@ -1555,6 +1566,37 @@ const ProduceProcessorApp = () => {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
           {/* Left column: Todo items */}
           <div style={{ flex: '1 1 0', minWidth: 'min(650px, 100%)', display: 'grid', gap: '0.75rem' }}>
+
+            {/* Display count control */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem',
+              padding: '0.6rem 1rem', background: '#f8fafc',
+              borderRadius: '12px', border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ fontSize: '1rem', fontWeight: '600', color: '#64748b' }}>
+                # of items to display
+              </div>
+              <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{
+                width: '2rem', height: '2rem', borderRadius: '50%',
+                border: '2px solid #cbd5e1', background: 'white',
+                fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1
+              }}>−</button>
+              <div style={{ fontSize: '1.4rem', fontWeight: '700', color: '#3a6b1e', minWidth: '2rem', textAlign: 'center' }}>
+                {displayCount ?? items.length}
+              </div>
+              <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{
+                width: '2rem', height: '2rem', borderRadius: '50%',
+                border: '2px solid #cbd5e1', background: 'white',
+                fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1
+              }}>+</button>
+              <button onClick={() => setDisplayCount(null)} style={{
+                padding: '0.25rem 0.75rem', borderRadius: '8px',
+                border: '2px solid ' + (displayCount === null ? '#3a6b1e' : '#cbd5e1'),
+                background: displayCount === null ? '#3a6b1e' : 'white',
+                color: displayCount === null ? 'white' : '#64748b',
+                fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer'
+              }}>All</button>
+            </div>
             {[...items].sort((a, b) => {
               const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
               if (ao !== bo) return ao - bo;
@@ -1562,7 +1604,7 @@ const ProduceProcessorApp = () => {
               const pb = b.priority === 'missing' ? 9999 : (b.priority ?? 9999);
               if (pa !== pb) return pa - pb;
               return (a.name || '').localeCompare(b.name || '');
-            }).map((item, idx, sortedArr) => {
+            }).slice(0, displayCount ?? undefined).map((item, idx, sortedArr) => {
             const sku = getSKU(item.name);
             const stats = sku ? getStats(sku) : null;
             const hasVideo = sku ? videos[sku] : null;
@@ -1627,66 +1669,6 @@ const ProduceProcessorApp = () => {
                       }}>
                         {item.cases}
                       </div>
-                    </div>
-                    <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                      <div style={{
-                        fontSize: '0.55rem',
-                        fontWeight: '700',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        marginBottom: '0.1rem'
-                      }}>
-                        Priority
-                      </div>
-                      {!readOnlyMode ? (
-                        <select
-                          value={item.priority}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === 'EDIT') {
-                              setShowPriorityEditor(true);
-                            } else {
-                              updatePriority(item.id, val);
-                            }
-                          }}
-                          style={{
-                            background: '#64748b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.4rem 0.6rem',
-                            fontSize: '0.85rem',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            appearance: 'none',
-                            WebkitAppearance: 'none',
-                            textAlign: 'center',
-                            textAlignLast: 'center'
-                          }}
-                        >
-                          <option value={item.priority}>
-                            {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
-                          </option>
-                          {historicalPriorities.filter(p => p !== item.priority).map(p => (
-                            <option key={p} value={p}>
-                              {p === 'missing' ? 'None' : p === 0 ? 'Floor' : `P${p}`}
-                            </option>
-                          ))}
-                          <option value="EDIT">Edit...</option>
-                        </select>
-                      ) : (
-                        <div style={{
-                          background: '#64748b',
-                          color: 'white',
-                          borderRadius: '8px',
-                          padding: '0.4rem 0.6rem',
-                          fontSize: '0.85rem',
-                          fontWeight: '700'
-                        }}>
-                          {item.priority === 'missing' ? 'None' : item.priority === 0 ? 'Floor' : `P${item.priority}`}
-                        </div>
-                      )}
                     </div>
                     <h3 style={{
                       margin: 0,
@@ -2069,7 +2051,8 @@ const ProduceProcessorApp = () => {
 
           </div>
 
-          {/* Right column: Completed items */}
+
+{/* Right column: Completed items */}
             {completedItems.length > 0 && (
             <div style={{ flex: '0 0 300px', minWidth: 0, display: 'grid', gap: '0.5rem' }}>
                 <div id="completed-section" style={{
