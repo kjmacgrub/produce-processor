@@ -1456,6 +1456,13 @@ const ProduceProcessorApp = () => {
                     <div style={{ marginTop: '0.4rem', fontSize: '1.8rem', color: '#64748b' }}>
                       Here are the next items to work on...
                     </div>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: '600', color: '#64748b' }}># of items to show</div>
+                      <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>−</button>
+                      <div style={{ fontSize: '1.4rem', fontWeight: '700', color: '#3a6b1e', minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
+                      <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>+</button>
+                      <button onClick={() => setDisplayCount(null)} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: '2px solid ' + (displayCount === null ? '#3a6b1e' : '#cbd5e1'), background: displayCount === null ? '#3a6b1e' : 'white', color: displayCount === null ? 'white' : '#64748b', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
+                    </div>
                   </div>
                 );
               })()}
@@ -1567,36 +1574,6 @@ const ProduceProcessorApp = () => {
           {/* Left column: Todo items */}
           <div style={{ flex: '1 1 0', minWidth: 'min(650px, 100%)', display: 'grid', gap: '0.75rem' }}>
 
-            {/* Display count control */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem',
-              padding: '0.6rem 1rem', background: '#f8fafc',
-              borderRadius: '12px', border: '1px solid #e2e8f0'
-            }}>
-              <div style={{ fontSize: '1rem', fontWeight: '600', color: '#64748b' }}>
-                # of items to display
-              </div>
-              <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{
-                width: '2rem', height: '2rem', borderRadius: '50%',
-                border: '2px solid #cbd5e1', background: 'white',
-                fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1
-              }}>−</button>
-              <div style={{ fontSize: '1.4rem', fontWeight: '700', color: '#3a6b1e', minWidth: '2rem', textAlign: 'center' }}>
-                {displayCount ?? items.length}
-              </div>
-              <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{
-                width: '2rem', height: '2rem', borderRadius: '50%',
-                border: '2px solid #cbd5e1', background: 'white',
-                fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1
-              }}>+</button>
-              <button onClick={() => setDisplayCount(null)} style={{
-                padding: '0.25rem 0.75rem', borderRadius: '8px',
-                border: '2px solid ' + (displayCount === null ? '#3a6b1e' : '#cbd5e1'),
-                background: displayCount === null ? '#3a6b1e' : 'white',
-                color: displayCount === null ? 'white' : '#64748b',
-                fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer'
-              }}>All</button>
-            </div>
             {[...items].sort((a, b) => {
               const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
               if (ao !== bo) return ao - bo;
