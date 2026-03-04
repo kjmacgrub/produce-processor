@@ -45,7 +45,7 @@ const ProduceProcessorApp = () => {
   const [editingLocation, setEditingLocation] = useState(null);
   const [locationEditText, setLocationEditText] = useState('');
   const [showAddItem, setShowAddItem] = useState(false);
-  const [displayCount, setDisplayCount] = useState(3);
+  const [displayCount, setDisplayCount] = useState(2);
   const [newItemName, setNewItemName] = useState('');
   const [newItemLocation, setNewItemLocation] = useState('');
   const [newItemCases, setNewItemCases] = useState('1');
@@ -1643,280 +1643,149 @@ const ProduceProcessorApp = () => {
                   )}
                 </div>
 
-                {/* Line 1: Cases badge + Item name + Done/Timer buttons */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Line 1: Cases badge + Item name */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <div style={{ flexShrink: 0, textAlign: 'center' }}>
                       <div style={{
-                        fontSize: '0.55rem',
-                        fontWeight: '700',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        marginBottom: '0.1rem'
-                      }}>
-                        Cases
-                      </div>
+                        fontSize: '0.55rem', fontWeight: '700', color: '#64748b',
+                        textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.1rem'
+                      }}>Cases</div>
                       <div style={{
-                        background: '#0f766e',
-                        color: 'white',
-                        borderRadius: '8px',
-                        padding: '0.3rem 0.7rem',
-                        fontSize: '1.1rem',
-                        fontWeight: '700',
-                        minWidth: '3.5rem',
-                        textAlign: 'center'
+                        background: '#0f766e', color: 'white', borderRadius: '8px',
+                        padding: '0.3rem 0.7rem', fontSize: '1.1rem', fontWeight: '700',
+                        minWidth: '3.5rem', textAlign: 'center'
                       }}>
                         {item.cases}
                       </div>
                     </div>
-                    <h3 style={{
-                      margin: 0,
-                      fontSize: '1.4rem',
-                      fontWeight: '700',
-                      color: '#1e293b',
-                      flex: 1,
-                      lineHeight: 1.2
-                    }}>
+                    <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', flex: 1, lineHeight: 1.2 }}>
                       {getDisplayName(item.name)}
                     </h3>
+                  </div>
+                </div>
 
-                    {!readOnlyMode && (
-                      <button
-                        onClick={() => markComplete(item)}
-                        style={{
-                          background: (itemsInProcess[item.id] || itemsPaused[item.id])
-                            ? '#1e293b'
-                            : '#10b981',
-                          color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
-                          border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
-                          borderRadius: '8px',
-                          padding: '0.4rem 1.2rem',
-                          cursor: 'pointer',
-                          fontWeight: '700',
-                          fontSize: '0.95rem',
-                          flexShrink: 0
-                        }}
-                      >
-                        {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
+                {/* Line 2: [Instructions + Video/Timer] + Done button */}
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {/* Instructions box */}
+                  <div style={{
+                    background: '#fef3c7', borderRadius: '8px',
+                    padding: '0.5rem 0.75rem', paddingBottom: '0.85rem',
+                    border: '1px solid #fbbf24', flex: '1 1 auto',
+                    display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                    flexWrap: 'wrap', position: 'relative'
+                  }}>
+                    <span style={{
+                      fontSize: '0.6rem', fontWeight: '700', color: '#92400e',
+                      textTransform: 'uppercase', letterSpacing: '0.05em',
+                      position: 'absolute', bottom: '-0.45rem', left: '50%',
+                      transform: 'translateX(-50%)', background: '#fef3c7',
+                      padding: '0 0.4rem', whiteSpace: 'nowrap'
+                    }}>Instructions</span>
+                    <div style={{ display: 'flex', alignItems: 'center', fontSize: '1.2rem', color: '#78350f', flex: '1', minWidth: 0 }}>
+                      {editingLocation === item.id ? (
+                        <input
+                          type="text"
+                          value={locationEditText}
+                          onChange={(e) => setLocationEditText(e.target.value)}
+                          onBlur={() => { updateLocation(item.id, locationEditText); setEditingLocation(null); }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { updateLocation(item.id, locationEditText); setEditingLocation(null); }
+                            else if (e.key === 'Escape') { setEditingLocation(null); }
+                          }}
+                          autoFocus
+                          style={{
+                            fontSize: '1.2rem', fontWeight: '600', color: '#78350f',
+                            background: 'white', border: '1px solid #fbbf24',
+                            borderRadius: '6px', padding: '0.3rem', textAlign: 'center', width: '100%'
+                          }}
+                        />
+                      ) : (
+                        <div
+                          onClick={() => { if (!readOnlyMode) { setEditingLocation(item.id); setLocationEditText(item.location); } }}
+                          style={{ fontWeight: '600', cursor: readOnlyMode ? 'default' : 'pointer', display: 'flex', alignItems: 'flex-start', gap: '0.3rem', flexWrap: 'wrap', wordBreak: 'break-word' }}
+                        >
+                          <span style={{ whiteSpace: 'normal' }}>{item.location}</span>
+                          {!readOnlyMode && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Video + Timer buttons — below instructions, inside left column */}
+                  {!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
+                    {hasVideo ? (
+                      <button onClick={() => setPlayingVideo(sku)} style={{
+                        background: '#059669', color: 'white', border: 'none', borderRadius: '8px',
+                        padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                      }}>
+                        <Play size={16} /> Watch
+                      </button>
+                    ) : (
+                      <button onClick={() => setShowVideoUpload(item.id)} style={{
+                        background: '#94a3b8', color: 'white', border: 'none', borderRadius: '8px',
+                        padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                      }}>
+                        <Video size={16} /> Video
                       </button>
                     )}
-
-                    {!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                      <>
-                        <button
-                          onClick={() => handleBeginProcessing(item.id)}
-                          style={{
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.4rem 1.2rem',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            fontSize: '0.95rem',
-                            flexShrink: 0
-                          }}
-                        >
-                          Timer
-                        </button>
-                        {(() => {
-                          const sku = getSKU(item.name);
-                          const stats = sku ? getStats(sku) : null;
-                          return stats ? (
-                            <span
-                              onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined}
-                              style={{
-                                background: 'rgba(15, 118, 110, 0.08)',
-                                border: '1px solid rgba(15, 118, 110, 0.25)',
-                                borderRadius: '6px',
-                                padding: '0.15rem 0.5rem',
-                                fontSize: '0.8rem',
-                                color: '#0f766e',
-                                fontWeight: '600',
-                                whiteSpace: 'nowrap',
-                                cursor: !isIPad ? 'pointer' : 'default',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                lineHeight: 1.3
-                              }}
-                            >
-                              <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
-                                Avg Time per Case
-                              </span>
-                              <span>
-                                {formatTimeWithUnits(stats.average)}
-                              </span>
-                              <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>
-                                {stats.totalCases} cases timed
-                              </span>
-                            </span>
-                          ) : null;
-                        })()}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Line 2: Instructions + Video */}
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch', marginTop: '0.75rem' }}>
-                    <div style={{
-                      background: '#fef3c7',
-                      borderRadius: '8px',
-                      padding: '0.5rem 0.75rem',
-                      paddingBottom: '0.85rem',
-                      border: '1px solid #fbbf24',
-                      flex: '1 1 auto',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.5rem',
-                      flexWrap: 'wrap',
-                      position: 'relative'
+                    <button onClick={() => handleBeginProcessing(item.id)} style={{
+                      background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
+                      padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
                     }}>
-                      <span style={{
-                        fontSize: '0.6rem',
-                        fontWeight: '700',
-                        color: '#92400e',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        position: 'absolute',
-                        bottom: '-0.45rem',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: '#fef3c7',
-                        padding: '0 0.4rem',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        Instructions
-                      </span>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '1.2rem',
-                        color: '#78350f',
-                        flex: '1',
-                        minWidth: 0
-                      }}>
-                        {editingLocation === item.id ? (
-                          <input
-                            type="text"
-                            value={locationEditText}
-                            onChange={(e) => setLocationEditText(e.target.value)}
-                            onBlur={() => {
-                              updateLocation(item.id, locationEditText);
-                              setEditingLocation(null);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                updateLocation(item.id, locationEditText);
-                                setEditingLocation(null);
-                              } else if (e.key === 'Escape') {
-                                setEditingLocation(null);
-                              }
-                            }}
-                            autoFocus
-                            style={{
-                              fontSize: '1.2rem',
-                              fontWeight: '600',
-                              color: '#78350f',
-                              background: 'white',
-                              border: '1px solid #fbbf24',
-                              borderRadius: '6px',
-                              padding: '0.3rem',
-                              textAlign: 'center',
-                              width: '100%'
-                            }}
-                          />
-                        ) : (
-                          <div
-                            onClick={() => {
-                              if (!readOnlyMode) {
-                                setEditingLocation(item.id);
-                                setLocationEditText(item.location);
-                              }
-                            }}
-                            style={{
-                              fontWeight: '600',
-                              cursor: readOnlyMode ? 'default' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '0.3rem',
-                              flexWrap: 'wrap',
-                              wordBreak: 'break-word'
-                            }}
-                          >
-                            <span style={{ whiteSpace: 'normal' }}>{item.location}</span>
-                            {!readOnlyMode && (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                style={{ opacity: 0.5 }}
-                              >
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                              </svg>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {!readOnlyMode && (
-                      <>
-                        {hasVideo ? (
-                          <button
-                            onClick={() => {
-                              setPlayingVideo(sku);
-                            }}
-                            style={{
-                              background: '#059669',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '8px',
-                              padding: '0.4rem 1rem',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              fontWeight: '700',
-                              fontSize: '0.85rem',
-                              flexShrink: 0
-                            }}
-                          >
-                            <Play size={16} />
-                            Watch
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setShowVideoUpload(item.id)}
-                            style={{
-                              background: '#94a3b8',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '8px',
-                              padding: '0.4rem 1rem',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              fontWeight: '700',
-                              fontSize: '0.85rem',
-                              flexShrink: 0
-                            }}
-                          >
-                            <Video size={16} />
-                            Video
-                          </button>
-                        )}
-                      </>
-                    )}
+                      Timer
+                    </button>
+                    {(() => {
+                      const sku = getSKU(item.name);
+                      const stats = sku ? getStats(sku) : null;
+                      return stats ? (
+                        <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
+                          background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
+                          borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
+                          color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
+                          cursor: !isIPad ? 'pointer' : 'default',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
+                        }}>
+                          <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
+                          <span>{formatTimeWithUnits(stats.average)}</span>
+                          <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
+                  )}
+                  </div>{/* end left column */}
+
+                  {/* Done button — tall, fixed height */}
+                  {!readOnlyMode && (
+                    <button
+                      onClick={() => markComplete(item)}
+                      style={{
+                        background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
+                        color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
+                        border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
+                        borderRadius: '10px',
+                        padding: '0 2rem',
+                        cursor: 'pointer',
+                        fontWeight: '900',
+                        fontSize: '1.6rem',
+                        flexShrink: 0,
+                        height: '100px',
+                        minWidth: '100px'
+                      }}
+                    >
+                      {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
+                    </button>
+                  )}
                 </div>
 
                 {/* Inline Timer Overlay */}
