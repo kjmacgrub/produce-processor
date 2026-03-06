@@ -388,6 +388,15 @@ const ProduceProcessorApp = () => {
     } catch (error) { console.error('Error saving completion photo:', error); alert('Error saving photo.'); }
   };
 
+  const deleteCompletionPhotoFromDB = async (sku) => {
+    try {
+      const idb = await openDB();
+      const tx = idb.transaction(['completionPhotos'], 'readwrite');
+      tx.objectStore('completionPhotos').delete(sku);
+      if (db) await remove(ref(db, `completionPhotos/${sku}`));
+    } catch (error) { console.error('Error deleting completion photo:', error); }
+  };
+
   const loadAllCompletionPhotosFromDB = async () => {
     try {
       const idb = await openDB();
@@ -2009,7 +2018,7 @@ const ProduceProcessorApp = () => {
                                 delBtn.style.cssText = 'background:#ef4444;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
                                 delBtn.onclick = async () => {
                                   if (!confirm('Delete this photo?')) return;
-                                  if (db) await remove(ref(db, `completionPhotos/${sku}`));
+                                  await deleteCompletionPhotoFromDB(sku);
                                   setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
                                   modal.remove();
                                 };
@@ -2367,9 +2376,7 @@ const ProduceProcessorApp = () => {
                             const item = showPhotoChoice;
                             setShowPhotoChoice(null);
 
-                            if (db) {
-                              await remove(ref(db, `completionPhotos/${sku}`));
-                            }
+                            await deleteCompletionPhotoFromDB(sku);
                             setCompletionPhotos(prev => {
                               const updated = {...prev};
                               delete updated[sku];
@@ -3784,7 +3791,7 @@ const ProduceProcessorApp = () => {
                               <button
                                 onClick={async () => {
                                   if (!confirm(`Delete photo for ${name}?`)) return;
-                                  if (db) await remove(ref(db, `completionPhotos/${sku}`));
+                                  await deleteCompletionPhotoFromDB(sku);
                                   setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
                                 }}
                                 style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.3rem 0.75rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
