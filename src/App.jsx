@@ -39,7 +39,6 @@ const ProduceProcessorApp = () => {
   const [completionPhotos, setCompletionPhotos] = useState({});
   const [showCompletionCamera, setShowCompletionCamera] = useState(null);
   const [showPhotoChoice, setShowPhotoChoice] = useState(null);
-  const [completionMediaStream, setCompletionMediaStream] = useState(null);
   const [photoTaken, setPhotoTaken] = useState(false);
   const [photoData, setPhotoData] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
@@ -68,8 +67,7 @@ const ProduceProcessorApp = () => {
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const videoPreviewRef = useRef(null);
-  const completionVideoRef = useRef(null);
-  const completionCanvasRef = useRef(null);
+  const nativeCameraInputRef = useRef(null);
   const playbackVideoRef = useRef(null);
 
   // Check Firebase connection
@@ -102,23 +100,9 @@ const ProduceProcessorApp = () => {
     return () => unsub();
   }, []);
 
-  // Handle completion camera stream
+  // Reset photo state when camera modal closes
   useEffect(() => {
-    if (!showCompletionCamera) { setPhotoTaken(false); setPhotoData(null); return; }
-    const startCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
-        setCompletionMediaStream(stream);
-        setTimeout(() => {
-          if (completionVideoRef.current) {
-            completionVideoRef.current.srcObject = stream;
-            completionVideoRef.current.play().catch(e => console.log('Video play failed:', e));
-          }
-        }, 100);
-      } catch (error) { console.error('Error accessing camera:', error); alert('Could not access camera.'); }
-    };
-    startCamera();
-    return () => { if (completionMediaStream) { completionMediaStream.getTracks().forEach(track => track.stop()); setCompletionMediaStream(null); } };
+    if (!showCompletionCamera) { setPhotoTaken(false); setPhotoData(null); }
   }, [showCompletionCamera]);
 
   // Update elapsed time for items in process every second
@@ -2548,35 +2532,26 @@ const ProduceProcessorApp = () => {
                     justifyContent: 'center',
                     flexWrap: 'wrap'
                   }}>
-                    <button
-                      onClick={() => {
-                        if (completionVideoRef.current && completionCanvasRef.current) {
-                          const video = completionVideoRef.current;
-                          const canvas = completionCanvasRef.current;
-                          canvas.width = video.videoWidth;
-                          canvas.height = video.videoHeight;
-                          const ctx = canvas.getContext('2d');
-                          ctx.drawImage(video, 0, 0);
-
-                          canvas.toBlob((blob) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              const photoDataObj = {
-                                data: reader.result,
-                                timestamp: new Date().toISOString()
-                              };
-                              setPhotoData(photoDataObj);
-                              setPhotoTaken(true);
-
-                              if (completionMediaStream) {
-                                completionMediaStream.getTracks().forEach(track => track.stop());
-                                setCompletionMediaStream(null);
-                              }
-                            };
-                            reader.readAsDataURL(blob);
-                          }, 'image/jpeg', 0.9);
-                        }
+                    <input
+                      ref={nativeCameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files && e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setPhotoData({ data: reader.result, timestamp: new Date().toISOString() });
+                          setPhotoTaken(true);
+                        };
+                        reader.readAsDataURL(file);
+                        e.target.value = '';
                       }}
+                    />
+                    <button
+                      onClick={() => nativeCameraInputRef.current && nativeCameraInputRef.current.click()}
                       style={{
                         background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: 'white',
@@ -2595,13 +2570,7 @@ const ProduceProcessorApp = () => {
                     </button>
 
                     <button
-                      onClick={() => {
-                        if (completionMediaStream) {
-                          completionMediaStream.getTracks().forEach(track => track.stop());
-                          setCompletionMediaStream(null);
-                        }
-                        finalizeCompletion(showCompletionCamera, null);
-                      }}
+                      onClick={() => finalizeCompletion(showCompletionCamera, null)}
                       style={{
                         background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
                         color: 'white',
@@ -2620,13 +2589,7 @@ const ProduceProcessorApp = () => {
                     </button>
 
                     <button
-                      onClick={() => {
-                        if (completionMediaStream) {
-                          completionMediaStream.getTracks().forEach(track => track.stop());
-                          setCompletionMediaStream(null);
-                        }
-                        setShowCompletionCamera(null);
-                      }}
+                      onClick={() => setShowCompletionCamera(null)}
                       style={{
                         background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: 'white',
@@ -2644,29 +2607,6 @@ const ProduceProcessorApp = () => {
                       Cancel
                     </button>
                   </div>
-                </div>
-
-                <div style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#000',
-                  padding: '1rem'
-                }}>
-                  <video
-                    ref={completionVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      width: 'auto',
-                      height: 'auto',
-                      borderRadius: '8px'
-                    }}
-                  />
                 </div>
               </>
             ) : (
@@ -2689,31 +2629,9 @@ const ProduceProcessorApp = () => {
                   </h3>
 
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       setPhotoTaken(false);
                       setPhotoData(null);
-                      try {
-                        const stream = await navigator.mediaDevices.getUserMedia({
-                          video: {
-                            facingMode: 'environment',
-                            width: { ideal: 1920 },
-                            height: { ideal: 1080 }
-                          },
-                          audio: false
-                        });
-                        setCompletionMediaStream(stream);
-
-                        setTimeout(() => {
-                          if (completionVideoRef.current) {
-                            completionVideoRef.current.srcObject = stream;
-                            completionVideoRef.current.play().catch(e => {
-                              console.log('Video play failed, but stream should still work:', e);
-                            });
-                          }
-                        }, 100);
-                      } catch (error) {
-                        console.error('Error restarting camera:', error);
-                      }
                     }}
                     style={{
                       background: 'transparent',
@@ -2783,7 +2701,6 @@ const ProduceProcessorApp = () => {
               </>
             )}
 
-            <canvas ref={completionCanvasRef} style={{ display: 'none' }} />
           </div>
         )}
 
