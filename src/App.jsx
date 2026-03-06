@@ -212,11 +212,13 @@ const ProduceProcessorApp = () => {
     return () => unsub();
   }, []);
 
+  const [photosLoaded, setPhotosLoaded] = useState(false);
+
   // Load completion photos from Firebase
   useEffect(() => {
     if (!db) return;
     const photosRef = ref(db, 'completionPhotos');
-    const unsub = onValue(photosRef, (snapshot) => { const data = snapshot.val(); if (data) { setCompletionPhotos(data); } else { setCompletionPhotos({}); } });
+    const unsub = onValue(photosRef, (snapshot) => { const data = snapshot.val(); if (data) { setCompletionPhotos(data); } else { setCompletionPhotos({}); } setPhotosLoaded(true); });
     return () => unsub();
   }, []);
 
@@ -3754,7 +3756,9 @@ const ProduceProcessorApp = () => {
                   >&times;</button>
                 </div>
 
-                {allSKUs.length === 0 ? (
+                {!photosLoaded ? (
+                  <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>Loading...</div>
+                ) : allSKUs.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>No photos or videos found.</div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
