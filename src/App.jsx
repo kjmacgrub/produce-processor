@@ -1400,21 +1400,12 @@ const ProduceProcessorApp = () => {
 
           {/* Date display */}
           <div
-            onClick={!isIPad && pdfDate ? async () => {
-              const dates = await listAvailableCSVs();
-              setAvailableDates(dates);
-              setShowLanding(true);
-            } : undefined}
             style={{
               fontSize: '1.6rem',
               fontWeight: '700',
               color: '#64748b',
               textAlign: 'center',
-              marginBottom: '0.5rem',
-              cursor: !isIPad && pdfDate ? 'pointer' : 'default',
-              textDecoration: !isIPad && pdfDate ? 'underline' : 'none',
-              textDecorationStyle: 'dotted',
-              textUnderlineOffset: '6px'
+              marginBottom: '0.5rem'
             }}
           >
             {pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
