@@ -1438,16 +1438,19 @@ const ProduceProcessorApp = () => {
                         inset: 0,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
+                        justifyContent: 'space-between',
                         fontSize: '0.75rem',
                         fontWeight: '700',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
                         color: 'rgba(255,255,255,0.75)',
                         mixBlendMode: 'overlay',
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        paddingLeft: '10px',
+                        paddingRight: '10px'
                       }}>
-                        total cases done today
+                        <span>cases done</span>
+                        <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
                       </div>
                     </div>
                     <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
