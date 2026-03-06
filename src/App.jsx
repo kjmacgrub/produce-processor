@@ -1449,7 +1449,7 @@ const ProduceProcessorApp = () => {
                         paddingLeft: '10px',
                         paddingRight: '10px'
                       }}>
-                        <span>cases done</span>
+                        <span>{completedCases} cases done</span>
                         <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
                       </div>
                     </div>
