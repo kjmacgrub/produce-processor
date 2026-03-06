@@ -1444,25 +1444,21 @@ const ProduceProcessorApp = () => {
                         transition: 'width 0.5s ease',
                         borderRadius: '20px'
                       }} />
-                      <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: '0.75rem',
-                        fontWeight: '700',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
-                        color: '#fef3c7',
-                        mixBlendMode: 'overlay',
-                        pointerEvents: 'none',
-                        paddingLeft: '10px',
-                        paddingRight: '10px'
-                      }}>
-                        <span>{completedCases} cases done</span>
-                        <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
-                      </div>
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: '#64748b',
+                      marginTop: '0.35rem',
+                      paddingLeft: '2px',
+                      paddingRight: '2px'
+                    }}>
+                      <span>{completedCases} cases done</span>
+                      <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
                     </div>
                     <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
                       Welcome to produce processing!
