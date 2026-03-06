@@ -1454,7 +1454,7 @@ const ProduceProcessorApp = () => {
                         fontWeight: '700',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
-                        color: 'rgba(255,255,255,0.75)',
+                        color: '#fef3c7',
                         mixBlendMode: 'overlay',
                         pointerEvents: 'none',
                         paddingLeft: '10px',
