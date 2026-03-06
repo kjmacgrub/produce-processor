@@ -62,6 +62,8 @@ const ProduceProcessorApp = () => {
   const [commits, setCommits] = useState([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showMediaManager, setShowMediaManager] = useState(false);
+  const [mediaVideoURLs, setMediaVideoURLs] = useState({});
 
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -234,6 +236,15 @@ const ProduceProcessorApp = () => {
     return () => unsub();
   }, []);
 
+  // Load video URLs for media manager
+  useEffect(() => {
+    if (!showMediaManager) { setMediaVideoURLs({}); return; }
+    Object.keys(videos).forEach(async (sku) => {
+      const url = await getVideoURL(sku);
+      if (url) setMediaVideoURLs(prev => ({ ...prev, [sku]: url }));
+    });
+  }, [showMediaManager, videos]);
+
   // Load video index from Firebase (real-time sync across devices)
   useEffect(() => {
     if (!db) return;
@@ -366,12 +377,12 @@ const ProduceProcessorApp = () => {
     });
   };
 
-  const saveCompletionPhotoToDB = async (sku, pd) => {
+  const saveCompletionPhotoToDB = async (sku, pd, itemName) => {
     try {
       const idb = await openDB();
       const tx = idb.transaction(['completionPhotos'], 'readwrite');
-      tx.objectStore('completionPhotos').put({ id: sku, data: pd.data, timestamp: pd.timestamp });
-      if (db) await set(ref(db, `completionPhotos/${sku}`), { data: pd.data, timestamp: pd.timestamp });
+      tx.objectStore('completionPhotos').put({ id: sku, data: pd.data, timestamp: pd.timestamp, name: itemName });
+      if (db) await set(ref(db, `completionPhotos/${sku}`), { data: pd.data, timestamp: pd.timestamp, name: itemName });
     } catch (error) { console.error('Error saving completion photo:', error); alert('Error saving photo.'); }
   };
 
@@ -450,7 +461,7 @@ const ProduceProcessorApp = () => {
       else throw new Error('Unknown video data format');
       if (!blob || blob.size === 0) throw new Error('Video blob is empty or invalid');
       await uploadBytes(storageRef, blob, { contentType: videoData.type || 'video/webm', customMetadata: { sku, uploadedAt: new Date().toISOString() } });
-      if (db) await set(ref(db, `videoIndex/${sku}`), { exists: true, filename, storageRef: `produce-videos/${filename}` });
+      if (db) await set(ref(db, `videoIndex/${sku}`), { exists: true, filename, storageRef: `produce-videos/${filename}`, name: videoData.itemName });
     } catch (error) { console.error('Error uploading video:', error); throw error; }
   };
 
@@ -741,7 +752,7 @@ const ProduceProcessorApp = () => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        await saveVideoToDB(sku, { data: e.target.result, name: file.name, type: file.type });
+        await saveVideoToDB(sku, { data: e.target.result, name: file.name, type: file.type, itemName: getDisplayName(item.name) });
         setShowVideoUpload(null);
       } catch (error) { console.error('Error saving video:', error); alert('Error saving video.'); setShowVideoUpload(null); }
     };
@@ -785,7 +796,7 @@ const ProduceProcessorApp = () => {
         const mimeType = recorder.mimeType || 'video/webm';
         const blob = new Blob(chunks, { type: mimeType });
         try {
-          await saveVideoToDB(sku, { data: blob, name: `recording-${Date.now()}.webm`, type: blob.type });
+          await saveVideoToDB(sku, { data: blob, name: `recording-${Date.now()}.webm`, type: blob.type, itemName: getDisplayName(item.name) });
           const refreshedVideos = await loadAllVideosFromDB();
           setVideos(refreshedVideos);
           setIsRecording(false); setRecordingItemId(null); setShowVideoUpload(null);
@@ -974,7 +985,7 @@ const ProduceProcessorApp = () => {
   const finalizeCompletion = async (item, pd) => {
     if (readOnlyMode || !db) return;
     const sku = getSKU(item.name);
-    if (pd && sku) { await saveCompletionPhotoToDB(sku, pd); setCompletionPhotos(prev => ({ ...prev, [sku]: pd })); }
+    if (pd && sku) { await saveCompletionPhotoToDB(sku, pd, getDisplayName(item.name)); setCompletionPhotos(prev => ({ ...prev, [sku]: { ...pd, name: getDisplayName(item.name) } })); }
     let totalTime = null;
     if (itemsInProcess[item.id]) totalTime = (Date.now() - itemsInProcess[item.id]) / 1000;
     else if (itemsPaused[item.id] && pausedElapsedTime[item.id] !== undefined) totalTime = pausedElapsedTime[item.id];
@@ -3436,6 +3447,28 @@ const ProduceProcessorApp = () => {
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
                   Changelog
                 </button>
+
+                <button
+                  onClick={() => { setShowMenu(false); setShowMediaManager(true); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                  Manage Photos & Videos
+                </button>
               </div>
             </div>
           </div>
@@ -3708,6 +3741,99 @@ const ProduceProcessorApp = () => {
             </div>
           </div>
         )}
+
+        {/* Media Manager Modal */}
+        {showMediaManager && (() => {
+          const allItems = [...items, ...completedItems];
+          const skuToName = {};
+          allItems.forEach(item => { const sku = getSKU(item.name); if (sku) skuToName[sku] = getDisplayName(item.name); });
+          const allSKUs = [...new Set([...Object.keys(completionPhotos), ...Object.keys(videos)])];
+          return (
+            <div
+              onClick={() => setShowMediaManager(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, overflow: 'auto' }}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{ background: 'white', minHeight: '100vh', padding: '1.5rem', maxWidth: '900px', margin: '0 auto' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: '800', color: '#1e293b' }}>Photos & Videos</h2>
+                  <button
+                    onClick={() => setShowMediaManager(false)}
+                    style={{ background: 'none', border: 'none', fontSize: '1.8rem', color: '#64748b', cursor: 'pointer' }}
+                  >&times;</button>
+                </div>
+
+                {allSKUs.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>No photos or videos found.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {allSKUs.map(sku => {
+                      const name = completionPhotos[sku]?.name || videos[sku]?.name || skuToName[sku] || `SKU #${sku}`;
+                      const photo = completionPhotos[sku];
+                      const hasVideo = videos[sku]?.exists;
+                      const videoURL = mediaVideoURLs[sku];
+                      return (
+                        <div key={sku} style={{ background: '#f8fafc', borderRadius: '16px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                          <div style={{ flex: '1 1 150px', fontWeight: '700', fontSize: '1rem', color: '#1e293b' }}>
+                            {name}
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '400' }}>#{sku}</div>
+                          </div>
+
+                          {photo && (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                              <img
+                                src={photo.data}
+                                alt={name}
+                                style={{ width: '100px', height: '80px', objectFit: 'cover', borderRadius: '10px', border: '2px solid #e2e8f0' }}
+                              />
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Delete photo for ${name}?`)) return;
+                                  if (db) await remove(ref(db, `completionPhotos/${sku}`));
+                                  setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
+                                }}
+                                style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.3rem 0.75rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
+                              >Delete Photo</button>
+                            </div>
+                          )}
+
+                          {hasVideo && (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                              {videoURL ? (
+                                <video
+                                  src={videoURL}
+                                  muted
+                                  preload="metadata"
+                                  style={{ width: '100px', height: '80px', objectFit: 'cover', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#000' }}
+                                  onLoadedMetadata={e => { e.target.currentTime = 0.1; }}
+                                />
+                              ) : (
+                                <div style={{ width: '100px', height: '80px', borderRadius: '10px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+                                </div>
+                              )}
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Delete video for ${name}?`)) return;
+                                  await deleteVideoFromDB(sku);
+                                  setVideos(prev => { const u = {...prev}; delete u[sku]; return u; });
+                                  setMediaVideoURLs(prev => { const u = {...prev}; delete u[sku]; return u; });
+                                }}
+                                style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.3rem 0.75rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
+                              >Delete Video</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Priority Editor Modal */}
         {showPriorityEditor && (
