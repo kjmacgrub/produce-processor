@@ -1638,14 +1638,15 @@ const ProduceProcessorApp = () => {
                   </div>
                 </div>
 
-                {/* Line 2: [Instructions + Video/Timer] + Done button */}
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {/* Line 2: Instructions + Done button, then Video/Timer below */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ flex: '1 1 auto' }}>
                   {/* Instructions box */}
                   <div style={{
                     background: '#fef3c7', borderRadius: '8px',
                     padding: '0.5rem 0.75rem', paddingBottom: '0.85rem',
-                    border: '1px solid #fbbf24', flex: '1 1 auto',
+                    border: '1px solid #fbbf24',
                     display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
                     flexWrap: 'wrap', position: 'relative'
                   }}>
@@ -1691,7 +1692,32 @@ const ProduceProcessorApp = () => {
                     </div>
                   </div>
 
-                  {/* Video + Timer buttons — below instructions, inside left column */}
+                  </div>{/* end instructions wrapper */}
+
+                  {/* Done button — centered on instructions row */}
+                  {!readOnlyMode && (
+                    <button
+                      onClick={() => markComplete(item)}
+                      style={{
+                        background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
+                        color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
+                        border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
+                        borderRadius: '10px',
+                        padding: '0 2rem',
+                        cursor: 'pointer',
+                        fontWeight: '900',
+                        fontSize: '1.6rem',
+                        flexShrink: 0,
+                        alignSelf: 'stretch',
+                        minWidth: '100px'
+                      }}
+                    >
+                      {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
+                    </button>
+                  )}
+                  </div>{/* end instructions + Done row */}
+
+                  {/* Video + Timer buttons — below instructions */}
                   {!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
                   <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
                     {hasVideo ? (
@@ -1735,29 +1761,6 @@ const ProduceProcessorApp = () => {
                       ) : null;
                     })()}
                   </div>
-                  )}
-                  </div>{/* end left column */}
-
-                  {/* Done button — tall, fixed height */}
-                  {!readOnlyMode && (
-                    <button
-                      onClick={() => markComplete(item)}
-                      style={{
-                        background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
-                        color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
-                        border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
-                        borderRadius: '10px',
-                        padding: '0 2rem',
-                        cursor: 'pointer',
-                        fontWeight: '900',
-                        fontSize: '1.6rem',
-                        flexShrink: 0,
-                        height: '100px',
-                        minWidth: '100px'
-                      }}
-                    >
-                      {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
-                    </button>
                   )}
                 </div>
 
