@@ -1450,7 +1450,7 @@ const ProduceProcessorApp = () => {
                       Welcome to produce processing!
                     </div>
                     <div style={{ marginTop: '0.4rem', fontSize: '1.8rem', color: '#64748b' }}>
-                      Here are the next items to work on...
+                      Next items to work on...
                     </div>
                     <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
                       <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>−</button>
