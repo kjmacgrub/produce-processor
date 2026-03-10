@@ -1453,11 +1453,9 @@ const ProduceProcessorApp = () => {
                       Next items to work on...
                     </div>
                     <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#64748b' }}>show</span>
                       <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>−</button>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: '600', color: '#64748b' }}>show</span>
-                        <div style={{ fontSize: '1.4rem', fontWeight: '700', color: '#3a6b1e', minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
-                      </div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: '700', color: '#3a6b1e', minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
                       <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>+</button>
                       <button onClick={() => setDisplayCount(null)} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: '2px solid ' + (displayCount === null ? '#3a6b1e' : '#cbd5e1'), background: displayCount === null ? '#3a6b1e' : 'white', color: displayCount === null ? 'white' : '#64748b', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
                     </div>
