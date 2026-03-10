@@ -1588,7 +1588,7 @@ const ProduceProcessorApp = () => {
                 style={{
                   background: 'white',
                   borderRadius: '12px',
-                  padding: '1rem 1.2rem',
+                  padding: '0.55rem 1.2rem',
                   boxShadow: activeItem?.id === item.id
                     ? '0 4px 20px rgba(15, 118, 110, 0.25)'
                     : '0 2px 8px rgba(0,0,0,0.08)',
