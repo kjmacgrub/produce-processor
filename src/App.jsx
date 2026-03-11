@@ -62,6 +62,10 @@ const ProduceProcessorApp = () => {
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showMediaManager, setShowMediaManager] = useState(false);
+  const [showReckoning, setShowReckoning] = useState(false);
+  const [reckoningItems, setReckoningItems] = useState([]);
+  const [reckoningDecisions, setReckoningDecisions] = useState({});
+  const [pendingLoad, setPendingLoad] = useState(null);
   const [mediaVideoURLs, setMediaVideoURLs] = useState({});
 
   const fileInputRef = useRef(null);
@@ -576,16 +580,27 @@ const ProduceProcessorApp = () => {
       const itemsWithIds = sortedForOrder.map((item, index) => ({ id: `item-${Date.now()}-${index}`, sortOrder: index, ...item }));
       const itemsObject = {};
       itemsWithIds.forEach(item => { itemsObject[item.id] = item; });
-      await set(ref(db, 'items'), itemsObject);
-      await set(ref(db, 'completedItems'), {});
-      await set(ref(db, 'totalCases'), totalCases);
-      setOriginalTotalCases(totalCases);
       let csvDate = dateHint;
       if (!csvDate) {
         const dateMatch = lines[0].match(/(\d{4}-\d{2}-\d{2})/);
         csvDate = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
       }
-      await set(ref(db, 'pdfDate'), csvDate);
+      const existingSnap = await get(ref(db, 'items'));
+      const existingItems = existingSnap.val() ? Object.values(existingSnap.val()) : [];
+      if (existingItems.length > 0) {
+        setPendingLoad({ itemsObject, totalCases, dateStr: csvDate });
+        setReckoningItems(existingItems);
+        const defaults = {};
+        existingItems.forEach(item => { defaults[item.id] = { action: 'carry', cases: item.cases }; });
+        setReckoningDecisions(defaults);
+        setShowReckoning(true);
+      } else {
+        await set(ref(db, 'items'), itemsObject);
+        await set(ref(db, 'completedItems'), {});
+        await set(ref(db, 'totalCases'), totalCases);
+        setOriginalTotalCases(totalCases);
+        await set(ref(db, 'pdfDate'), csvDate);
+      }
     } catch (error) { console.error('Error processing CSV:', error); alert('Error processing CSV: ' + error.message); }
   };
 
@@ -659,8 +674,6 @@ const ProduceProcessorApp = () => {
         }
       }
       const totalCases = parsedItems.reduce((sum, item) => sum + item.cases, 0);
-      const itemsRef2 = ref(db, 'items');
-      await remove(itemsRef2);
       const sortedForOrderPdf = [...parsedItems].sort((a, b) => {
         const pa = a.priority === 'missing' ? 9999 : a.priority;
         const pb = b.priority === 'missing' ? 9999 : b.priority;
@@ -669,10 +682,7 @@ const ProduceProcessorApp = () => {
       });
       const newItems = {};
       sortedForOrderPdf.forEach((item, index) => { const key = push(child(ref(db), 'items')).key; newItems[key] = { ...item, sortOrder: index }; });
-      await update(itemsRef2, newItems);
-      await remove(ref(db, 'completedItems'));
-      if (dateMatch) await set(ref(db, 'pdfDate'), dateMatch[1]);
-      await set(ref(db, 'originalTotalCases'), totalCases);
+      const pdfDateStr = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
       const newPriorities = [...new Set(parsedItems.map(item => item.priority))];
       const snap = await get(ref(db, 'historicalPriorities'));
       const currentPriorities = firebaseToArray(snap.val());
@@ -682,6 +692,23 @@ const ProduceProcessorApp = () => {
         if (a === 'missing') return -1; if (b === 'missing') return 1; return 0;
       });
       await set(ref(db, 'historicalPriorities'), combined);
+      const existingSnapPdf = await get(ref(db, 'items'));
+      const existingItemsPdf = existingSnapPdf.val() ? Object.values(existingSnapPdf.val()) : [];
+      if (existingItemsPdf.length > 0) {
+        setPendingLoad({ itemsObject: newItems, totalCases, dateStr: pdfDateStr, isPdf: true });
+        setReckoningItems(existingItemsPdf);
+        const defaults = {};
+        existingItemsPdf.forEach(item => { defaults[item.id] = { action: 'carry', cases: item.cases }; });
+        setReckoningDecisions(defaults);
+        setShowReckoning(true);
+      } else {
+        const itemsRef2 = ref(db, 'items');
+        await remove(itemsRef2);
+        await update(itemsRef2, newItems);
+        await remove(ref(db, 'completedItems'));
+        await set(ref(db, 'pdfDate'), pdfDateStr);
+        await set(ref(db, 'originalTotalCases'), totalCases);
+      }
     } catch (error) { console.error('Error processing PDF:', error); alert('Error processing PDF: ' + error.message); }
   };
 
@@ -722,6 +749,31 @@ const ProduceProcessorApp = () => {
     setItems([]); setCompletedItems([]); setPdfDate(''); setOriginalTotalCases(0);
     setActiveItem(null); setIsProcessing(false); setStartTime(null);
     setItemsInProcess({}); setItemsPaused({}); setPausedElapsedTime({}); setElapsedTimes({});
+  };
+
+  const finishReckoning = async () => {
+    if (!pendingLoad || !db) return;
+    const { itemsObject, totalCases, dateStr, isPdf } = pendingLoad;
+    const carryItems = reckoningItems.filter(item => reckoningDecisions[item.id]?.action === 'carry');
+    const carryObject = {};
+    carryItems.forEach((item, idx) => {
+      const newId = `carryover-${Date.now()}-${idx}`;
+      carryObject[newId] = { ...item, id: newId, cases: reckoningDecisions[item.id]?.cases ?? item.cases, sortOrder: idx - carryItems.length, carryover: true };
+    });
+    const combined = { ...carryObject, ...itemsObject };
+    const carryTotal = carryItems.reduce((sum, item) => sum + (reckoningDecisions[item.id]?.cases ?? item.cases), 0);
+    const itemsRef = ref(db, 'items');
+    await remove(itemsRef);
+    if (isPdf) { await update(itemsRef, combined); } else { await set(itemsRef, combined); }
+    await set(ref(db, 'completedItems'), {});
+    await set(ref(db, 'totalCases'), totalCases + carryTotal);
+    await set(ref(db, 'originalTotalCases'), totalCases + carryTotal);
+    setOriginalTotalCases(totalCases + carryTotal);
+    await set(ref(db, 'pdfDate'), dateStr);
+    setShowReckoning(false);
+    setReckoningItems([]);
+    setReckoningDecisions({});
+    setPendingLoad(null);
   };
 
   // HANDLER FUNCTIONS
@@ -1631,9 +1683,14 @@ const ProduceProcessorApp = () => {
                         {item.cases}
                       </div>
                     </div>
-                    <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', flex: 1, lineHeight: 1.2 }}>
-                      {getDisplayName(item.name)}
-                    </h3>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', lineHeight: 1.2 }}>
+                        {getDisplayName(item.name)}
+                      </h3>
+                      {item.carryover && (
+                        <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#92400e', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '4px', padding: '0.1rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>↩ From yesterday</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -3236,6 +3293,56 @@ const ProduceProcessorApp = () => {
             </div>
           );
         })()}
+
+        {/* Reckoning Modal */}
+        {showReckoning && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
+            <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
+              <h2 style={{ margin: '0 0 0.4rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', textAlign: 'center' }}>Before we start today...</h2>
+              <p style={{ margin: '0 0 1.5rem 0', fontSize: '1rem', color: '#64748b', textAlign: 'center' }}>
+                {reckoningItems.length} item{reckoningItems.length !== 1 ? 's' : ''} weren't finished yesterday. What happened?
+              </p>
+              <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                {reckoningItems.map(item => {
+                  const decision = reckoningDecisions[item.id] ?? { action: 'carry', cases: item.cases };
+                  const isDone = decision.action === 'done';
+                  return (
+                    <div key={item.id} style={{ border: '2px solid ' + (isDone ? '#bbf7d0' : '#fbbf24'), borderRadius: '12px', padding: '0.85rem 1rem', background: isDone ? '#f0fdf4' : '#fffbeb', transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: isDone ? 0 : '0.6rem' }}>
+                        <div style={{ background: isDone ? '#16a34a' : '#0f766e', color: 'white', borderRadius: '6px', padding: '0.25rem 0.55rem', fontSize: '0.95rem', fontWeight: '700', minWidth: '2.8rem', textAlign: 'center', flexShrink: 0 }}>
+                          {isDone ? item.cases : decision.cases}
+                        </div>
+                        <span style={{ flex: 1, fontWeight: '700', fontSize: '1.05rem', color: '#1e293b', textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.5 : 1 }}>
+                          {getDisplayName(item.name)}
+                        </span>
+                        <button
+                          onClick={() => setReckoningDecisions(d => ({ ...d, [item.id]: { ...d[item.id], action: isDone ? 'carry' : 'done' } }))}
+                          style={{ padding: '0.35rem 0.8rem', borderRadius: '8px', border: 'none', background: isDone ? '#16a34a' : '#e2e8f0', color: isDone ? 'white' : '#475569', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          {isDone ? '✓ Done' : 'Mark Done'}
+                        </button>
+                      </div>
+                      {!isDone && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '0.25rem' }}>
+                          <span style={{ fontSize: '0.8rem', color: '#92400e', fontWeight: '600' }}>Cases to carry forward:</span>
+                          <button onClick={() => setReckoningDecisions(d => ({ ...d, [item.id]: { ...d[item.id], cases: Math.max(1, (d[item.id]?.cases ?? item.cases) - 1) } }))} style={{ width: '1.8rem', height: '1.8rem', borderRadius: '50%', border: '2px solid #fbbf24', background: 'white', fontSize: '1rem', fontWeight: '700', color: '#92400e', cursor: 'pointer', lineHeight: 1 }}>−</button>
+                          <span style={{ fontSize: '1.1rem', fontWeight: '700', color: '#92400e', minWidth: '1.5rem', textAlign: 'center' }}>{decision.cases}</span>
+                          <button onClick={() => setReckoningDecisions(d => ({ ...d, [item.id]: { ...d[item.id], cases: Math.min(item.cases, (d[item.id]?.cases ?? item.cases) + 1) } }))} style={{ width: '1.8rem', height: '1.8rem', borderRadius: '50%', border: '2px solid #fbbf24', background: 'white', fontSize: '1rem', fontWeight: '700', color: '#92400e', cursor: 'pointer', lineHeight: 1 }}>+</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                onClick={finishReckoning}
+                style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: 'none', background: '#0f766e', color: 'white', fontSize: '1.2rem', fontWeight: '800', cursor: 'pointer' }}
+              >
+                Let's go →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Hamburger Menu Modal */}
         {showMenu && (
