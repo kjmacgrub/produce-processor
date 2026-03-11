@@ -66,6 +66,8 @@ const ProduceProcessorApp = () => {
   const [reckoningItems, setReckoningItems] = useState([]);
   const [reckoningDecisions, setReckoningDecisions] = useState({});
   const [pendingLoad, setPendingLoad] = useState(null);
+  const [showCasesPrompt, setShowCasesPrompt] = useState(null);
+  const [casesPromptValue, setCasesPromptValue] = useState(1);
   const [mediaVideoURLs, setMediaVideoURLs] = useState({});
 
   const fileInputRef = useRef(null);
@@ -1029,6 +1031,27 @@ const ProduceProcessorApp = () => {
 
   const markComplete = async (item) => { if (readOnlyMode || !db) return; setShowPhotoChoice(item); };
 
+  const openCasesPrompt = (item) => {
+    if (readOnlyMode) return;
+    if (item.cases === 1) { markComplete(item); return; }
+    setCasesPromptValue(item.cases);
+    setShowCasesPrompt(item.id);
+  };
+
+  const confirmCases = async (item) => {
+    setShowCasesPrompt(null);
+    if (casesPromptValue >= item.cases) {
+      markComplete(item);
+    } else {
+      if (!db) return;
+      const originalCases = item.originalCases ?? item.cases;
+      const prevDone = item.casesDone ?? 0;
+      const nowDone = prevDone + casesPromptValue;
+      const remaining = item.cases - casesPromptValue;
+      await update(ref(db, `items/${item.id}`), { cases: remaining, casesDone: nowDone, originalCases });
+    }
+  };
+
   const finalizeCompletion = async (item, pd) => {
     if (readOnlyMode || !db) return;
     const sku = getSKU(item.name);
@@ -1311,9 +1334,8 @@ const ProduceProcessorApp = () => {
 
             {/* Available Files */}
             {(() => {
-              const fileInProgress = items.length > 0 && !!pdfDate;
               return (
-                <div style={{ opacity: fileInProgress ? 0.4 : 1, pointerEvents: fileInProgress ? 'none' : 'auto' }}>
+                <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <h2 style={{
                       fontSize: '1.3rem',
@@ -1499,7 +1521,10 @@ const ProduceProcessorApp = () => {
                       <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
                     </div>
                     <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
-                      Welcome to Produce Processing!
+                      Produce Processing
+                    </div>
+                    <div style={{ fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
+                      Welcome!
                     </div>
                     <div style={{ marginTop: '0.4rem', fontSize: '1.8rem', color: '#64748b' }}>
                       Show items to work on...
@@ -1690,12 +1715,29 @@ const ProduceProcessorApp = () => {
                       {item.carryover && (
                         <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#92400e', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '4px', padding: '0.1rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>↩ From yesterday</span>
                       )}
+                      {item.casesDone > 0 && (
+                        <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#065f46', background: '#d1fae5', border: '1px solid #10b981', borderRadius: '4px', padding: '0.1rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>{item.casesDone} of {item.originalCases} done</span>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Line 2: Instructions + Done button, then Video/Timer below */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  {showCasesPrompt === item.id ? (
+                    <div style={{ background: '#f0fdf4', border: '2px solid #10b981', borderRadius: '10px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#dc2626', flex: '1 1 auto' }}>How many cases done?</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button onClick={() => setCasesPromptValue(v => Math.max(1, v - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #10b981', background: 'white', fontSize: '1.1rem', fontWeight: '700', color: '#065f46', cursor: 'pointer', lineHeight: 1 }}>−</button>
+                        <span style={{ fontSize: '1.3rem', fontWeight: '700', color: '#065f46', minWidth: '2rem', textAlign: 'center' }}>{casesPromptValue}</span>
+                        <button onClick={() => setCasesPromptValue(v => Math.min(item.cases, v + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #10b981', background: 'white', fontSize: '1.1rem', fontWeight: '700', color: '#065f46', cursor: 'pointer', lineHeight: 1 }}>+</button>
+                      </div>
+                      <button onClick={() => confirmCases(item)} style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem 1.2rem', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', minWidth: '7.5rem', textAlign: 'center' }}>
+                        {casesPromptValue >= item.cases ? 'All done ✓' : 'Confirm'}
+                      </button>
+                      <button onClick={() => setShowCasesPrompt(null)} style={{ background: 'transparent', color: '#94a3b8', border: 'none', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+                    </div>
+                  ) : (
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <div style={{ flex: '1 1 auto' }}>
                   {/* Instructions box */}
@@ -1753,7 +1795,7 @@ const ProduceProcessorApp = () => {
                   {/* Done button — centered on instructions row */}
                   {!readOnlyMode && (
                     <button
-                      onClick={() => markComplete(item)}
+                      onClick={() => openCasesPrompt(item)}
                       style={{
                         background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
                         color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
@@ -1771,7 +1813,8 @@ const ProduceProcessorApp = () => {
                       {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
                     </button>
                   )}
-                  </div>{/* end instructions + Done row */}
+                  </div>
+                  )}
 
                   {/* Video + Timer buttons — below instructions */}
                   {!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
@@ -1899,7 +1942,7 @@ const ProduceProcessorApp = () => {
                           {isPaused ? 'Restart' : 'Pause'}
                         </button>
                         <button
-                          onClick={() => markComplete(item)}
+                          onClick={() => openCasesPrompt(item)}
                           style={{
                             background: '#10b981',
                             color: 'white',
@@ -2476,49 +2519,51 @@ const ProduceProcessorApp = () => {
                         Would you like to take a photo of the completed work?
                       </p>
 
-                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => {
-                            setShowPhotoChoice(null);
-                            setShowCompletionCamera(showPhotoChoice);
-                          }}
-                          style={{
-                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '16px',
-                            padding: '1.25rem 2.5rem',
-                            fontSize: '1.2rem',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
-                            minWidth: '150px'
-                          }}
-                        >
-                          📸 Take Photo
-                        </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                          <button
+                            onClick={() => {
+                              setShowPhotoChoice(null);
+                              setShowCompletionCamera(showPhotoChoice);
+                            }}
+                            style={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '16px',
+                              padding: '1.25rem 2.5rem',
+                              fontSize: '1.2rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
+                              minWidth: '150px'
+                            }}
+                          >
+                            📸 Take Photo
+                          </button>
 
-                        <button
-                          onClick={() => {
-                            const item = showPhotoChoice;
-                            setShowPhotoChoice(null);
-                            finalizeCompletion(item, null);
-                          }}
-                          style={{
-                            background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '16px',
-                            padding: '1.25rem 2.5rem',
-                            fontSize: '1.2rem',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            boxShadow: '0 8px 25px rgba(100, 116, 139, 0.4)',
-                            minWidth: '150px'
-                          }}
-                        >
-                          Skip
-                        </button>
+                          <button
+                            onClick={() => {
+                              const item = showPhotoChoice;
+                              setShowPhotoChoice(null);
+                              finalizeCompletion(item, null);
+                            }}
+                            style={{
+                              background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '16px',
+                              padding: '1.25rem 2.5rem',
+                              fontSize: '1.2rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              boxShadow: '0 8px 25px rgba(100, 116, 139, 0.4)',
+                              minWidth: '150px'
+                            }}
+                          >
+                            Skip photo
+                          </button>
+                        </div>
 
                         <button
                           onClick={() => setShowPhotoChoice(null)}
@@ -3300,7 +3345,7 @@ const ProduceProcessorApp = () => {
             <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
               <h2 style={{ margin: '0 0 0.4rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', textAlign: 'center' }}>Before we start today...</h2>
               <p style={{ margin: '0 0 1.5rem 0', fontSize: '1rem', color: '#64748b', textAlign: 'center' }}>
-                {reckoningItems.length} item{reckoningItems.length !== 1 ? 's' : ''} weren't finished yesterday. What happened?
+                {reckoningItems.length} item{reckoningItems.length !== 1 ? 's' : ''} weren't finished yesterday. What should I do with them?
               </p>
               <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 {reckoningItems.map(item => {
@@ -3491,6 +3536,33 @@ const ProduceProcessorApp = () => {
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
                   Manage Photos & Videos
                 </button>
+
+                {!isIPad && (
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm('Mark ALL remaining items as done?')) return;
+                      setShowMenu(false);
+                      for (const item of items) { await finalizeCompletion(item, null); }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      padding: '1rem 1.25rem',
+                      background: '#fff1f2',
+                      border: '2px solid #fecdd3',
+                      borderRadius: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '700',
+                      color: '#dc2626',
+                      cursor: 'pointer',
+                      width: '100%',
+                      textAlign: 'left'
+                    }}
+                  >
+                    ☢️ Nuclear option — Mark ALL done
+                  </button>
+                )}
               </div>
             </div>
           </div>
