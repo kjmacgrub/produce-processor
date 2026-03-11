@@ -1472,7 +1472,7 @@ const ProduceProcessorApp = () => {
             style={{
               fontSize: '1.6rem',
               fontWeight: '700',
-              color: '#64748b',
+              color: '#2563eb',
               textAlign: 'center',
               marginBottom: '0.5rem'
             }}
@@ -1523,13 +1523,11 @@ const ProduceProcessorApp = () => {
                     <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
                       Produce Processing
                     </div>
-                    <div style={{ fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
-                      Welcome!
+                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: '#3a6b1e' }}>
+                      Welcome and thank you!
                     </div>
-                    <div style={{ marginTop: '0.4rem', fontSize: '1.8rem', color: '#64748b' }}>
-                      Show items to work on...
-                    </div>
-                    <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                    <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '1.8rem', color: '#64748b' }}>Show # of items to work on</span>
                       <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>−</button>
                       <div style={{ fontSize: '1.4rem', fontWeight: '700', color: '#3a6b1e', minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
                       <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>+</button>
@@ -1993,6 +1991,11 @@ const ProduceProcessorApp = () => {
             );
           })}
 
+          {displayCount !== null && items.length > displayCount && (
+            <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.95rem', fontWeight: '600', marginTop: '0.25rem' }}>
+              {items.length - displayCount} item{items.length - displayCount !== 1 ? 's' : ''} not shown
+            </div>
+          )}
           </div>
 
 
