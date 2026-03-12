@@ -57,7 +57,7 @@ const ProduceProcessorApp = () => {
   const [videoError, setVideoError] = useState(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
-  const [showLanding, setShowLanding] = useState(true);
+  const [showLanding, setShowLanding] = useState(false);
   const [commits, setCommits] = useState([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -71,6 +71,7 @@ const ProduceProcessorApp = () => {
   const [mediaVideoURLs, setMediaVideoURLs] = useState({});
 
   const fileInputRef = useRef(null);
+  const cloverUploadRef = useRef(null);
   const videoInputRef = useRef(null);
   const videoPreviewRef = useRef(null);
   const nativeCameraInputRef = useRef(null);
@@ -329,12 +330,10 @@ const ProduceProcessorApp = () => {
     }
   }, [showLanding]);
 
-  // Auto-show landing when no data loaded
+  // Auto-skip landing when file is already loaded
   useEffect(() => {
-    if (items.length === 0 && completedItems.length === 0 && !pdfDate && !showLanding) {
-      setShowLanding(true);
-    }
-  }, [items, completedItems, pdfDate]);
+    if (pdfDate && showLanding) setShowLanding(false);
+  }, [pdfDate]);
 
   // Pull-to-refresh detection
   useEffect(() => {
@@ -790,6 +789,24 @@ const ProduceProcessorApp = () => {
       const arrayBuffer = await file.arrayBuffer();
       await processPDFData(arrayBuffer);
     }
+  };
+
+  const handleCloverUpload = async (event) => {
+    if (!storage || !db) return;
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    const namePattern = /^\d{4}-\d{2}-\d{2}-produce-processing-report\.csv$/i;
+    if (!namePattern.test(file.name)) {
+      if (!window.confirm(`The filename "${file.name}" doesn't match the expected format (YYYY-MM-DD-produce-processing-report.csv). Upload anyway?`)) return;
+    }
+    try {
+      const storageRef = sRef(storage, `produce-csv/${file.name}`);
+      await uploadBytes(storageRef, file, { contentType: 'text/csv' });
+      const text = await file.text();
+      await processCSVData(text);
+      setShowMenu(false);
+    } catch (error) { console.error('Error uploading Clover file:', error); alert('Upload failed: ' + error.message); }
   };
 
   const handleVideoUpload = (event, item) => {
@@ -1420,7 +1437,7 @@ const ProduceProcessorApp = () => {
         )}
 
         {/* Main Work View */}
-        {!showLanding && (
+        {(!showLanding || pdfDate) && (
         <>
         {/* Header */}
         <div style={{
@@ -1524,7 +1541,7 @@ const ProduceProcessorApp = () => {
                       Produce Processing
                     </div>
                     <div style={{ fontSize: '1.8rem', fontWeight: '700', color: '#3a6b1e' }}>
-                      Welcome and thank you!
+                      Thank you coop workers!
                     </div>
                     <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '1.8rem', color: '#64748b' }}>Show # of items to work on</span>
@@ -1576,6 +1593,21 @@ const ProduceProcessorApp = () => {
 
 
         {/* No items message - View mode */}
+        {items.length === 0 && !pdfDate && !readOnlyMode && (
+          <div style={{
+            background: 'white',
+            borderRadius: '24px',
+            padding: '5rem 2rem',
+            textAlign: 'center',
+            boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
+            color: '#64748b'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>☰</div>
+            <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>No file loaded</h2>
+            <p style={{ fontSize: '1.1rem' }}>Tap the menu in the top-right corner<br />to upload today's Clover file.</p>
+          </div>
+        )}
+
         {items.length === 0 && readOnlyMode && (
           <div style={{
             background: 'white',
@@ -3440,6 +3472,35 @@ const ProduceProcessorApp = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <input
+                  ref={cloverUploadRef}
+                  type="file"
+                  accept=".csv"
+                  style={{ display: 'none' }}
+                  onChange={handleCloverUpload}
+                />
+                <button
+                  onClick={() => cloverUploadRef.current?.click()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f0fdf4',
+                    border: '2px solid #10b981',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '700',
+                    color: '#065f46',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <Upload size={22} />
+                  Upload a Clover data file
+                </button>
+
                 <button
                   onClick={() => {
                     setShowMenu(false);
@@ -3465,32 +3526,6 @@ const ProduceProcessorApp = () => {
                   Add New Item
                 </button>
 
-                <button
-                  onClick={async () => {
-                    setShowMenu(false);
-                    const dates = await listAvailableCSVs();
-                    setAvailableDates(dates);
-                    setShowLanding(true);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    padding: '1rem 1.25rem',
-                    background: '#f8fafc',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    cursor: 'pointer',
-                    width: '100%',
-                    textAlign: 'left'
-                  }}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-                  Import New Day
-                </button>
 
                 <button
                   onClick={() => {
