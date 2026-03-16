@@ -69,6 +69,8 @@ const ProduceProcessorApp = () => {
   const [showCasesPrompt, setShowCasesPrompt] = useState(null);
   const [casesPromptValue, setCasesPromptValue] = useState(1);
   const [mediaVideoURLs, setMediaVideoURLs] = useState({});
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState(new Set());
 
   const fileInputRef = useRef(null);
   const cloverUploadRef = useRef(null);
@@ -76,6 +78,7 @@ const ProduceProcessorApp = () => {
   const videoPreviewRef = useRef(null);
   const nativeCameraInputRef = useRef(null);
   const playbackVideoRef = useRef(null);
+  const longPressTimerRef = useRef(null);
 
   // Check Firebase connection
   useEffect(() => {
@@ -338,7 +341,7 @@ const ProduceProcessorApp = () => {
   // Pull-to-refresh detection
   useEffect(() => {
     let startY = 0;
-    const handleTouchStart = (e) => { if (window.scrollY === 0) startY = e.touches[0].clientY; };
+    const handleTouchStart = (e) => { if (selectMode) return; if (window.scrollY === 0) startY = e.touches[0].clientY; };
     const handleTouchMove = (e) => {
       if (window.scrollY === 0 && startY > 0) {
         const distance = e.touches[0].clientY - startY;
@@ -350,7 +353,7 @@ const ProduceProcessorApp = () => {
     document.addEventListener('touchmove', handleTouchMove);
     document.addEventListener('touchend', handleTouchEnd);
     return () => { document.removeEventListener('touchstart', handleTouchStart); document.removeEventListener('touchmove', handleTouchMove); document.removeEventListener('touchend', handleTouchEnd); };
-  }, [isPulling, pullDistance, isProcessing, pdfDate]);
+  }, [isPulling, pullDistance, isProcessing, pdfDate, selectMode]);
 
   // IndexedDB setup for video storage
   const openDB = () => {
@@ -1094,6 +1097,35 @@ const ProduceProcessorApp = () => {
     setShowCompletionCamera(null);
   };
 
+  const bulkMarkDone = async () => {
+    const targets = items.filter(item => selectedItemIds.has(item.id));
+    for (const item of targets) {
+      await finalizeCompletion(item, null);
+    }
+    setSelectMode(false);
+    setSelectedItemIds(new Set());
+  };
+
+  const handleCardLongPress = (itemId) => {
+    setSelectMode(true);
+    setSelectedItemIds(new Set([itemId]));
+  };
+
+  const toggleItemSelection = (itemId) => {
+    setSelectedItemIds(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedItemIds(new Set());
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  };
+
   const undoComplete = async (item) => {
     if (readOnlyMode || !db) return;
     const { completedAt, ...activeItem } = item;
@@ -1691,24 +1723,59 @@ const ProduceProcessorApp = () => {
             return (
               <div
                 key={item.id}
+                onTouchStart={() => {
+                  longPressTimerRef.current = setTimeout(() => handleCardLongPress(item.id), 600);
+                }}
+                onTouchEnd={() => clearTimeout(longPressTimerRef.current)}
+                onTouchMove={() => clearTimeout(longPressTimerRef.current)}
                 style={{
-                  background: 'white',
+                  background: selectMode && selectedItemIds.has(item.id) ? '#eff6ff' : 'white',
                   borderRadius: '12px',
                   padding: '0.55rem 1.2rem',
                   boxShadow: activeItem?.id === item.id
                     ? '0 4px 20px rgba(15, 118, 110, 0.25)'
                     : '0 2px 8px rgba(0,0,0,0.08)',
                   transition: 'all 0.2s ease',
-                  border: activeItem?.id === item.id ? '2px solid #0f766e' : '2px solid transparent',
+                  border: selectMode && selectedItemIds.has(item.id)
+                    ? '2px solid #3b82f6'
+                    : activeItem?.id === item.id ? '2px solid #0f766e' : '2px solid transparent',
                   position: 'relative',
                   paddingLeft: '2.8rem',
                 }}
               >
+                {/* Bulk-select checkbox — always visible on desktop, select-mode-only on iPad */}
+                {(selectMode || !isIPad) && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!selectMode) setSelectMode(true);
+                      toggleItemSelection(item.id);
+                    }}
+                    style={{
+                      position: 'absolute', top: '0.5rem', right: '0.5rem',
+                      width: '28px', height: '28px',
+                      borderRadius: '50%',
+                      border: `3px solid ${selectedItemIds.has(item.id) ? '#3b82f6' : '#cbd5e1'}`,
+                      background: selectedItemIds.has(item.id) ? '#3b82f6' : 'white',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      zIndex: 10, cursor: 'pointer', flexShrink: 0,
+                      opacity: selectMode ? 1 : 0.35,
+                    }}
+                  >
+                    {selectedItemIds.has(item.id) && (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <polyline points="2,7 6,11 12,3" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                )}
+
                 {/* Up/down arrows — left margin */}
                 <div style={{
                   position: 'absolute', left: '0.5rem', top: '50%',
                   transform: 'translateY(-50%)',
                   display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center',
+                  opacity: selectMode ? 0 : 1, pointerEvents: selectMode ? 'none' : 'auto',
                 }}>
                   {idx > 0 && (
                     <div onClick={() => moveItemUp(item.id)} title="Move up" style={{ cursor: 'pointer', display: 'flex', userSelect: 'none' }}>
@@ -1823,7 +1890,7 @@ const ProduceProcessorApp = () => {
                   </div>{/* end instructions wrapper */}
 
                   {/* Done button — centered on instructions row */}
-                  {!readOnlyMode && (
+                  {!readOnlyMode && !selectMode && (
                     <button
                       onClick={() => openCasesPrompt(item)}
                       style={{
@@ -1847,7 +1914,7 @@ const ProduceProcessorApp = () => {
                   )}
 
                   {/* Video + Timer buttons — below instructions */}
-                  {!readOnlyMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+                  {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
                   <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
                     {hasVideo ? (
                       <button onClick={() => setPlayingVideo(sku)} style={{
@@ -1894,7 +1961,7 @@ const ProduceProcessorApp = () => {
                 </div>
 
                 {/* Inline Timer Overlay */}
-                {(itemsInProcess[item.id] || itemsPaused[item.id]) && (() => {
+                {!selectMode && (itemsInProcess[item.id] || itemsPaused[item.id]) && (() => {
                   const isPaused = itemsPaused[item.id];
                   const elapsed = elapsedTimes[item.id] || 0;
                   return (
@@ -2029,6 +2096,49 @@ const ProduceProcessorApp = () => {
             </div>
           )}
           </div>
+
+          {/* Bulk-select floating toolbar */}
+          {selectMode && (
+            <div style={{
+              position: 'fixed', bottom: '1.5rem', left: '50%',
+              transform: 'translateX(-50%)',
+              background: '#1e293b', borderRadius: '16px',
+              padding: '0.75rem 1.25rem',
+              display: 'flex', alignItems: 'center', gap: '1rem',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+              zIndex: 100, whiteSpace: 'nowrap',
+            }}>
+              <span style={{ color: '#94a3b8', fontWeight: '700', fontSize: '0.95rem', minWidth: '5rem' }}>
+                {selectedItemIds.size} selected
+              </span>
+              <button
+                onClick={() => setSelectedItemIds(new Set(items.map(i => i.id)))}
+                style={{ background: '#334155', color: 'white', border: 'none', borderRadius: '10px',
+                         padding: '0.5rem 1rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' }}
+              >
+                Select All
+              </button>
+              <button
+                onClick={bulkMarkDone}
+                disabled={selectedItemIds.size === 0}
+                style={{ background: selectedItemIds.size > 0 ? '#10b981' : '#334155',
+                         color: 'white', border: 'none', borderRadius: '10px',
+                         padding: '0.5rem 1.2rem', fontWeight: '800', fontSize: '1rem',
+                         cursor: selectedItemIds.size > 0 ? 'pointer' : 'default',
+                         opacity: selectedItemIds.size === 0 ? 0.5 : 1 }}
+              >
+                Mark Done
+              </button>
+              <button
+                onClick={exitSelectMode}
+                style={{ background: 'transparent', color: '#ef4444', border: '2px solid #ef4444',
+                         borderRadius: '10px', padding: '0.5rem 1rem', fontWeight: '700',
+                         fontSize: '0.9rem', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
 
 
 {/* Right column: Completed items */}
