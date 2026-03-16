@@ -1511,7 +1511,7 @@ const ProduceProcessorApp = () => {
               style={{
                 position: 'absolute',
                 top: '1rem',
-                right: '1rem',
+                left: '1rem',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -1531,7 +1531,7 @@ const ProduceProcessorApp = () => {
           <div style={{
             position: 'absolute',
             top: '1rem',
-            right: isIPad ? '1rem' : '3.5rem',
+            right: '1rem',
             textAlign: 'right',
             lineHeight: 1.2,
           }}>
