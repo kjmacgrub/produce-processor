@@ -1741,6 +1741,8 @@ const ProduceProcessorApp = () => {
                     : activeItem?.id === item.id ? '2px solid #0f766e' : '2px solid transparent',
                   position: 'relative',
                   paddingLeft: '2.8rem',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
                 }}
               >
                 {/* Bulk-select checkbox — always visible on desktop, select-mode-only on iPad */}
