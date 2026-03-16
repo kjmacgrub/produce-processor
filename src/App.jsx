@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { ref, onValue, get, set, remove, push, child, update } from 'firebase/database';
 import { ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { db, storage } from './firebase';
@@ -15,6 +15,26 @@ const ProduceProcessorApp = () => {
   const [playingVideo, setPlayingVideo] = useState(null);
   const readOnlyMode = false;
   const [isIPad] = useState(() => /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
+
+  const weekInfo = useMemo(() => {
+    const base = new Date();
+    const julianDay = Math.floor(
+      (Date.UTC(base.getFullYear(), base.getMonth(), base.getDate()) -
+       Date.UTC(base.getFullYear(), 0, 0)) / 86400000
+    );
+    const d = new Date(Date.UTC(base.getFullYear(), base.getMonth(), base.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    const palette = [
+      { bg: '#ff1744', border: '#d50000', text: '#ffffff' },
+      { bg: '#0091ea', border: '#0064b7', text: '#ffffff' },
+      { bg: '#ffc400', border: '#d4a000', text: '#1a1a1a' },
+      { bg: '#00e676', border: '#00b248', text: '#1a1a1a' },
+    ];
+    return { julianDay, weekNum, ...palette[(weekNum - 1) % 4] };
+  }, []);
+
   const [firebaseConnected, setFirebaseConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingItemId, setRecordingItemId] = useState(null);
@@ -1473,23 +1493,14 @@ const ProduceProcessorApp = () => {
         <>
         {/* Header */}
         <div style={{
-          background: 'white',
+          background: weekInfo.bg,
           borderRadius: '24px',
           padding: '1.2rem 1.5rem',
           marginBottom: '1rem',
           position: 'relative',
           boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
-          border: 'clamp(4px, 1.5vw, 14px) solid #3a6b1e',
-          backgroundImage: `
-            linear-gradient(white, white),
-            url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q20,30 30,50 T50,50 T70,50 T90,50' stroke='%23543b2c' stroke-width='3' fill='none'/%3E%3Cpath d='M15,45 Q20,38 25,35 Q22,40 20,45 Q18,42 15,45 Z' fill='%234a8526'/%3E%3Cpath d='M35,55 Q40,48 45,45 Q42,50 40,55 Q38,52 35,55 Z' fill='%233a6b1e'/%3E%3Cpath d='M55,45 Q60,38 65,35 Q62,40 60,45 Q58,42 55,45 Z' fill='%234a8526'/%3E%3Cpath d='M75,55 Q80,48 85,45 Q82,50 80,55 Q78,52 75,55 Z' fill='%232d5016'/%3E%3C/svg%3E"),
-            url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,10 Q30,20 50,30 T50,50 T50,70 T50,90' stroke='%23543b2c' stroke-width='3' fill='none'/%3E%3Cpath d='M45,15 Q38,20 35,25 Q40,22 45,20 Q42,18 45,15 Z' fill='%234a8526'/%3E%3Cpath d='M55,35 Q48,40 45,45 Q50,42 55,40 Q52,38 55,35 Z' fill='%233a6b1e'/%3E%3Cpath d='M45,55 Q38,60 35,65 Q40,62 45,60 Q42,58 45,55 Z' fill='%234a8526'/%3E%3Cpath d='M55,75 Q48,80 45,85 Q50,82 55,80 Q52,78 55,75 Z' fill='%232d5016'/%3E%3C/svg%3E")
-          `,
-          backgroundPosition: 'center, top, left',
-          backgroundSize: 'auto, 100% 14px, 14px 100%',
-          backgroundRepeat: 'no-repeat, repeat-x, repeat-y',
-          backgroundClip: 'padding-box, border-box, border-box',
-          backgroundOrigin: 'padding-box, border-box, border-box'
+          border: `clamp(4px, 1.5vw, 14px) solid ${weekInfo.border}`,
+          transition: 'background 0.3s',
         }}>
 
           {/* Hamburger Menu Button */}
@@ -1508,7 +1519,7 @@ const ProduceProcessorApp = () => {
                 zIndex: 10
               }}
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={weekInfo.text} strokeWidth="2.5">
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="12" x2="21" y2="12"/>
                 <line x1="3" y1="18" x2="21" y2="18"/>
@@ -1516,12 +1527,26 @@ const ProduceProcessorApp = () => {
             </button>
           )}
 
+          {/* Julian Day / Week */}
+          <div style={{
+            position: 'absolute',
+            top: '1rem',
+            right: isIPad ? '1rem' : '3.5rem',
+            textAlign: 'right',
+            lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: '500', color: weekInfo.text, opacity: 0.7 }}>Day </span>
+            <span style={{ fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text }}>{weekInfo.julianDay}</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: '500', color: weekInfo.text, opacity: 0.7 }}>&nbsp;&nbsp;Week </span>
+            <span style={{ fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text }}>{weekInfo.weekNum}</span>
+          </div>
+
           {/* Date display */}
           <div
             style={{
               fontSize: '1.6rem',
               fontWeight: '700',
-              color: '#2563eb',
+              color: weekInfo.text,
               textAlign: 'center',
               marginBottom: '0.5rem'
             }}
@@ -1561,7 +1586,8 @@ const ProduceProcessorApp = () => {
                       fontWeight: '700',
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
-                      color: '#64748b',
+                      color: weekInfo.text,
+                      opacity: 0.75,
                       marginTop: '0.35rem',
                       paddingLeft: '2px',
                       paddingRight: '2px'
@@ -1569,18 +1595,18 @@ const ProduceProcessorApp = () => {
                       <span>{completedCases} cases done</span>
                       <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
                     </div>
-                    <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: '#3a6b1e' }}>
+                    <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: weekInfo.text }}>
                       Produce Processing
                     </div>
-                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: '#3a6b1e' }}>
+                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: weekInfo.text }}>
                       Thank you coop workers!
                     </div>
                     <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '1.8rem', color: '#64748b' }}>Show # of items to work on</span>
-                      <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>−</button>
-                      <div style={{ fontSize: '1.4rem', fontWeight: '700', color: '#3a6b1e', minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
-                      <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.2rem', fontWeight: '700', color: '#64748b', cursor: 'pointer', lineHeight: 1 }}>+</button>
-                      <button onClick={() => setDisplayCount(null)} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: '2px solid ' + (displayCount === null ? '#3a6b1e' : '#cbd5e1'), background: displayCount === null ? '#3a6b1e' : 'white', color: displayCount === null ? 'white' : '#64748b', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
+                      <span style={{ fontSize: '1.8rem', color: weekInfo.text, opacity: 0.75 }}>Show # of items to work on</span>
+                      <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: 'rgba(255,255,255,0.25)', fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
+                      <div style={{ fontSize: '1.4rem', fontWeight: '700', color: weekInfo.text, minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
+                      <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: 'rgba(255,255,255,0.25)', fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
+                      <button onClick={() => setDisplayCount(null)} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.25)', color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
                     </div>
                   </div>
                 );
@@ -1593,7 +1619,8 @@ const ProduceProcessorApp = () => {
             style={{
               textAlign: 'right',
               fontSize: '0.75rem',
-              color: '#c0c8d4',
+              color: weekInfo.text,
+              opacity: 0.5,
               fontWeight: '600',
               marginTop: '0.5rem',
               cursor: 'pointer'
