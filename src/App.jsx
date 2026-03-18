@@ -1992,7 +1992,7 @@ const ProduceProcessorApp = () => {
                 </div>
 
                 {/* Inline Timer Overlay */}
-                {!selectMode && (itemsInProcess[item.id] || itemsPaused[item.id]) && (() => {
+                {!selectMode && showCasesPrompt !== item.id && (itemsInProcess[item.id] || itemsPaused[item.id]) && (() => {
                   const isPaused = itemsPaused[item.id];
                   const elapsed = elapsedTimes[item.id] || 0;
                   return (
