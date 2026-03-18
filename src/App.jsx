@@ -27,10 +27,10 @@ const ProduceProcessorApp = () => {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     const palette = [
-      { bg: '#ff1744', border: '#d50000', text: '#ffffff' },
-      { bg: '#0091ea', border: '#0064b7', text: '#ffffff' },
-      { bg: '#ffc400', border: '#d4a000', text: '#1a1a1a' },
-      { bg: '#00e676', border: '#00b248', text: '#1a1a1a' },
+      { bg: '#ff1744', border: '#d50000', text: '#ffffff', bgLight: '#ff6680' },
+      { bg: '#0091ea', border: '#0064b7', text: '#ffffff', bgLight: '#40baff' },
+      { bg: '#ffc400', border: '#d4a000', text: '#1a1a1a', bgLight: '#ffd740' },
+      { bg: '#00e676', border: '#00b248', text: '#1a1a1a', bgLight: '#69f0ae' },
     ];
     return { julianDay, weekNum, ...palette[(weekNum - 1) % 4] };
   }, []);
@@ -1603,10 +1603,10 @@ const ProduceProcessorApp = () => {
                     </div>
                     <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '1.8rem', color: weekInfo.text, opacity: 0.75 }}>Show # of items to work on</span>
-                      <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: 'rgba(255,255,255,0.25)', fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
+                      <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
                       <div style={{ fontSize: '1.4rem', fontWeight: '700', color: weekInfo.text, minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
-                      <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: 'rgba(255,255,255,0.25)', fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
-                      <button onClick={() => setDisplayCount(null)} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.25)', color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
+                      <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
+                      <button onClick={() => setDisplayCount(null)} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
                     </div>
                   </div>
                 );
@@ -3737,7 +3737,7 @@ const ProduceProcessorApp = () => {
                       textAlign: 'left'
                     }}
                   >
-                    ☢️ Nuclear option — Mark ALL done
+                    ☢️ Mark ALL done
                   </button>
                 )}
               </div>
