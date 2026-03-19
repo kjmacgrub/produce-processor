@@ -1841,7 +1841,7 @@ const ProduceProcessorApp = () => {
                         {getDisplayName(item.name)}
                       </h3>
                       {item.carryover && (
-                        <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#92400e', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '4px', padding: '0.1rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>↩ From yesterday</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#fff', background: '#dc2626', border: '1px solid #b91c1c', borderRadius: '4px', padding: '0.2rem 0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>↩ From yesterday</span>
                       )}
                       {item.casesDone > 0 && (
                         <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#065f46', background: '#d1fae5', border: '1px solid #10b981', borderRadius: '4px', padding: '0.1rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>{item.casesDone} of {item.originalCases} done</span>

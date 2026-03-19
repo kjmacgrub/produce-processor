@@ -28,7 +28,7 @@ A browser-based iPad application for processing produce items with real-time syn
 
 **3. Firebase Hosting** (optional)
 - Deploy via Netlify currently
-- URL: https://chimerical-brigadeiros-b50285.netlify.app
+- URL: https://produce-processor.netlify.app
 
 ---
 
@@ -126,7 +126,7 @@ npx http-server -p 8000
 
 ### 4. Deployment to Netlify (Current)
 
-**Current Site:** https://chimerical-brigadeiros-b50285.netlify.app
+**Current Site:** https://produce-processor.netlify.app
 
 **To redeploy:**
 1. Go to Netlify dashboard
