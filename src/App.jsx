@@ -1950,9 +1950,9 @@ const ProduceProcessorApp = () => {
 
                   {/* Video + Timer + Photo buttons — below instructions */}
                   {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-                    {/* Centered group: Video, Timer, Photo */}
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                    {/* Left slot: Video button (flex:1, right-aligned) */}
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '0.75rem' }}>
                       {hasVideo ? (
                         <button onClick={() => setPlayingVideo(sku)} style={{
                           background: '#059669', color: 'white', border: 'none', borderRadius: '8px',
@@ -1970,12 +1970,18 @@ const ProduceProcessorApp = () => {
                           <Video size={16} /> Record Video
                         </button>
                       ) : null}
+                    </div>
+                    {/* Center: Timer always centered */}
+                    <div>
                       <button onClick={() => handleBeginProcessing(item.id)} style={{
                         background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
                         padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
                       }}>
                         Timer
                       </button>
+                    </div>
+                    {/* Right slot: Photo button (flex:1, left-aligned) */}
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '0.75rem' }}>
                       {hasPhoto ? (
                         <button onClick={() => {
                           const photo = completionPhotos[sku];
