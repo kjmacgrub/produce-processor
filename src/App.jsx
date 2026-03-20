@@ -15,6 +15,7 @@ const ProduceProcessorApp = () => {
   const [playingVideo, setPlayingVideo] = useState(null);
   const readOnlyMode = false;
   const [isIPad] = useState(() => /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
+  const [isPhone] = useState(() => /iPhone/.test(navigator.userAgent) || (/Android/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent)));
 
   const weekInfo = useMemo(() => {
     const base = new Date();
@@ -1955,15 +1956,15 @@ const ProduceProcessorApp = () => {
                       }}>
                         <Play size={16} /> Watch
                       </button>
-                    ) : (
-                      <button onClick={() => setShowVideoUpload(item.id)} style={{
-                        background: '#94a3b8', color: 'white', border: 'none', borderRadius: '8px',
+                    ) : isPhone ? (
+                      <button onClick={() => { setShowVideoUpload(item.id); startRecording(item); }} style={{
+                        background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px',
                         padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
                         alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
                       }}>
-                        <Video size={16} /> Video
+                        <Video size={16} /> Record Video
                       </button>
-                    )}
+                    ) : null}
                     <button onClick={() => handleBeginProcessing(item.id)} style={{
                       background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
                       padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
@@ -3432,29 +3433,31 @@ const ProduceProcessorApp = () => {
                   </div>
                 ) : (
                   <div>
-                    <div style={{
-                      marginBottom: '3rem',
-                      textAlign: 'center',
-                      padding: '3rem',
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                      borderRadius: '16px'
-                    }}>
+                    {!isPhone && (
                       <div style={{
-                        fontWeight: '700',
-                        marginBottom: '1rem',
-                        color: '#1e293b',
-                        fontSize: '1.5rem'
+                        marginBottom: '3rem',
+                        textAlign: 'center',
+                        padding: '3rem',
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                        borderRadius: '16px'
                       }}>
-                        Add Processing Video
+                        <div style={{
+                          fontWeight: '700',
+                          marginBottom: '1rem',
+                          color: '#1e293b',
+                          fontSize: '1.5rem'
+                        }}>
+                          Add Processing Video
+                        </div>
+                        <div style={{
+                          fontSize: '1.2rem',
+                          color: '#64748b',
+                          fontWeight: '500'
+                        }}>
+                          Record with camera or choose an existing file
+                        </div>
                       </div>
-                      <div style={{
-                        fontSize: '1.2rem',
-                        color: '#64748b',
-                        fontWeight: '500'
-                      }}>
-                        Record with camera or choose an existing file
-                      </div>
-                    </div>
+                    )}
 
                     <div style={{
                       display: 'flex',
@@ -3485,28 +3488,30 @@ const ProduceProcessorApp = () => {
                         Record Video
                       </button>
 
-                      <button
-                        onClick={() => videoInputRef.current?.click()}
-                        style={{
-                          background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '16px',
-                          padding: '2rem 3rem',
-                          cursor: 'pointer',
-                          fontWeight: '700',
-                          fontSize: '1.3rem',
-                          boxShadow: '0 6px 20px rgba(15, 118, 110, 0.4)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '1rem',
-                          minWidth: '250px',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <span style={{ fontSize: '2rem' }}>📁</span>
-                        Choose File
-                      </button>
+                      {!isPhone && (
+                        <button
+                          onClick={() => videoInputRef.current?.click()}
+                          style={{
+                            background: 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '16px',
+                            padding: '2rem 3rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '1.3rem',
+                            boxShadow: '0 6px 20px rgba(15, 118, 110, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            minWidth: '250px',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <span style={{ fontSize: '2rem' }}>📁</span>
+                          Choose File
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
