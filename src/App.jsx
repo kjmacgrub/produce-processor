@@ -60,6 +60,7 @@ const ProduceProcessorApp = () => {
   const [completionPhotos, setCompletionPhotos] = useState({});
   const [showCompletionCamera, setShowCompletionCamera] = useState(null);
   const [showPhotoChoice, setShowPhotoChoice] = useState(null);
+  const [itemPhotoTarget, setItemPhotoTarget] = useState(null);
   const [photoTaken, setPhotoTaken] = useState(false);
   const [photoData, setPhotoData] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
@@ -100,6 +101,7 @@ const ProduceProcessorApp = () => {
   const videoInputRef = useRef(null);
   const videoPreviewRef = useRef(null);
   const nativeCameraInputRef = useRef(null);
+  const itemPhotoInputRef = useRef(null);
   const playbackVideoRef = useRef(null);
   const longPressTimerRef = useRef(null);
 
@@ -1749,6 +1751,7 @@ const ProduceProcessorApp = () => {
             const sku = getSKU(item.name);
             const stats = sku ? getStats(sku) : null;
             const hasVideo = sku ? videos[sku] : null;
+            const hasPhoto = sku ? completionPhotos[sku] : null;
 
             return (
               <div
@@ -1945,49 +1948,104 @@ const ProduceProcessorApp = () => {
                   </div>
                   )}
 
-                  {/* Video + Timer buttons — below instructions */}
+                  {/* Video + Timer + Photo buttons — below instructions */}
                   {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
-                    {hasVideo ? (
-                      <button onClick={() => setPlayingVideo(sku)} style={{
-                        background: '#059669', color: 'white', border: 'none', borderRadius: '8px',
-                        padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
-                        alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
-                      }}>
-                        <Play size={16} /> Watch
-                      </button>
-                    ) : isPhone ? (
-                      <button onClick={() => { setShowVideoUpload(item.id); startRecording(item); }} style={{
-                        background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px',
-                        padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
-                        alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
-                      }}>
-                        <Video size={16} /> Record Video
-                      </button>
-                    ) : null}
-                    <button onClick={() => handleBeginProcessing(item.id)} style={{
-                      background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
-                      padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
-                    }}>
-                      Timer
-                    </button>
-                    {(() => {
-                      const sku = getSKU(item.name);
-                      const stats = sku ? getStats(sku) : null;
-                      return stats ? (
-                        <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
-                          background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
-                          borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
-                          color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
-                          cursor: !isIPad ? 'pointer' : 'default',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* Left group: Video, Timer, Photo */}
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      {hasVideo ? (
+                        <button onClick={() => setPlayingVideo(sku)} style={{
+                          background: '#059669', color: 'white', border: 'none', borderRadius: '8px',
+                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
                         }}>
-                          <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
-                          <span>{formatTimeWithUnits(stats.average)}</span>
-                          <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
-                        </span>
-                      ) : null;
-                    })()}
+                          <Play size={16} /> Watch
+                        </button>
+                      ) : isPhone ? (
+                        <button onClick={() => { setShowVideoUpload(item.id); startRecording(item); }} style={{
+                          background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px',
+                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                        }}>
+                          <Video size={16} /> Record Video
+                        </button>
+                      ) : null}
+                      <button onClick={() => handleBeginProcessing(item.id)} style={{
+                        background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
+                        padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
+                      }}>
+                        Timer
+                      </button>
+                      {hasPhoto ? (
+                        <button onClick={() => {
+                          const photo = completionPhotos[sku];
+                          const modal = document.createElement('div');
+                          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+                          modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+                          const wrapper = document.createElement('div');
+                          wrapper.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;gap:0.75rem;max-width:100%;max-height:95%;';
+                          const img = document.createElement('img');
+                          img.src = photo.data;
+                          img.style.cssText = 'max-width:100%;max-height:85vh;border-radius:12px;';
+                          wrapper.appendChild(img);
+                          const btnRow = document.createElement('div');
+                          btnRow.style.cssText = 'display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;justify-content:center;';
+                          const closeBtn = document.createElement('button');
+                          closeBtn.textContent = 'Close';
+                          closeBtn.style.cssText = 'background:#64748b;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                          closeBtn.onclick = () => modal.remove();
+                          btnRow.appendChild(closeBtn);
+                          if (!isIPad) {
+                            const retakeBtn = document.createElement('button');
+                            retakeBtn.textContent = '📷 Retake';
+                            retakeBtn.style.cssText = 'background:#6366f1;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                            retakeBtn.onclick = () => { modal.remove(); setItemPhotoTarget(item); setTimeout(() => itemPhotoInputRef.current?.click(), 50); };
+                            btnRow.appendChild(retakeBtn);
+                            const delBtn = document.createElement('button');
+                            delBtn.textContent = 'Delete Photo';
+                            delBtn.style.cssText = 'background:#ef4444;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                            delBtn.onclick = async () => {
+                              if (!confirm('Delete this photo?')) return;
+                              await deleteCompletionPhotoFromDB(sku);
+                              setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
+                              modal.remove();
+                            };
+                            btnRow.appendChild(delBtn);
+                          }
+                          wrapper.appendChild(btnRow);
+                          modal.appendChild(wrapper);
+                          document.body.appendChild(modal);
+                        }} style={{
+                          background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
+                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                        }}>
+                          📷 Photo
+                        </button>
+                      ) : isPhone ? (
+                        <button onClick={() => { setItemPhotoTarget(item); itemPhotoInputRef.current?.click(); }} style={{
+                          background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
+                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                        }}>
+                          📷 Take Photo
+                        </button>
+                      ) : null}
+                    </div>
+                    {/* Right: Avg Time per Case — aligned under Done button */}
+                    {stats && (
+                      <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
+                        background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
+                        borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
+                        color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
+                        cursor: !isIPad ? 'pointer' : 'default',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
+                      }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
+                        <span>{formatTimeWithUnits(stats.average)}</span>
+                        <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
+                      </span>
+                    )}
                   </div>
                   )}
                 </div>
@@ -3271,6 +3329,30 @@ const ProduceProcessorApp = () => {
             </div>
           </div>
         )}
+
+        {/* Hidden input for item-level photo capture */}
+        <input
+          ref={itemPhotoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file || !itemPhotoTarget) return;
+            const sku = getSKU(itemPhotoTarget.name);
+            if (!sku) return;
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              const pd = { data: reader.result, timestamp: new Date().toISOString() };
+              await saveCompletionPhotoToDB(sku, pd, getDisplayName(itemPhotoTarget.name));
+              setCompletionPhotos(prev => ({ ...prev, [sku]: { ...pd, name: getDisplayName(itemPhotoTarget.name) } }));
+              setItemPhotoTarget(null);
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+          }}
+        />
 
         {/* Video Upload/Recording Section */}
         {!readOnlyMode && showVideoUpload && (() => {
