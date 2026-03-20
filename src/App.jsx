@@ -1950,8 +1950,8 @@ const ProduceProcessorApp = () => {
 
                   {/* Video + Timer + Photo buttons — below instructions */}
                   {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {/* Left group: Video, Timer, Photo */}
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                    {/* Centered group: Video, Timer, Photo */}
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                       {hasVideo ? (
                         <button onClick={() => setPlayingVideo(sku)} style={{
@@ -2032,9 +2032,10 @@ const ProduceProcessorApp = () => {
                         </button>
                       ) : null}
                     </div>
-                    {/* Right: Avg Time per Case — aligned under Done button */}
+                    {/* Avg Time per Case — absolutely positioned right, aligned under Done button */}
                     {stats && (
                       <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
+                        position: 'absolute', right: 0,
                         background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
                         borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
                         color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
