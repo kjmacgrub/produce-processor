@@ -1948,9 +1948,10 @@ const ProduceProcessorApp = () => {
                   </div>
                   )}
 
-                  {/* Video + Timer + Photo buttons — below instructions */}
+                  {/* Video + Timer + Photo buttons + Avg Time — below instructions */}
                   {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                  <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
                     {/* Left slot: Video button (flex:1, right-aligned) */}
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '0.75rem' }}>
                       {hasVideo ? (
@@ -2038,21 +2039,23 @@ const ProduceProcessorApp = () => {
                         </button>
                       ) : null}
                     </div>
-                    {/* Avg Time per Case — absolutely positioned right, aligned under Done button */}
-                    {stats && (
-                      <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
-                        position: 'absolute', right: 0,
-                        background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
-                        borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
-                        color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
-                        cursor: !isIPad ? 'pointer' : 'default',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
-                      }}>
-                        <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
-                        <span>{formatTimeWithUnits(stats.average)}</span>
-                        <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
-                      </span>
-                    )}
+                  </div>
+                  {/* Avg Time per Case — own row, right-aligned under Done button */}
+                  {stats && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
+                      background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
+                      borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
+                      color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
+                      cursor: !isIPad ? 'pointer' : 'default',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
+                    }}>
+                      <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
+                      <span>{formatTimeWithUnits(stats.average)}</span>
+                      <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
+                    </span>
+                  </div>
+                  )}
                   </div>
                   )}
                 </div>
