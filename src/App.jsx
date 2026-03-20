@@ -1870,192 +1870,189 @@ const ProduceProcessorApp = () => {
                       <button onClick={() => setShowCasesPrompt(null)} style={{ background: 'transparent', color: '#94a3b8', border: 'none', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
                     </div>
                   ) : (
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <div style={{ flex: '1 1 auto' }}>
-                  {/* Instructions box */}
-                  <div style={{
-                    background: '#fef3c7', borderRadius: '8px',
-                    padding: '0.5rem 0.75rem', paddingBottom: '0.85rem',
-                    border: '1px solid #fbbf24',
-                    display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-                    flexWrap: 'wrap', position: 'relative'
-                  }}>
-                    <span style={{
-                      fontSize: '0.6rem', fontWeight: '700', color: '#92400e',
-                      textTransform: 'uppercase', letterSpacing: '0.05em',
-                      position: 'absolute', bottom: '-0.45rem', left: '50%',
-                      transform: 'translateX(-50%)', background: '#fef3c7',
-                      padding: '0 0.4rem', whiteSpace: 'nowrap'
-                    }}>Instructions</span>
-                    <div style={{ display: 'flex', alignItems: 'center', fontSize: '1.2rem', color: '#78350f', flex: '1', minWidth: 0 }}>
-                      {editingLocation === item.id ? (
-                        <input
-                          type="text"
-                          value={locationEditText}
-                          onChange={(e) => setLocationEditText(e.target.value)}
-                          onBlur={() => { updateLocation(item.id, locationEditText); setEditingLocation(null); }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { updateLocation(item.id, locationEditText); setEditingLocation(null); }
-                            else if (e.key === 'Escape') { setEditingLocation(null); }
-                          }}
-                          autoFocus
-                          style={{
-                            fontSize: '1.2rem', fontWeight: '600', color: '#78350f',
-                            background: 'white', border: '1px solid #fbbf24',
-                            borderRadius: '6px', padding: '0.3rem', textAlign: 'center', width: '100%'
-                          }}
-                        />
-                      ) : (
-                        <div
-                          onClick={() => { if (!readOnlyMode) { setEditingLocation(item.id); setLocationEditText(item.location); } }}
-                          style={{ fontWeight: '600', cursor: readOnlyMode ? 'default' : 'pointer', display: 'flex', alignItems: 'flex-start', gap: '0.3rem', flexWrap: 'wrap', wordBreak: 'break-word' }}
-                        >
-                          <span style={{ whiteSpace: 'normal' }}>{item.location}</span>
-                          {!readOnlyMode && (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
+
+                    {/* Left column: instructions box + Video/Timer/Photo buttons */}
+                    <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {/* Instructions box */}
+                      <div style={{
+                        background: '#fef3c7', borderRadius: '8px',
+                        padding: '0.5rem 0.75rem', paddingBottom: '0.85rem',
+                        border: '1px solid #fbbf24',
+                        display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                        flexWrap: 'wrap', position: 'relative'
+                      }}>
+                        <span style={{
+                          fontSize: '0.6rem', fontWeight: '700', color: '#92400e',
+                          textTransform: 'uppercase', letterSpacing: '0.05em',
+                          position: 'absolute', bottom: '-0.45rem', left: '50%',
+                          transform: 'translateX(-50%)', background: '#fef3c7',
+                          padding: '0 0.4rem', whiteSpace: 'nowrap'
+                        }}>Instructions</span>
+                        <div style={{ display: 'flex', alignItems: 'center', fontSize: '1.2rem', color: '#78350f', flex: '1', minWidth: 0 }}>
+                          {editingLocation === item.id ? (
+                            <input
+                              type="text"
+                              value={locationEditText}
+                              onChange={(e) => setLocationEditText(e.target.value)}
+                              onBlur={() => { updateLocation(item.id, locationEditText); setEditingLocation(null); }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') { updateLocation(item.id, locationEditText); setEditingLocation(null); }
+                                else if (e.key === 'Escape') { setEditingLocation(null); }
+                              }}
+                              autoFocus
+                              style={{
+                                fontSize: '1.2rem', fontWeight: '600', color: '#78350f',
+                                background: 'white', border: '1px solid #fbbf24',
+                                borderRadius: '6px', padding: '0.3rem', textAlign: 'center', width: '100%'
+                              }}
+                            />
+                          ) : (
+                            <div
+                              onClick={() => { if (!readOnlyMode) { setEditingLocation(item.id); setLocationEditText(item.location); } }}
+                              style={{ fontWeight: '600', cursor: readOnlyMode ? 'default' : 'pointer', display: 'flex', alignItems: 'flex-start', gap: '0.3rem', flexWrap: 'wrap', wordBreak: 'break-word' }}
+                            >
+                              <span style={{ whiteSpace: 'normal' }}>{item.location}</span>
+                              {!readOnlyMode && (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                              )}
+                            </div>
                           )}
                         </div>
+                      </div>
+
+                      {/* Video | Timer | Photo — centered under instructions */}
+                      {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {/* Left slot: Video */}
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '0.75rem' }}>
+                          {hasVideo ? (
+                            <button onClick={() => setPlayingVideo(sku)} style={{
+                              background: '#059669', color: 'white', border: 'none', borderRadius: '8px',
+                              padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                              alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                            }}>
+                              <Play size={16} /> Watch
+                            </button>
+                          ) : isPhone ? (
+                            <button onClick={() => { setShowVideoUpload(item.id); startRecording(item); }} style={{
+                              background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px',
+                              padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                              alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                            }}>
+                              <Video size={16} /> Record Video
+                            </button>
+                          ) : null}
+                        </div>
+                        {/* Center: Timer */}
+                        <div>
+                          <button onClick={() => handleBeginProcessing(item.id)} style={{
+                            background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
+                            padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
+                          }}>
+                            Timer
+                          </button>
+                        </div>
+                        {/* Right slot: Photo */}
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '0.75rem' }}>
+                          {hasPhoto ? (
+                            <button onClick={() => {
+                              const photo = completionPhotos[sku];
+                              const modal = document.createElement('div');
+                              modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+                              modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+                              const wrapper = document.createElement('div');
+                              wrapper.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;gap:0.75rem;max-width:100%;max-height:95%;';
+                              const img = document.createElement('img');
+                              img.src = photo.data;
+                              img.style.cssText = 'max-width:100%;max-height:85vh;border-radius:12px;';
+                              wrapper.appendChild(img);
+                              const btnRow = document.createElement('div');
+                              btnRow.style.cssText = 'display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;justify-content:center;';
+                              const closeBtn = document.createElement('button');
+                              closeBtn.textContent = 'Close';
+                              closeBtn.style.cssText = 'background:#64748b;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                              closeBtn.onclick = () => modal.remove();
+                              btnRow.appendChild(closeBtn);
+                              if (!isIPad) {
+                                const retakeBtn = document.createElement('button');
+                                retakeBtn.textContent = '📷 Retake';
+                                retakeBtn.style.cssText = 'background:#6366f1;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                                retakeBtn.onclick = () => { modal.remove(); setItemPhotoTarget(item); setTimeout(() => itemPhotoInputRef.current?.click(), 50); };
+                                btnRow.appendChild(retakeBtn);
+                                const delBtn = document.createElement('button');
+                                delBtn.textContent = 'Delete Photo';
+                                delBtn.style.cssText = 'background:#ef4444;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
+                                delBtn.onclick = async () => {
+                                  if (!confirm('Delete this photo?')) return;
+                                  await deleteCompletionPhotoFromDB(sku);
+                                  setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
+                                  modal.remove();
+                                };
+                                btnRow.appendChild(delBtn);
+                              }
+                              wrapper.appendChild(btnRow);
+                              modal.appendChild(wrapper);
+                              document.body.appendChild(modal);
+                            }} style={{
+                              background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
+                              padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                              alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                            }}>
+                              📷 Photo
+                            </button>
+                          ) : isPhone ? (
+                            <button onClick={() => { setItemPhotoTarget(item); itemPhotoInputRef.current?.click(); }} style={{
+                              background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
+                              padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                              alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                            }}>
+                              📷 Take Photo
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
                       )}
                     </div>
-                  </div>
 
-                  </div>{/* end instructions wrapper */}
-
-                  {/* Done button — centered on instructions row */}
-                  {!readOnlyMode && !selectMode && (
-                    <button
-                      onClick={() => openCasesPrompt(item)}
-                      style={{
-                        background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
-                        color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
-                        border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
-                        borderRadius: '10px',
-                        padding: '0 2rem',
-                        cursor: 'pointer',
-                        fontWeight: '900',
-                        fontSize: '1.6rem',
-                        flexShrink: 0,
-                        alignSelf: 'stretch',
-                        minWidth: '100px'
-                      }}
-                    >
-                      {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
-                    </button>
-                  )}
-                  </div>
-                  )}
-
-                  {/* Video + Timer + Photo buttons + Avg Time — below instructions */}
-                  {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {/* Left slot: Video button (flex:1, right-aligned) */}
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '0.75rem' }}>
-                      {hasVideo ? (
-                        <button onClick={() => setPlayingVideo(sku)} style={{
-                          background: '#059669', color: 'white', border: 'none', borderRadius: '8px',
-                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
-                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
-                        }}>
-                          <Play size={16} /> Watch
-                        </button>
-                      ) : isPhone ? (
-                        <button onClick={() => { setShowVideoUpload(item.id); startRecording(item); }} style={{
-                          background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px',
-                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
-                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
-                        }}>
-                          <Video size={16} /> Record Video
-                        </button>
-                      ) : null}
-                    </div>
-                    {/* Center: Timer always centered */}
-                    <div>
-                      <button onClick={() => handleBeginProcessing(item.id)} style={{
-                        background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
-                        padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
-                      }}>
-                        Timer
+                    {/* Right column: Done button + Avg Time — stacked */}
+                    {!readOnlyMode && !selectMode && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '0.25rem', flexShrink: 0 }}>
+                      <button
+                        onClick={() => openCasesPrompt(item)}
+                        style={{
+                          background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
+                          color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
+                          border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '2px solid #fbbf24' : 'none',
+                          borderRadius: '10px',
+                          padding: '0 2rem',
+                          cursor: 'pointer',
+                          fontWeight: '900',
+                          fontSize: '1.6rem',
+                          flex: 1,
+                          minWidth: '100px'
+                        }}
+                      >
+                        {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
                       </button>
-                    </div>
-                    {/* Right slot: Photo button (flex:1, left-aligned) */}
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '0.75rem' }}>
-                      {hasPhoto ? (
-                        <button onClick={() => {
-                          const photo = completionPhotos[sku];
-                          const modal = document.createElement('div');
-                          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;';
-                          modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-                          const wrapper = document.createElement('div');
-                          wrapper.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;gap:0.75rem;max-width:100%;max-height:95%;';
-                          const img = document.createElement('img');
-                          img.src = photo.data;
-                          img.style.cssText = 'max-width:100%;max-height:85vh;border-radius:12px;';
-                          wrapper.appendChild(img);
-                          const btnRow = document.createElement('div');
-                          btnRow.style.cssText = 'display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;justify-content:center;';
-                          const closeBtn = document.createElement('button');
-                          closeBtn.textContent = 'Close';
-                          closeBtn.style.cssText = 'background:#64748b;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
-                          closeBtn.onclick = () => modal.remove();
-                          btnRow.appendChild(closeBtn);
-                          if (!isIPad) {
-                            const retakeBtn = document.createElement('button');
-                            retakeBtn.textContent = '📷 Retake';
-                            retakeBtn.style.cssText = 'background:#6366f1;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
-                            retakeBtn.onclick = () => { modal.remove(); setItemPhotoTarget(item); setTimeout(() => itemPhotoInputRef.current?.click(), 50); };
-                            btnRow.appendChild(retakeBtn);
-                            const delBtn = document.createElement('button');
-                            delBtn.textContent = 'Delete Photo';
-                            delBtn.style.cssText = 'background:#ef4444;color:white;border:none;border-radius:8px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;';
-                            delBtn.onclick = async () => {
-                              if (!confirm('Delete this photo?')) return;
-                              await deleteCompletionPhotoFromDB(sku);
-                              setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
-                              modal.remove();
-                            };
-                            btnRow.appendChild(delBtn);
-                          }
-                          wrapper.appendChild(btnRow);
-                          modal.appendChild(wrapper);
-                          document.body.appendChild(modal);
-                        }} style={{
-                          background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
-                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
-                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                      {stats && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+                        <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
+                          background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
+                          borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
+                          color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
+                          cursor: !isIPad ? 'pointer' : 'default',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
                         }}>
-                          📷 Photo
-                        </button>
-                      ) : isPhone ? (
-                        <button onClick={() => { setItemPhotoTarget(item); itemPhotoInputRef.current?.click(); }} style={{
-                          background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
-                          padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
-                          alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
-                        }}>
-                          📷 Take Photo
-                        </button>
-                      ) : null}
+                          <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
+                          <span>{formatTimeWithUnits(stats.average)}</span>
+                          <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
+                        </span>
+                      )}
                     </div>
-                  </div>
-                  {/* Avg Time per Case — own row, right-aligned under Done button */}
-                  {stats && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
-                      background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
-                      borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
-                      color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
-                      cursor: !isIPad ? 'pointer' : 'default',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
-                    }}>
-                      <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
-                      <span>{formatTimeWithUnits(stats.average)}</span>
-                      <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
-                    </span>
-                  </div>
-                  )}
+                    )}
                   </div>
                   )}
                 </div>
