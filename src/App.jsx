@@ -1987,8 +1987,8 @@ const ProduceProcessorApp = () => {
                               cursor: !isIPad ? 'pointer' : 'default',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
                             }}>
-                              <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
                               <span>{formatTimeWithUnits(stats.average)}</span>
+                              <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
                               <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
                             </span>
                           )}
