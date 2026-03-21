@@ -1950,7 +1950,7 @@ const ProduceProcessorApp = () => {
 
                     {/* Row 2: Video | Timer+AvgTime | Photo — centered under instructions */}
                     {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', paddingRight: 'calc(72px + 0.5rem)' }}>
                         {/* Left slot: Video */}
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '0.75rem' }}>
                           {hasVideo ? (
