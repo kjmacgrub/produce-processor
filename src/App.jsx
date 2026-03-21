@@ -1996,9 +1996,7 @@ const ProduceProcessorApp = () => {
                         {/* Right slot: Photo */}
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '0.75rem' }}>
                           {hasPhoto ? (
-                            <img
-                              src={hasPhoto.data}
-                              onClick={() => {
+                            <button onClick={() => {
                                 const photo = completionPhotos[sku];
                                 const modal = document.createElement('div');
                                 modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;';
@@ -2036,14 +2034,13 @@ const ProduceProcessorApp = () => {
                                 wrapper.appendChild(btnRow);
                                 modal.appendChild(wrapper);
                                 document.body.appendChild(modal);
-                              }}
-                              style={{
-                                width: '56px', height: '56px',
-                                objectFit: 'cover', borderRadius: '8px',
-                                cursor: 'pointer', border: '2px solid #e2e8f0',
-                                flexShrink: 0
-                              }}
-                            />
+                              }} style={{
+                                background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
+                                padding: '0.4rem 1rem', cursor: 'pointer', display: 'flex',
+                                alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem'
+                              }}>
+                                📷 Photo
+                              </button>
                           ) : isPhone ? (
                             <button onClick={() => { setItemPhotoTarget(item); itemPhotoInputRef.current?.click(); }} style={{
                               background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px',
