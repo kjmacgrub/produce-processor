@@ -1870,11 +1870,10 @@ const ProduceProcessorApp = () => {
                       <button onClick={() => setShowCasesPrompt(null)} style={{ background: 'transparent', color: '#94a3b8', border: 'none', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
                     </div>
                   ) : (
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
-
-                    {/* Left column: Avg Time + instructions box + Video/Timer/Photo buttons */}
-                    <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {/* Instructions box */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {/* Row 1: Instructions box + Done circle — centerlines aligned */}
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <div style={{ flex: '1 1 auto' }}>
                       <div style={{
                         background: '#fef3c7', borderRadius: '8px',
                         padding: '0.5rem 0.75rem', paddingBottom: '0.85rem',
@@ -1923,9 +1922,34 @@ const ProduceProcessorApp = () => {
                           )}
                         </div>
                       </div>
+                      </div>
+                      {!readOnlyMode && !selectMode && (
+                        <button
+                          onClick={() => openCasesPrompt(item)}
+                          style={{
+                            background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
+                            color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
+                            border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '3px solid #fbbf24' : 'none',
+                            borderRadius: '50%',
+                            width: '72px',
+                            height: '72px',
+                            cursor: 'pointer',
+                            fontWeight: '900',
+                            fontSize: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '0.75rem' : '1.3rem',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: 1.1
+                          }}
+                        >
+                          {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
+                        </button>
+                      )}
+                    </div>
 
-                      {/* Video | Timer | Photo — centered under instructions */}
-                      {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+                    {/* Row 2: Video | Timer+AvgTime | Photo — centered under instructions */}
+                    {!readOnlyMode && !selectMode && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
                       <div style={{ display: 'flex', alignItems: 'center' }}>
                         {/* Left slot: Video */}
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '0.75rem' }}>
@@ -2029,34 +2053,7 @@ const ProduceProcessorApp = () => {
                         </div>
                       </div>
                       )}
-                    </div>
 
-                    {/* Right column: Done circle button + Avg Time below */}
-                    {!readOnlyMode && !selectMode && (
-                    <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                      <button
-                        onClick={() => openCasesPrompt(item)}
-                        style={{
-                          background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
-                          color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
-                          border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '3px solid #fbbf24' : 'none',
-                          borderRadius: '50%',
-                          width: '72px',
-                          height: '72px',
-                          cursor: 'pointer',
-                          fontWeight: '900',
-                          fontSize: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '0.75rem' : '1.3rem',
-                          flexShrink: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          lineHeight: 1.1
-                        }}
-                      >
-                        {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
-                      </button>
-                    </div>
-                    )}
                   </div>
                   )}
                 </div>
