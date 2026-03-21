@@ -1947,14 +1947,27 @@ const ProduceProcessorApp = () => {
                             </button>
                           ) : null}
                         </div>
-                        {/* Center: Timer */}
-                        <div>
+                        {/* Center: Timer + Avg Time below */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                           <button onClick={() => handleBeginProcessing(item.id)} style={{
                             background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
                             padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
                           }}>
                             Timer
                           </button>
+                          {stats && (
+                            <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
+                              background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
+                              borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
+                              color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
+                              cursor: !isIPad ? 'pointer' : 'default',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
+                            }}>
+                              <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
+                              <span>{formatTimeWithUnits(stats.average)}</span>
+                              <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
+                            </span>
+                          )}
                         </div>
                         {/* Right slot: Photo */}
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '0.75rem' }}>
@@ -2020,7 +2033,7 @@ const ProduceProcessorApp = () => {
 
                     {/* Right column: Done circle button + Avg Time below */}
                     {!readOnlyMode && !selectMode && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                       <button
                         onClick={() => openCasesPrompt(item)}
                         style={{
@@ -2042,19 +2055,6 @@ const ProduceProcessorApp = () => {
                       >
                         {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
                       </button>
-                      {stats && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
-                        <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
-                          background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
-                          borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
-                          color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
-                          cursor: !isIPad ? 'pointer' : 'default',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
-                        }}>
-                          <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
-                          <span>{formatTimeWithUnits(stats.average)}</span>
-                          <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
-                        </span>
-                      )}
                     </div>
                     )}
                   </div>
