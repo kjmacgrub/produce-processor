@@ -18,7 +18,7 @@ const ProduceProcessorApp = () => {
   const [isPhone] = useState(() => /iPhone/.test(navigator.userAgent) || (/Android/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent)));
 
   const weekInfo = useMemo(() => {
-    const base = new Date();
+    const base = pdfDate ? new Date(pdfDate + 'T00:00:00') : new Date();
     const julianDay = Math.floor(
       (Date.UTC(base.getFullYear(), base.getMonth(), base.getDate()) -
        Date.UTC(base.getFullYear(), 0, 0)) / 86400000
@@ -34,7 +34,7 @@ const ProduceProcessorApp = () => {
       { bg: '#00e676', border: '#00b248', text: '#1a1a1a', bgLight: '#69f0ae' },
     ];
     return { julianDay, weekNum, ...palette[(weekNum - 1) % 4] };
-  }, []);
+  }, [pdfDate]);
 
   const [firebaseConnected, setFirebaseConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
