@@ -16,6 +16,7 @@ const ProduceProcessorApp = () => {
   const readOnlyMode = false;
   const [isIPad] = useState(() => /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
   const [isPhone] = useState(() => /iPhone/.test(navigator.userAgent) || (/Android/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent)));
+  const [pdfDate, setPdfDate] = useState('');
 
   const weekInfo = useMemo(() => {
     const base = pdfDate ? new Date(pdfDate + 'T00:00:00') : new Date();
@@ -45,7 +46,6 @@ const ProduceProcessorApp = () => {
   const [completedItems, setCompletedItems] = useState([]);
 
   const [showTimingEvents, setShowTimingEvents] = useState(null);
-  const [pdfDate, setPdfDate] = useState('');
   const [originalTotalCases, setOriginalTotalCases] = useState(0);
   const [itemsInProcess, setItemsInProcess] = useState({});
   const [itemsPaused, setItemsPaused] = useState({});
