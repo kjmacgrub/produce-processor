@@ -95,6 +95,7 @@ const ProduceProcessorApp = () => {
   const [selectedItemIds, setSelectedItemIds] = useState(new Set());
   const [storageFiles, setStorageFiles] = useState(null);
   const [loadingStorageFiles, setLoadingStorageFiles] = useState(false);
+  const [oosItems, setOosItems] = useState(new Set());
 
   const fileInputRef = useRef(null);
   const cloverUploadRef = useRef(null);
@@ -104,6 +105,14 @@ const ProduceProcessorApp = () => {
   const itemPhotoInputRef = useRef(null);
   const playbackVideoRef = useRef(null);
   const longPressTimerRef = useRef(null);
+
+  // Fetch O/S items from Delivery app
+  useEffect(() => {
+    fetch('https://delivery-app-481756503401.us-east1.run.app/api/v1/oos-items')
+      .then(r => r.json())
+      .then(data => setOosItems(new Set(data.oos || [])))
+      .catch(() => {});
+  }, []);
 
   // Check Firebase connection
   useEffect(() => {
@@ -1867,7 +1876,7 @@ const ProduceProcessorApp = () => {
                       </div>
                     </div>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', lineHeight: 1.2 }}>
+                      <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', lineHeight: 1.2, textDecoration: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 'line-through' : 'none', opacity: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 0.5 : 1 }}>
                         {getDisplayName(item.name)}
                       </h3>
                       {item.carryover && (
@@ -2317,7 +2326,9 @@ const ProduceProcessorApp = () => {
                           color: '#1e293b',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          textDecoration: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 'line-through' : 'none',
+                          opacity: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 0.5 : 1
                         }}>
                           {getDisplayName(item.name)}
                         </span>
@@ -3458,7 +3469,9 @@ const ProduceProcessorApp = () => {
                   fontWeight: '800',
                   color: '#1e293b',
                   marginBottom: '2rem',
-                  paddingRight: '60px'
+                  paddingRight: '60px',
+                  textDecoration: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 'line-through' : 'none',
+                  opacity: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 0.5 : 1
                 }}>
                   {getDisplayName(item.name)}
                 </h2>
@@ -3654,7 +3667,7 @@ const ProduceProcessorApp = () => {
                         <div style={{ background: isDone ? '#16a34a' : '#0f766e', color: 'white', borderRadius: '6px', padding: '0.25rem 0.55rem', fontSize: '0.95rem', fontWeight: '700', minWidth: '2.8rem', textAlign: 'center', flexShrink: 0 }}>
                           {isDone ? item.cases : decision.cases}
                         </div>
-                        <span style={{ flex: 1, fontWeight: '700', fontSize: '1.05rem', color: '#1e293b', textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.5 : 1 }}>
+                        <span style={{ flex: 1, fontWeight: '700', fontSize: '1.05rem', color: '#1e293b', textDecoration: (isDone || oosItems.has(getDisplayName(item.name).toLowerCase())) ? 'line-through' : 'none', opacity: (isDone || oosItems.has(getDisplayName(item.name).toLowerCase())) ? 0.5 : 1 }}>
                           {getDisplayName(item.name)}
                         </span>
                         <button
