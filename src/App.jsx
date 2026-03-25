@@ -1581,6 +1581,11 @@ const ProduceProcessorApp = () => {
             <span style={{ fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text }}>{weekInfo.weekNum}</span>
           </div>
 
+          {/* Title */}
+          <div style={{ textAlign: 'center', fontSize: '2.6rem', fontWeight: '700', color: weekInfo.text, marginBottom: '0.25rem' }}>
+            Produce Processing
+          </div>
+
           {/* Date display */}
           <div
             style={{
@@ -1634,9 +1639,6 @@ const ProduceProcessorApp = () => {
                     }}>
                       <span>{completedCases} cases done</span>
                       <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
-                    </div>
-                    <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: weekInfo.text }}>
-                      Produce Processing
                     </div>
                     <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '1.8rem', color: weekInfo.text, opacity: 0.75 }}>Show # of items to work on</span>
