@@ -1638,9 +1638,6 @@ const ProduceProcessorApp = () => {
                     <div style={{ marginTop: '0.75rem', fontSize: '2.6rem', fontWeight: '700', color: weekInfo.text }}>
                       Produce Processing
                     </div>
-                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: weekInfo.text }}>
-                      Thank you coop workers!
-                    </div>
                     <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '1.8rem', color: weekInfo.text, opacity: 0.75 }}>Show # of items to work on</span>
                       <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
