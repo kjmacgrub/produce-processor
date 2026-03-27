@@ -4922,7 +4922,10 @@ const ProduceProcessorApp = () => {
                       </h2>
                       <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 8px', borderRadius: '8px', background: dailyLogData.status === 'complete' ? '#dcfce7' : '#fef9c3', color: dailyLogData.status === 'complete' ? '#166534' : '#854d0e' }}>{dailyLogData.status}</span>
                     </div>
-                    <button onClick={() => { setShowDailyLog(false); setDailyLogData(null); setDailyLogList(null); }} style={{ background: '#e2e8f0', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', cursor: 'pointer', fontWeight: '700', color: '#64748b' }}>✕</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <a href={`${DELIVERY_API}/daily-logs/${dailyLogData.date}/report`} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', fontWeight: '600', color: '#007aff', textDecoration: 'none', padding: '4px 10px', border: '1px solid #007aff', borderRadius: '8px' }}>Report ↗</a>
+                      <button onClick={() => { setShowDailyLog(false); setDailyLogData(null); setDailyLogList(null); }} style={{ background: '#e2e8f0', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', cursor: 'pointer', fontWeight: '700', color: '#64748b' }}>✕</button>
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.8rem', color: '#64748b', marginBottom: '1rem' }}>
