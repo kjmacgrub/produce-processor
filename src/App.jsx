@@ -2392,7 +2392,7 @@ const ProduceProcessorApp = () => {
 
 {/* Right column: Completed items */}
             {completedItems.length > 0 && (
-            <div style={{ flex: '0 0 300px', minWidth: 0, display: 'grid', gap: '0.5rem' }}>
+            <div style={{ flex: '0 0 300px', minWidth: 0, maxWidth: '300px', overflow: 'hidden', display: 'grid', gap: '0.5rem' }}>
                 <div id="completed-section" style={{
                   textAlign: 'center',
                   padding: '0.5rem 0',
@@ -2417,10 +2417,12 @@ const ProduceProcessorApp = () => {
                       style={{
                         background: '#f0fdf4',
                         borderRadius: '10px',
-                        padding: '0.6rem 0.8rem',
+                        padding: '0.6rem 0.8rem 1.8rem 0.8rem',
                         boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                         opacity: 0.85,
-                        border: '1px solid #d1fae5'
+                        border: '1px solid #d1fae5',
+                        position: 'relative',
+                        overflow: 'hidden'
                       }}
                     >
                       {/* Line 1: checkmark + item name */}
@@ -2440,9 +2442,7 @@ const ProduceProcessorApp = () => {
                           fontSize: '1rem',
                           fontWeight: '700',
                           color: '#1e293b',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          wordBreak: 'break-word',
                           textDecoration: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 'line-through' : 'none',
                           opacity: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 0.5 : 1
                         }}>
@@ -2526,25 +2526,28 @@ const ProduceProcessorApp = () => {
                             Photo
                           </button>
                         )}
-                        {!readOnlyMode && (
-                          <button
-                            onClick={() => undoComplete(item)}
-                            style={{
-                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '0.2rem 0.6rem',
-                              cursor: 'pointer',
-                              fontWeight: '700',
-                              fontSize: '0.75rem',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            ↶ Undo
-                          </button>
-                        )}
                       </div>
+                      {!readOnlyMode && (
+                        <button
+                          onClick={() => undoComplete(item)}
+                          style={{
+                            position: 'absolute',
+                            bottom: '0.4rem',
+                            right: '0.5rem',
+                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '0.2rem 0.6rem',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '0.75rem',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Undo
+                        </button>
+                      )}
                     </div>
                   );
                 })}
