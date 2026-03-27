@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { ref, onValue, get, set, remove, push, child, update } from 'firebase/database';
 import { ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { Upload, Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle } from 'lucide-react';
+import { Upload, Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote } from 'lucide-react';
 
 const ProduceProcessorApp = () => {
   const [items, setItems] = useState([]);
@@ -96,6 +96,13 @@ const ProduceProcessorApp = () => {
   const [storageFiles, setStorageFiles] = useState(null);
   const [loadingStorageFiles, setLoadingStorageFiles] = useState(false);
   const [oosItems, setOosItems] = useState(new Set());
+  const [notes, setNotes] = useState({});
+  const [showNotesBrowser, setShowNotesBrowser] = useState(false);
+  const [notesBrowserDate, setNotesBrowserDate] = useState(null);
+  const [editingItemNote, setEditingItemNote] = useState(null);
+  const [itemNoteText, setItemNoteText] = useState('');
+  const [editingFreeformNote, setEditingFreeformNote] = useState(null);
+  const [freeformNoteText, setFreeformNoteText] = useState('');
 
   const fileInputRef = useRef(null);
   const cloverUploadRef = useRef(null);
@@ -304,6 +311,36 @@ const ProduceProcessorApp = () => {
       setHistoricalPriorities(sorted);
     });
     return () => unsub();
+  }, []);
+
+  // Load notes from Firebase
+  useEffect(() => {
+    if (!db) return;
+    const notesRef = ref(db, 'notes');
+    const unsub = onValue(notesRef, (snapshot) => { setNotes(snapshot.val() || {}); });
+    return () => unsub();
+  }, []);
+
+  // Cleanup notes older than 10 days
+  useEffect(() => {
+    if (!db) return;
+    const cleanupOldNotes = async () => {
+      try {
+        const notesRef = ref(db, 'notes');
+        const snapshot = await get(notesRef);
+        const data = snapshot.val();
+        if (!data) return;
+        const tenDaysAgo = new Date(Date.now() - (10 * 24 * 60 * 60 * 1000));
+        for (const dateKey in data) {
+          if (new Date(dateKey + 'T00:00:00') < tenDaysAgo) {
+            await remove(ref(db, `notes/${dateKey}`));
+          }
+        }
+      } catch (error) { console.error('Error cleaning up old notes:', error); }
+    };
+    cleanupOldNotes();
+    const intervalId = setInterval(cleanupOldNotes, 24 * 60 * 60 * 1000);
+    return () => clearInterval(intervalId);
   }, []);
 
   // Cleanup completed items older than 10 days
@@ -787,6 +824,52 @@ const ProduceProcessorApp = () => {
     setItems([]); setCompletedItems([]); setPdfDate(''); setOriginalTotalCases(0);
     setActiveItem(null); setIsProcessing(false); setStartTime(null);
     setItemsInProcess({}); setItemsPaused({}); setPausedElapsedTime({}); setElapsedTimes({});
+  };
+
+  // --- Notes helpers ---
+  const saveItemNote = async (itemId, text, itemName) => {
+    if (!db || !pdfDate) return;
+    const noteRef = ref(db, `notes/${pdfDate}/itemNotes/${itemId}`);
+    if (text.trim()) {
+      await set(noteRef, { text: text.trim(), itemName, updatedAt: new Date().toISOString() });
+    } else {
+      await remove(noteRef);
+    }
+  };
+
+  const saveFreeformNote = async (noteId, text) => {
+    if (!db || !pdfDate) return;
+    if (noteId === 'new') {
+      if (!text.trim()) return;
+      const notesRef = ref(db, `notes/${pdfDate}/freeformNotes`);
+      await push(notesRef, { text: text.trim(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    } else {
+      const noteRef = ref(db, `notes/${pdfDate}/freeformNotes/${noteId}`);
+      if (text.trim()) {
+        await update(noteRef, { text: text.trim(), updatedAt: new Date().toISOString() });
+      } else {
+        await remove(noteRef);
+      }
+    }
+  };
+
+  const saveBrowserNote = async (dateKey, type, noteId, text, itemName) => {
+    if (!db) return;
+    if (type === 'item') {
+      const noteRef = ref(db, `notes/${dateKey}/itemNotes/${noteId}`);
+      if (text.trim()) {
+        await update(noteRef, { text: text.trim(), updatedAt: new Date().toISOString() });
+      } else {
+        await remove(noteRef);
+      }
+    } else {
+      const noteRef = ref(db, `notes/${dateKey}/freeformNotes/${noteId}`);
+      if (text.trim()) {
+        await update(noteRef, { text: text.trim(), updatedAt: new Date().toISOString() });
+      } else {
+        await remove(noteRef);
+      }
+    }
   };
 
   const finishReckoning = async () => {
@@ -1555,6 +1638,20 @@ const ProduceProcessorApp = () => {
                 <polygon points="5,3 19,12 5,21"/>
               </svg>
             </a>
+            <button
+              onClick={() => { setShowNotesBrowser(true); setNotesBrowserDate(null); }}
+              aria-label="Notes"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', color: weekInfo.text, opacity: 0.7, position: 'relative' }}
+            >
+              <StickyNote size={24} />
+              {Object.keys(notes).length > 0 && (
+                <span style={{
+                  position: 'absolute', top: '4px', right: '2px',
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: '#f59e0b'
+                }} />
+              )}
+            </button>
           </div>
 
           {/* Julian Day / Week */}
@@ -1865,9 +1962,39 @@ const ProduceProcessorApp = () => {
                       </div>
                     </div>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', lineHeight: 1.2, textDecoration: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 'line-through' : 'none', opacity: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 0.5 : 1 }}>
-                        {getDisplayName(item.name)}
-                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', lineHeight: 1.2, textDecoration: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 'line-through' : 'none', opacity: oosItems.has(getDisplayName(item.name).toLowerCase()) ? 0.5 : 1 }}>
+                          {getDisplayName(item.name)}
+                        </h3>
+                        <button
+                          onClick={() => { setEditingItemNote(item.id); setItemNoteText(notes[pdfDate]?.itemNotes?.[item.id]?.text || ''); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.15rem', opacity: notes[pdfDate]?.itemNotes?.[item.id] ? 1 : 0.3, color: notes[pdfDate]?.itemNotes?.[item.id] ? '#f59e0b' : '#94a3b8', flexShrink: 0 }}
+                        >
+                          <StickyNote size={16} />
+                        </button>
+                      </div>
+                      {editingItemNote === item.id && (
+                        <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={itemNoteText}
+                            onChange={(e) => setItemNoteText(e.target.value)}
+                            onBlur={() => { saveItemNote(item.id, itemNoteText, getDisplayName(item.name)); setEditingItemNote(null); }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') { saveItemNote(item.id, itemNoteText, getDisplayName(item.name)); setEditingItemNote(null); }
+                              else if (e.key === 'Escape') { setEditingItemNote(null); }
+                            }}
+                            autoFocus
+                            placeholder="Add a note..."
+                            style={{ flex: 1, fontSize: '0.9rem', padding: '0.3rem 0.5rem', border: '1px solid #fbbf24', borderRadius: '6px', background: '#fffbeb', color: '#78350f' }}
+                          />
+                        </div>
+                      )}
+                      {editingItemNote !== item.id && notes[pdfDate]?.itemNotes?.[item.id]?.text && (
+                        <span style={{ fontSize: '0.8rem', color: '#92400e', background: '#fef3c7', borderRadius: '4px', padding: '0.1rem 0.4rem', alignSelf: 'flex-start' }}>
+                          📝 {notes[pdfDate]?.itemNotes?.[item.id]?.text}
+                        </span>
+                      )}
                       {item.carryover && (
                         <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#fff', background: '#dc2626', border: '1px solid #b91c1c', borderRadius: '4px', padding: '0.2rem 0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>↩ From yesterday</span>
                       )}
@@ -2321,6 +2448,9 @@ const ProduceProcessorApp = () => {
                         }}>
                           {getDisplayName(item.name)}
                         </span>
+                        {notes[pdfDate]?.itemNotes?.[item.id]?.text && (
+                          <span style={{ fontSize: '0.7rem', color: '#92400e', background: '#fef3c7', borderRadius: '4px', padding: '0.05rem 0.3rem', flexShrink: 0 }}>📝</span>
+                        )}
                       </div>
                       {/* Line 2: cases + time + stats */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -4376,6 +4506,164 @@ const ProduceProcessorApp = () => {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Notes Browser Overlay */}
+        {showNotesBrowser && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '1rem'
+          }}>
+            <div style={{
+              background: 'white', borderRadius: '20px', padding: '1.5rem',
+              maxWidth: '550px', width: '100%', maxHeight: '80vh', overflow: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}>
+              {!notesBrowserDate ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', color: '#1e293b' }}>Notes</h2>
+                    <button onClick={() => setShowNotesBrowser(false)} style={{ background: '#e2e8f0', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', cursor: 'pointer', fontWeight: '700', color: '#64748b' }}>✕</button>
+                  </div>
+                  {Object.keys(notes).length === 0 ? (
+                    <p style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem 0' }}>No notes yet</p>
+                  ) : (
+                    Object.keys(notes).sort().reverse().map(dateKey => {
+                      const dateNotes = notes[dateKey];
+                      const itemCount = dateNotes.itemNotes ? Object.keys(dateNotes.itemNotes).length : 0;
+                      const freeformCount = dateNotes.freeformNotes ? Object.keys(dateNotes.freeformNotes).length : 0;
+                      if (itemCount === 0 && freeformCount === 0) return null;
+                      const d = new Date(dateKey + 'T00:00:00');
+                      const formatted = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                      return (
+                        <div
+                          key={dateKey}
+                          onClick={() => setNotesBrowserDate(dateKey)}
+                          style={{
+                            padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0',
+                            marginBottom: '0.5rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: dateKey === pdfDate ? '#f0fdf4' : 'white'
+                          }}
+                        >
+                          <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '1.05rem' }}>{formatted}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                            {itemCount > 0 && `${itemCount} item${itemCount > 1 ? 's' : ''}`}
+                            {itemCount > 0 && freeformCount > 0 && ' · '}
+                            {freeformCount > 0 && `${freeformCount} note${freeformCount > 1 ? 's' : ''}`}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <button onClick={() => setNotesBrowserDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b', padding: '0.2rem' }}>←</button>
+                      <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', color: '#1e293b' }}>
+                        {new Date(notesBrowserDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </h2>
+                    </div>
+                    <button onClick={() => setShowNotesBrowser(false)} style={{ background: '#e2e8f0', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', cursor: 'pointer', fontWeight: '700', color: '#64748b' }}>✕</button>
+                  </div>
+
+                  {/* Item Notes */}
+                  {notes[notesBrowserDate]?.itemNotes && Object.keys(notes[notesBrowserDate].itemNotes).length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h3 style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Item Notes</h3>
+                      {Object.entries(notes[notesBrowserDate].itemNotes).map(([itemId, note]) => (
+                        <div key={itemId} style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '0.4rem' }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.2rem' }}>{note.itemName || itemId}</div>
+                          {editingFreeformNote === `item-${itemId}` ? (
+                            <input
+                              type="text"
+                              value={freeformNoteText}
+                              onChange={(e) => setFreeformNoteText(e.target.value)}
+                              onBlur={() => { saveBrowserNote(notesBrowserDate, 'item', itemId, freeformNoteText); setEditingFreeformNote(null); }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') { saveBrowserNote(notesBrowserDate, 'item', itemId, freeformNoteText); setEditingFreeformNote(null); }
+                                else if (e.key === 'Escape') setEditingFreeformNote(null);
+                              }}
+                              autoFocus
+                              style={{ width: '100%', fontSize: '0.9rem', padding: '0.3rem', border: '1px solid #fbbf24', borderRadius: '4px', background: '#fffbeb', boxSizing: 'border-box' }}
+                            />
+                          ) : (
+                            <div
+                              onClick={() => { setEditingFreeformNote(`item-${itemId}`); setFreeformNoteText(note.text); }}
+                              style={{ fontSize: '0.9rem', color: '#78350f', cursor: 'pointer' }}
+                            >
+                              {note.text}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Freeform Notes */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Day Notes</h3>
+                      {notesBrowserDate === pdfDate && (
+                        <button
+                          onClick={() => { setEditingFreeformNote('new'); setFreeformNoteText(''); }}
+                          style={{ background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', padding: '0.2rem 0.6rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
+                        >+ Add</button>
+                      )}
+                    </div>
+                    {notes[notesBrowserDate]?.freeformNotes ? (
+                      Object.entries(notes[notesBrowserDate].freeformNotes).map(([noteId, note]) => (
+                        <div key={noteId} style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '0.4rem' }}>
+                          {editingFreeformNote === noteId ? (
+                            <input
+                              type="text"
+                              value={freeformNoteText}
+                              onChange={(e) => setFreeformNoteText(e.target.value)}
+                              onBlur={() => { saveBrowserNote(notesBrowserDate, 'freeform', noteId, freeformNoteText); setEditingFreeformNote(null); }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') { saveBrowserNote(notesBrowserDate, 'freeform', noteId, freeformNoteText); setEditingFreeformNote(null); }
+                                else if (e.key === 'Escape') setEditingFreeformNote(null);
+                              }}
+                              autoFocus
+                              style={{ width: '100%', fontSize: '0.9rem', padding: '0.3rem', border: '1px solid #fbbf24', borderRadius: '4px', background: '#fffbeb', boxSizing: 'border-box' }}
+                            />
+                          ) : (
+                            <div
+                              onClick={() => { setEditingFreeformNote(noteId); setFreeformNoteText(note.text); }}
+                              style={{ fontSize: '0.9rem', color: '#1e293b', cursor: 'pointer' }}
+                            >
+                              {note.text}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No day notes</p>
+                    )}
+                    {editingFreeformNote === 'new' && (
+                      <div style={{ padding: '0.5rem 0.75rem', border: '2px solid #f59e0b', borderRadius: '8px', marginBottom: '0.4rem' }}>
+                        <input
+                          type="text"
+                          value={freeformNoteText}
+                          onChange={(e) => setFreeformNoteText(e.target.value)}
+                          onBlur={() => { saveFreeformNote('new', freeformNoteText); setEditingFreeformNote(null); }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { saveFreeformNote('new', freeformNoteText); setEditingFreeformNote(null); }
+                            else if (e.key === 'Escape') setEditingFreeformNote(null);
+                          }}
+                          autoFocus
+                          placeholder="Add a day note..."
+                          style={{ width: '100%', fontSize: '0.9rem', padding: '0.3rem', border: '1px solid #fbbf24', borderRadius: '4px', background: '#fffbeb', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>
