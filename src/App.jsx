@@ -103,6 +103,11 @@ const ProduceProcessorApp = () => {
   const [itemNoteText, setItemNoteText] = useState('');
   const [editingFreeformNote, setEditingFreeformNote] = useState(null);
   const [freeformNoteText, setFreeformNoteText] = useState('');
+  const [showDailyLog, setShowDailyLog] = useState(false);
+  const [dailyLogData, setDailyLogData] = useState(null);
+  const [dailyLogList, setDailyLogList] = useState(null);
+  const [dailyLogSearch, setDailyLogSearch] = useState('');
+  const [dailyLogSearchResults, setDailyLogSearchResults] = useState(null);
 
   const fileInputRef = useRef(null);
   const cloverUploadRef = useRef(null);
@@ -872,8 +877,74 @@ const ProduceProcessorApp = () => {
     }
   };
 
+  // ---- Daily Log (Delivery API) ----
+  const DELIVERY_API = 'https://delivery-app-481756503401.us-east1.run.app/api/v1';
+
+  const snapshotProcessingToLog = async (dateKey) => {
+    if (!dateKey) return;
+    try {
+      const payload = {
+        completedItems: completedItems.map(item => ({
+          sku: item.id || '',
+          itemName: item.name || '',
+          cases: item.cases || 0,
+          completedAt: item.completedAt || null,
+          carryover: item.carryover || false,
+        })),
+        timingEvents: timingEventsBySKU || {},
+        notes: notes[dateKey] || {},
+        photos: completionPhotos || {},
+      };
+      await fetch(`${DELIVERY_API}/daily-logs/${dateKey}/snapshot-processing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      console.warn('Daily log snapshot failed:', e);
+    }
+  };
+
+  const loadDailyLogList = async () => {
+    try {
+      const res = await fetch(`${DELIVERY_API}/daily-logs`);
+      const data = await res.json();
+      setDailyLogList(data.logs || []);
+      setDailyLogData(null);
+      setDailyLogSearch('');
+      setDailyLogSearchResults(null);
+    } catch (e) {
+      setDailyLogList([]);
+    }
+  };
+
+  const loadDailyLogDetail = async (dateKey) => {
+    try {
+      const res = await fetch(`${DELIVERY_API}/daily-logs/${dateKey}`);
+      const data = await res.json();
+      setDailyLogData(data);
+    } catch (e) {
+      setDailyLogData(null);
+    }
+  };
+
+  const searchDailyLogs = async (query) => {
+    if (!query.trim()) { setDailyLogSearchResults(null); return; }
+    try {
+      const res = await fetch(`${DELIVERY_API}/daily-logs/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setDailyLogSearchResults(data);
+    } catch (e) {
+      setDailyLogSearchResults({ results: [], totalHits: 0 });
+    }
+  };
+
   const finishReckoning = async () => {
     if (!pendingLoad || !db) return;
+    // Snapshot current day's processing data to daily log before clearing
+    if (pdfDate && completedItems.length > 0) {
+      await snapshotProcessingToLog(pdfDate);
+    }
     const { itemsObject, totalCases, dateStr, isPdf } = pendingLoad;
     const carryItems = reckoningItems.filter(item => reckoningDecisions[item.id]?.action === 'carry');
     const carryObject = {};
@@ -4003,6 +4074,62 @@ const ProduceProcessorApp = () => {
                   Manage Photos & Videos
                 </button>
 
+                <button
+                  onClick={async () => {
+                    setShowMenu(false);
+                    if (pdfDate && completedItems.length > 0) {
+                      await snapshotProcessingToLog(pdfDate);
+                      alert('Processing data saved to daily log');
+                    } else {
+                      alert('No completed items to save');
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+                  Save to Daily Log
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowDailyLog(true);
+                    loadDailyLogList();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Daily Log History
+                </button>
+
                 {!isIPad && (
                   <button
                     onClick={async () => {
@@ -4666,6 +4793,224 @@ const ProduceProcessorApp = () => {
                       </div>
                     )}
                   </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Daily Log History Overlay */}
+        {showDailyLog && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '1rem'
+          }}>
+            <div style={{
+              background: 'white', borderRadius: '20px', padding: '1.5rem',
+              maxWidth: '600px', width: '100%', maxHeight: '85vh', overflow: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}>
+              {!dailyLogData ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', color: '#1e293b' }}>Daily Log</h2>
+                    <button onClick={() => { setShowDailyLog(false); setDailyLogList(null); setDailyLogSearch(''); setDailyLogSearchResults(null); }} style={{ background: '#e2e8f0', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', cursor: 'pointer', fontWeight: '700', color: '#64748b' }}>✕</button>
+                  </div>
+                  <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 0.75rem' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input
+                      type="text"
+                      placeholder="Search items across all days..."
+                      value={dailyLogSearch}
+                      onChange={(e) => {
+                        setDailyLogSearch(e.target.value);
+                        clearTimeout(window._dlSearchTimer);
+                        window._dlSearchTimer = setTimeout(() => searchDailyLogs(e.target.value), 300);
+                      }}
+                      style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.95rem', color: '#1e293b' }}
+                    />
+                    {dailyLogSearch && (
+                      <button onClick={() => { setDailyLogSearch(''); setDailyLogSearchResults(null); }} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>&times;</button>
+                    )}
+                  </div>
+
+                  {dailyLogSearchResults ? (
+                    <>
+                      <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                        {dailyLogSearchResults.totalHits || 0} result{dailyLogSearchResults.totalHits !== 1 ? 's' : ''} for "{dailyLogSearchResults.query}"
+                      </p>
+                      {(dailyLogSearchResults.results || []).map(dayResult => {
+                        const d = new Date(dayResult.date + 'T00:00:00');
+                        const formatted = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                        const sectionColors = { exceptions: '#fee2e2', pulls: '#dbeafe', processing: '#dcfce7', outOfStock: '#fef3c7', notes: '#fef3c7' };
+                        const sectionText = { exceptions: '#991b1b', pulls: '#1e40af', processing: '#166534', outOfStock: '#92400e', notes: '#92400e' };
+                        const sectionLabels = { exceptions: 'EXC', pulls: 'PULL', processing: 'PROC', outOfStock: 'O/S', notes: 'NOTE' };
+                        return (
+                          <div key={dayResult.date} style={{ marginBottom: '0.75rem' }}>
+                            <p style={{ fontWeight: '700', fontSize: '0.95rem', color: '#1e293b', marginBottom: '0.25rem' }}>{dayResult.dayOfWeek} {formatted}</p>
+                            {dayResult.hits.map((hit, i) => {
+                              const name = hit.rawDescription || hit.itemName || hit.text || '';
+                              const section = hit.section;
+                              return (
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem' }}>
+                                  <span style={{ fontSize: '0.65rem', fontWeight: '700', padding: '2px 5px', borderRadius: '4px', background: sectionColors[section] || '#f1f5f9', color: sectionText[section] || '#64748b', whiteSpace: 'nowrap', marginTop: '2px' }}>{sectionLabels[section] || section}</span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <span style={{ fontWeight: '600' }}>{name}</span>
+                                    {hit.supplierName && <span style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block' }}>{hit.supplierName}</span>}
+                                    {hit.quantityReceived !== undefined && <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}> {hit.quantityReceived ?? '?'}/{hit.quantityExpected ?? '?'}</span>}
+                                    {hit.pullQuantity !== undefined && <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}> {hit.pullQuantity} cases{hit.pullConfirmed ? ' ✓' : ''}</span>}
+                                    {hit.cases !== undefined && <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}> {hit.cases} cases</span>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                      {dailyLogSearchResults.totalHits === 0 && (
+                        <p style={{ color: '#94a3b8', textAlign: 'center', padding: '1rem 0' }}>No matches found</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Last 7 Days</p>
+                      {!dailyLogList ? (
+                        <p style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem 0' }}>Loading...</p>
+                      ) : dailyLogList.length === 0 ? (
+                        <p style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem 0' }}>No daily logs yet</p>
+                      ) : (
+                        dailyLogList.map(log => {
+                          const d = new Date(log.date + 'T00:00:00');
+                          const formatted = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                          return (
+                            <div
+                              key={log.date}
+                              onClick={() => loadDailyLogDetail(log.date)}
+                              style={{
+                                padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0',
+                                marginBottom: '0.5rem', cursor: 'pointer', background: 'white'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '1.05rem' }}>{formatted}</span>
+                                <span style={{ width: 10, height: 10, borderRadius: '50%', background: log.status === 'complete' ? '#34c759' : '#f59e0b' }} />
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                {log.totalItemsExpected || 0} items · {log.totalCasesExpected || 0} cases
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.4rem' }}>
+                                {log.exceptionCount > 0 && <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '1px 6px', borderRadius: '8px', background: '#fee2e2', color: '#991b1b' }}>{log.exceptionCount} exc</span>}
+                                {log.pullCount > 0 && <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '1px 6px', borderRadius: '8px', background: '#dbeafe', color: '#1e40af' }}>{log.pullCount} pulls</span>}
+                                {log.processingCount > 0 && <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '1px 6px', borderRadius: '8px', background: '#dcfce7', color: '#166534' }}>{log.processingCount} processed</span>}
+                                {log.noteCount > 0 && <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '1px 6px', borderRadius: '8px', background: '#fef3c7', color: '#92400e' }}>{log.noteCount} notes</span>}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <button onClick={() => setDailyLogData(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b', padding: '0.2rem' }}>←</button>
+                      <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', color: '#1e293b' }}>
+                        {dailyLogData.dayOfWeek} {new Date(dailyLogData.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </h2>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 8px', borderRadius: '8px', background: dailyLogData.status === 'complete' ? '#dcfce7' : '#fef9c3', color: dailyLogData.status === 'complete' ? '#166534' : '#854d0e' }}>{dailyLogData.status}</span>
+                    </div>
+                    <button onClick={() => { setShowDailyLog(false); setDailyLogData(null); setDailyLogList(null); }} style={{ background: '#e2e8f0', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', cursor: 'pointer', fontWeight: '700', color: '#64748b' }}>✕</button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.8rem', color: '#64748b', marginBottom: '1rem' }}>
+                    <span>{dailyLogData.totalItemsExpected || 0} items expected</span>
+                    <span>{dailyLogData.totalCasesExpected || 0} cases expected</span>
+                    <span>{dailyLogData.totalItemsReceived || 0} received</span>
+                    {dailyLogData.totalItemsProcessed > 0 && <span>{dailyLogData.totalItemsProcessed} processed</span>}
+                  </div>
+
+                  {/* Exceptions */}
+                  {(dailyLogData.exceptions || []).length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.3rem' }}>Exceptions <span style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px', fontWeight: '600' }}>{dailyLogData.exceptions.length}</span></p>
+                      {dailyLogData.exceptions.map((e, i) => (
+                        <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: '700', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', background: e.receivedStatus === 'SHORT' ? '#fee2e2' : e.receivedStatus === 'OVER' ? '#dbeafe' : '#fef3c7', color: e.receivedStatus === 'SHORT' ? '#991b1b' : e.receivedStatus === 'OVER' ? '#1e40af' : '#92400e' }}>{e.receivedStatus}</span>
+                          <span style={{ fontWeight: '600' }}>{e.rawDescription}</span>
+                          <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{e.quantityReceived ?? '?'}/{e.quantityExpected ?? '?'}</span>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', width: '100%' }}>{e.supplierName}</span>
+                          {e.receivedNotes && <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic', width: '100%' }}>{e.receivedNotes}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Pulls */}
+                  {(dailyLogData.pulls || []).length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.3rem' }}>Pulls <span style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px', fontWeight: '600' }}>{dailyLogData.pulls.length}</span></p>
+                      {dailyLogData.pulls.map((p, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem' }}>
+                          <span style={{ fontWeight: '700', background: '#f1f5f9', borderRadius: '6px', padding: '1px 6px', minWidth: '1.5rem', textAlign: 'center' }}>{p.pullQuantity}</span>
+                          <span style={{ fontWeight: '500', flex: 1 }}>{p.rawDescription}</span>
+                          <span>{p.pullConfirmed ? '✓' : '○'}</span>
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{p.supplierName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Processing */}
+                  {(dailyLogData.processing || []).length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.3rem' }}>Processing <span style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px', fontWeight: '600' }}>{dailyLogData.processing.length}</span></p>
+                      {dailyLogData.processing.map((p, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem' }}>
+                          <span style={{ fontWeight: '500', flex: 1 }}>{p.itemName}</span>
+                          <span style={{ fontWeight: '600' }}>{p.cases || 0} cs</span>
+                          {p.totalTime && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{Math.round(p.totalTime / 60)}m</span>}
+                          {p.photoUrl && <a href={p.photoUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📷</a>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Out of Stock */}
+                  {(dailyLogData.outOfStock || []).length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.3rem' }}>Out of Stock <span style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px', fontWeight: '600' }}>{dailyLogData.outOfStock.length}</span></p>
+                      {dailyLogData.outOfStock.map((o, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem' }}>
+                          <span style={{ fontWeight: '500', flex: 1 }}>{o.rawDescription}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{o.supplierName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {(dailyLogData.notes || []).length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.3rem' }}>Notes <span style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px', fontWeight: '600' }}>{dailyLogData.notes.length}</span></p>
+                      {dailyLogData.notes.map((n, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem' }}>
+                          <span>{n.type === 'item' ? '📦' : n.type === 'delivery' ? '🚚' : '📝'}</span>
+                          <div style={{ flex: 1 }}>
+                            {n.itemName && <span style={{ fontWeight: '600', fontSize: '0.8rem', display: 'block' }}>{n.itemName}</span>}
+                            <span style={{ color: '#1e293b' }}>{n.text}</span>
+                          </div>
+                          <span style={{ fontSize: '0.65rem', fontWeight: '600', color: '#94a3b8', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{n.source === 'produce-processor' ? 'PP' : 'DLV'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {(dailyLogData.exceptions || []).length === 0 && (dailyLogData.pulls || []).length === 0 && (dailyLogData.processing || []).length === 0 && (dailyLogData.notes || []).length === 0 && (
+                    <p style={{ color: '#94a3b8', textAlign: 'center', padding: '1rem 0' }}>No data in this log yet</p>
+                  )}
                 </>
               )}
             </div>
