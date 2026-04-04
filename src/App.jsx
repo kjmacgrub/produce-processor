@@ -18,6 +18,15 @@ const ProduceProcessorApp = () => {
   const [isPhone] = useState(() => /iPhone/.test(navigator.userAgent) || (/Android/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent)));
   const [pdfDate, setPdfDate] = useState('');
 
+  const isNotToday = useMemo(() => {
+    if (!pdfDate) return false;
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+    return pdfDate !== todayStr;
+  }, [pdfDate]);
+
   const weekInfo = useMemo(() => {
     const base = pdfDate ? new Date(pdfDate + 'T00:00:00') : new Date();
     const julianDay = Math.floor(
@@ -1410,6 +1419,19 @@ const ProduceProcessorApp = () => {
         50% { opacity: 0.4; }
       }
     `}</style>
+    {isNotToday && (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+        pointerEvents: 'none', zIndex: 99999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+      }}>
+        <div style={{
+          fontSize: '5vw', fontWeight: 900, letterSpacing: '0.15em',
+          color: 'rgba(255, 0, 0, 0.18)', whiteSpace: 'nowrap',
+          transform: 'rotate(-35deg)',
+        }}>NOT TODAY'S DATA</div>
+      </div>
+    )}
     <div style={{
       minHeight: '100vh',
       background: readOnlyMode
