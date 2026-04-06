@@ -1821,7 +1821,7 @@ const ProduceProcessorApp = () => {
                       <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
                     </div>
                     <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '1.8rem', color: weekInfo.text, opacity: 0.75 }}>Show # of items to work on</span>
+                      <span style={{ fontSize: '1.8rem', color: weekInfo.text, opacity: 0.75 }}># of items to show</span>
                       <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
                       <div style={{ fontSize: '1.4rem', fontWeight: '700', color: weekInfo.text, minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
                       <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
