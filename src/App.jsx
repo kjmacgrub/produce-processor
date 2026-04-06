@@ -4047,6 +4047,33 @@ const ProduceProcessorApp = () => {
                   Add New Item
                 </button>
 
+                <a
+                  href="https://inventory.intranet.psfc.coop/login/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowMenu(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                    textDecoration: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <img src="/clover-icon.png" alt="" width="22" height="22" style={{ objectFit: 'contain' }} />
+                  Open Clover
+                </a>
+
 
                 <button
                   onClick={() => {
