@@ -1427,7 +1427,7 @@ const ProduceProcessorApp = () => {
       }}>
         <div style={{
           fontSize: '5vw', fontWeight: 900, letterSpacing: '0.15em',
-          color: 'rgba(255, 0, 0, 0.18)', whiteSpace: 'nowrap',
+          color: 'rgba(255, 0, 0, 0.32)', whiteSpace: 'nowrap',
           transform: 'rotate(-35deg)',
         }}>NOT TODAY'S DATA</div>
       </div>
