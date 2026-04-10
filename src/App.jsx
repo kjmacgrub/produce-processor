@@ -1726,16 +1726,6 @@ const ProduceProcessorApp = () => {
             gap: '0.3rem',
             zIndex: 10,
           }}>
-            <a href="https://delivery-app-481756503401.us-east1.run.app" aria-label="Delivery" style={{ padding: '0.5rem', color: weekInfo.text, opacity: 0.7 }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="4" y1="3" x2="4" y2="21"/>
-                <line x1="20" y1="3" x2="20" y2="21"/>
-                <line x1="12" y1="4" x2="12" y2="6"/>
-                <line x1="12" y1="9" x2="12" y2="11"/>
-                <line x1="12" y1="14" x2="12" y2="16"/>
-                <line x1="12" y1="19" x2="12" y2="21"/>
-              </svg>
-            </a>
             <button
               onClick={() => { setShowNotesBrowser(true); setNotesBrowserDate(null); }}
               aria-label="Notes"
@@ -3967,6 +3957,37 @@ const ProduceProcessorApp = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <a
+                  href="https://delivery-app-481756503401.us-east1.run.app"
+                  onClick={() => setShowMenu(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                    textDecoration: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="4" y1="3" x2="4" y2="21"/>
+                    <line x1="20" y1="3" x2="20" y2="21"/>
+                    <line x1="12" y1="4" x2="12" y2="6"/>
+                    <line x1="12" y1="9" x2="12" y2="11"/>
+                    <line x1="12" y1="14" x2="12" y2="16"/>
+                    <line x1="12" y1="19" x2="12" y2="21"/>
+                  </svg>
+                  Delivery
+                </a>
                 <a
                   href="https://inventory.intranet.psfc.coop/login/"
                   target="_blank"
