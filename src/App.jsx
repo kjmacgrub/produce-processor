@@ -1246,7 +1246,7 @@ const ProduceProcessorApp = () => {
     }
   };
 
-  const markComplete = async (item) => { if (readOnlyMode || !db) return; setShowPhotoChoice(item); };
+  const markComplete = async (item) => { if (readOnlyMode || !db) return; finalizeCompletion(item, null); };
 
   const openCasesPrompt = (item) => {
     if (readOnlyMode) return;
