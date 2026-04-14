@@ -2144,8 +2144,9 @@ const ProduceProcessorApp = () => {
                               autoFocus
                               style={{
                                 fontSize: '1.2rem', fontWeight: '600', color: '#78350f',
-                                background: 'white', border: '1px solid #fbbf24',
-                                borderRadius: '6px', padding: '0.3rem', textAlign: 'center', width: '100%'
+                                background: 'transparent', border: 'none', borderBottom: '2px solid #f59e0b',
+                                borderRadius: '0', padding: '0', textAlign: 'left', width: '100%',
+                                outline: 'none'
                               }}
                             />
                           ) : (
