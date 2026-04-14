@@ -2050,6 +2050,7 @@ const ProduceProcessorApp = () => {
                       }}>
                         {item.cases}
                       </div>
+                      {item.supplier && <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.15rem', textAlign: 'center', lineHeight: 1.2 }}>{item.supplier}</div>}
                     </div>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -2215,8 +2216,9 @@ const ProduceProcessorApp = () => {
                         {/* Center: Timer + Avg Time below */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                           <button onClick={() => handleBeginProcessing(item.id)} style={{
-                            background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px',
-                            padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
+                            background: 'linear-gradient(to bottom, #fef9c3, #fde047)', color: '#000', border: '1px solid #000', borderRadius: '8px',
+                            padding: '0.4rem 1.2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem',
+                            boxShadow: '0 2px 0 #a16207, 0 3px 5px rgba(0,0,0,0.15)'
                           }}>
                             Timer
                           </button>
