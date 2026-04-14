@@ -2550,7 +2550,14 @@ const ProduceProcessorApp = () => {
                           <strong>{item.cases}</strong> cases
                         </span>
                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                          {new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {(() => {
+                            const d = new Date(item.completedAt);
+                            const now = new Date();
+                            const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+                            return isToday
+                              ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          })()}
                         </span>
                         {completedStats && (
                           <span
