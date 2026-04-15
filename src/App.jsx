@@ -1695,28 +1695,26 @@ const ProduceProcessorApp = () => {
         }}>
 
           {/* Hamburger Menu Button */}
-          {!isIPad && (
-            <button
-              onClick={() => setShowMenu(true)}
-              aria-label="Menu"
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                left: '1rem',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '0.5rem',
-                zIndex: 10
-              }}
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={weekInfo.text} strokeWidth="2.5">
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <line x1="3" y1="12" x2="21" y2="12"/>
-                <line x1="3" y1="18" x2="21" y2="18"/>
-              </svg>
-            </button>
-          )}
+          <button
+            onClick={() => setShowMenu(true)}
+            aria-label="Menu"
+            style={{
+              position: 'absolute',
+              top: '1rem',
+              left: '1rem',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.5rem',
+              zIndex: 10
+            }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={weekInfo.text} strokeWidth="2.5">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
 
           {/* Delivery App Nav Link */}
           <a
@@ -1725,7 +1723,7 @@ const ProduceProcessorApp = () => {
             style={{
               position: 'absolute',
               top: '1.15rem',
-              left: isIPad ? '1rem' : '3.5rem',
+              left: '3.5rem',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
@@ -1781,7 +1779,7 @@ const ProduceProcessorApp = () => {
           <div style={{ textAlign: 'center' }}>
             <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
               {(() => {
-                const completedCases = completedItems.reduce((sum, item) => sum + item.cases, 0);
+                const completedCases = completedItems.reduce((sum, item) => sum + (item.originalCases ?? item.cases), 0) + items.reduce((sum, item) => sum + (item.casesDone ?? 0), 0);
                 const completedPercentage = originalTotalCases > 0 ? (completedCases / originalTotalCases) * 100 : 0;
                 return (
                   <div>
