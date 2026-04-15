@@ -76,6 +76,7 @@ const ProduceProcessorApp = () => {
   const [locationEditText, setLocationEditText] = useState('');
   const [showAddItem, setShowAddItem] = useState(false);
   const [displayCount, setDisplayCount] = useState(2);
+  const prevDisplayCountRef = useRef(2);
   const [newItemName, setNewItemName] = useState('');
   const [newItemLocation, setNewItemLocation] = useState('');
   const [newItemCases, setNewItemCases] = useState('1');
@@ -1723,7 +1724,7 @@ const ProduceProcessorApp = () => {
             aria-label="Delivery"
             style={{
               position: 'absolute',
-              top: '1rem',
+              top: '1.15rem',
               left: isIPad ? '1rem' : '3.5rem',
               background: 'none',
               border: 'none',
@@ -1817,13 +1818,6 @@ const ProduceProcessorApp = () => {
                       <span>{completedCases} cases done</span>
                       <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
                     </div>
-                    <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '1.8rem', color: weekInfo.text, opacity: 0.75 }}># of items to show</span>
-                      <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
-                      <div style={{ fontSize: '1.4rem', fontWeight: '700', color: weekInfo.text, minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
-                      <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
-                      <button onClick={() => setDisplayCount(null)} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
-                    </div>
                   </div>
                 );
               })()}
@@ -1843,6 +1837,14 @@ const ProduceProcessorApp = () => {
             }}
           >
             v2.15 · {__COMMIT_HASH__}
+          </div>
+
+          <div style={{ marginTop: '0.5rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>Show</span>
+            <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
+            <div style={{ fontSize: '1.4rem', fontWeight: '700', color: weekInfo.text, minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
+            <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
+            <button onClick={() => { if (displayCount === null) { setDisplayCount(prevDisplayCountRef.current); } else { prevDisplayCountRef.current = displayCount; setDisplayCount(null); } }} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All items</button>
           </div>
 
         </div>
