@@ -1769,7 +1769,7 @@ const ProduceProcessorApp = () => {
               fontWeight: '700',
               color: weekInfo.text,
               textAlign: 'center',
-              marginBottom: '0.5rem'
+              marginBottom: '1.5rem'
             }}
           >
             {pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
@@ -1781,8 +1781,20 @@ const ProduceProcessorApp = () => {
               {(() => {
                 const completedCases = completedItems.reduce((sum, item) => sum + (item.originalCases ?? item.cases), 0) + items.reduce((sum, item) => sum + (item.casesDone ?? 0), 0);
                 const completedPercentage = originalTotalCases > 0 ? (completedCases / originalTotalCases) * 100 : 0;
+                const casesToDo = Math.max(0, originalTotalCases - completedCases);
                 return (
                   <div>
+                    <div style={{
+                      fontSize: '0.85rem',
+                      fontWeight: '700',
+                      color: weekInfo.text,
+                      opacity: 0.85,
+                      marginTop: '0.75rem',
+                      marginBottom: '0.75rem',
+                      textAlign: 'center'
+                    }}>
+                      Daily total of {originalTotalCases} cases expected of {items.length + completedItems.length} items
+                    </div>
                     <div style={{
                       width: '100%',
                       height: '24px',
@@ -1814,12 +1826,25 @@ const ProduceProcessorApp = () => {
                       paddingRight: '2px'
                     }}>
                       <span>{completedCases} cases done</span>
-                      <span>{originalTotalCases} cases and {items.length + completedItems.length} items expected</span>
+                      <span>{casesToDo} cases to do</span>
                     </div>
                   </div>
                 );
               })()}
             </div>
+          </div>
+
+          <div style={{ marginTop: '0.5rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
+            <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem' }}>
+              <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>Show</span>
+              <span style={{ fontSize: '1.4rem', fontWeight: '800', color: weekInfo.text }}>{displayCount ?? items.length}</span>
+              <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>items below</span>
+            </span>
+            <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
+          </div>
+          <div style={{ marginBottom: '0.25rem', display: 'flex', justifyContent: 'center' }}>
+            <button onClick={() => { if (displayCount === null) { setDisplayCount(prevDisplayCountRef.current); } else { prevDisplayCountRef.current = displayCount; setDisplayCount(null); } }} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
           </div>
 
           <div
@@ -1830,19 +1855,11 @@ const ProduceProcessorApp = () => {
               color: weekInfo.text,
               opacity: 0.5,
               fontWeight: '600',
-              marginTop: '0.5rem',
+              marginTop: '0.75rem',
               cursor: 'pointer'
             }}
           >
             v2.15 · {__COMMIT_HASH__}
-          </div>
-
-          <div style={{ marginTop: '0.5rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>Show</span>
-            <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
-            <div style={{ fontSize: '1.4rem', fontWeight: '700', color: weekInfo.text, minWidth: '2rem', textAlign: 'center' }}>{displayCount ?? items.length}</div>
-            <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
-            <button onClick={() => { if (displayCount === null) { setDisplayCount(prevDisplayCountRef.current); } else { prevDisplayCountRef.current = displayCount; setDisplayCount(null); } }} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All items</button>
           </div>
 
         </div>
@@ -2496,7 +2513,7 @@ const ProduceProcessorApp = () => {
                   letterSpacing: '0.05em',
                   borderBottom: '2px dashed #10b981'
                 }}>
-                  Completed
+                  Completed {completedItems.length} items
                 </div>
 
                 {[...completedItems].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)).map(item => {
