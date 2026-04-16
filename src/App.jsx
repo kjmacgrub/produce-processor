@@ -103,8 +103,6 @@ const ProduceProcessorApp = () => {
   const [mediaVideoURLs, setMediaVideoURLs] = useState({});
   const [selectMode, setSelectMode] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState(new Set());
-  const [storageFiles, setStorageFiles] = useState(null);
-  const [loadingStorageFiles, setLoadingStorageFiles] = useState(false);
   const [oosItems, setOosItems] = useState(new Set());
   const [notes, setNotes] = useState({});
   const [showNotesBrowser, setShowNotesBrowser] = useState(false);
@@ -3941,7 +3939,7 @@ const ProduceProcessorApp = () => {
         {/* Hamburger Menu Modal */}
         {showMenu && (
           <div
-            onClick={() => { setShowMenu(false); setStorageFiles(null); }}
+            onClick={() => { setShowMenu(false); }}
             style={{
               position: 'fixed',
               top: 0,
@@ -4043,13 +4041,7 @@ const ProduceProcessorApp = () => {
                 </a>
 
                 <button
-                  onClick={async () => {
-                    setLoadingStorageFiles(true);
-                    setStorageFiles([]);
-                    const files = await listAvailableCSVs();
-                    setStorageFiles(files);
-                    setLoadingStorageFiles(false);
-                  }}
+                  onClick={() => cloverUploadRef.current?.click()}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -4069,38 +4061,15 @@ const ProduceProcessorApp = () => {
                   <Upload size={22} />
                   Load Clover data file
                 </button>
-                {loadingStorageFiles && (
-                  <p style={{ fontSize: '0.9rem', color: '#64748b', padding: '0.25rem 0.5rem' }}>Loading files…</p>
-                )}
-                {storageFiles && storageFiles.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                    {storageFiles.map(f => (
-                      <button
-                        key={f.filename}
-                        onClick={async () => {
-                          await loadCSVFromStorage(f);
-                          setStorageFiles([]);
-                          setShowMenu(false);
-                        }}
-                        style={{
-                          padding: '0.75rem 1rem',
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '0.95rem',
-                          color: '#1e293b',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
-                      >
-                        {f.filename}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {!loadingStorageFiles && storageFiles !== null && storageFiles.length === 0 && (
-                  <p style={{ fontSize: '0.9rem', color: '#64748b', padding: '0.25rem 0.5rem' }}>No files found in storage.</p>
-                )}
+                <input
+                  ref={cloverUploadRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    await handleCloverUpload(e);
+                  }}
+                />
 
                 <button
                   onClick={() => {
