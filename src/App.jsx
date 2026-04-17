@@ -1833,13 +1833,13 @@ const ProduceProcessorApp = () => {
           </div>
 
           <div style={{ marginTop: '0.5rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
+            <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bg, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
             <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem' }}>
               <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>Show</span>
-              <span style={{ fontSize: '1.4rem', fontWeight: '800', color: weekInfo.text }}>{displayCount ?? items.length}</span>
+              <span style={{ fontSize: '1.4rem', fontWeight: '800', color: weekInfo.text }}>#</span>
               <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>items below</span>
             </span>
-            <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bgLight, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
+            <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bg, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
           </div>
           <div style={{ marginBottom: '0.25rem', display: 'flex', justifyContent: 'center' }}>
             <button onClick={() => { if (displayCount === null) { setDisplayCount(prevDisplayCountRef.current); } else { prevDisplayCountRef.current = displayCount; setDisplayCount(null); } }} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
