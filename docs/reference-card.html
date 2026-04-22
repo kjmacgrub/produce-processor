@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Produce Processor — Reference Card</title>
+<style>
+  @page { size: letter; margin: 0.5in; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; font-size: 10.5pt; color: #111; line-height: 1.35; margin: 0; }
+  h1 { font-size: 18pt; margin: 0 0 2pt 0; }
+  h2 { font-size: 11pt; margin: 14pt 0 4pt 0; text-transform: uppercase; letter-spacing: 0.5pt; color: #444; border-bottom: 1px solid #ccc; padding-bottom: 2pt; }
+  .sub { color: #666; margin-bottom: 12pt; font-size: 10pt; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 4pt; }
+  td { padding: 3pt 6pt 3pt 0; vertical-align: top; }
+  td.label { color: #555; width: 28%; white-space: nowrap; }
+  td.value { font-family: "SF Mono", Menlo, monospace; font-size: 9.5pt; word-break: break-all; }
+  .note { font-size: 9pt; color: #666; margin-top: 2pt; }
+  ul { margin: 4pt 0; padding-left: 18pt; }
+  li { margin-bottom: 3pt; }
+  .footer { margin-top: 16pt; padding-top: 6pt; border-top: 1px solid #ccc; font-size: 8.5pt; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>Produce Processor</h1>
+<div class="sub">Emergency reference · current as of 2026-04-22</div>
+
+<h2>What it is</h2>
+<p>An iPad-based web app used in the produce department to work through a daily processing task list. A receiving manager uploads a CSV each morning; iPads on the floor pull from a shared list in real time, letting staff mark items complete, record short instructional videos, and capture completion photos.</p>
+
+<h2>Where it runs</h2>
+<table>
+  <tr><td class="label">Live URL</td><td class="value">https://produce-processor.netlify.app</td></tr>
+  <tr><td class="label">Hosting</td><td class="value">Netlify (auto-deploys from GitHub master)</td></tr>
+  <tr><td class="label">Data backend</td><td class="value">Firebase project: process-6d2dc</td></tr>
+</table>
+
+<h2>Where the code lives</h2>
+<table>
+  <tr><td class="label">GitHub repo</td><td class="value">https://github.com/kjmacgrub/produce-processor</td></tr>
+  <tr><td class="label">Local checkout</td><td class="value">/Users/km/python3/source/produce-processor</td></tr>
+</table>
+
+<h2>Accounts you'd need</h2>
+<ul>
+  <li><b>GitHub</b> — owner: kjmacgrub. Add IT as collaborator to grant code access.</li>
+  <li><b>Netlify</b> — site name: <tt>produce-processor</tt>. Owner account controls deploys and env vars.</li>
+  <li><b>Firebase console</b> — project <tt>process-6d2dc</tt>. Holds the Realtime Database, Storage (videos + daily CSVs), and API keys.</li>
+</ul>
+
+<h2>If it's broken — start here</h2>
+<ol>
+  <li><b>Site loads but data is stale</b> → Firebase console → Realtime Database, confirm today's items are present under <tt>/items</tt>.</li>
+  <li><b>CSV didn't arrive</b> → Firebase Storage bucket <tt>process-6d2dc.firebasestorage.app</tt>, path <tt>produce-csv/YYYY-MM-DD.csv</tt>.</li>
+  <li><b>Site is down</b> → Netlify dashboard → Deploys tab. Latest deploy should be green; rollback if red.</li>
+  <li><b>Videos won't play</b> → check Storage path <tt>produce-videos/{item_id}.webm</tt>.</li>
+</ol>
+
+<h2>Who to call</h2>
+<p>Primary owner: Ken MacGruber (kjmacbcg@gmail.com). All credentials, service accounts, and deploy history route through this email.</p>
+
+<div class="footer">
+Produce Processor · v2.15.0 · Ref A (emergency card) · generated 2026-04-22
+</div>
+
+</body>
+</html>

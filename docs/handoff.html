@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Produce Processor — Handoff Doc</title>
+<style>
+  @page { size: letter; margin: 0.45in; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; font-size: 9.5pt; color: #111; line-height: 1.3; margin: 0; }
+  h1 { font-size: 16pt; margin: 0 0 1pt 0; }
+  h2 { font-size: 10pt; margin: 10pt 0 3pt 0; text-transform: uppercase; letter-spacing: 0.5pt; color: #444; border-bottom: 1px solid #ccc; padding-bottom: 2pt; }
+  .sub { color: #666; margin-bottom: 8pt; font-size: 9pt; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 3pt; font-size: 9pt; }
+  td { padding: 2pt 6pt 2pt 0; vertical-align: top; }
+  td.label { color: #555; width: 24%; white-space: nowrap; }
+  td.value { font-family: "SF Mono", Menlo, monospace; font-size: 8.5pt; word-break: break-all; }
+  ul { margin: 2pt 0; padding-left: 16pt; }
+  li { margin-bottom: 1.5pt; }
+  code, tt { font-family: "SF Mono", Menlo, monospace; font-size: 8.5pt; background: #f3f3f3; padding: 0 3pt; border-radius: 2pt; }
+  .twocol { column-count: 2; column-gap: 16pt; }
+  .twocol h2:first-child { margin-top: 0; }
+  .footer { margin-top: 14pt; padding-top: 5pt; border-top: 1px solid #ccc; font-size: 8pt; color: #888; }
+  p { margin: 3pt 0; }
+</style>
+</head>
+<body>
+
+<h1>Produce Processor</h1>
+<div class="sub">Handoff / maintenance doc · current as of 2026-04-22 · v2.15.0</div>
+
+<h2>What it does</h2>
+<p><b>Brief:</b> Shared real-time task list on iPads for the produce-processing crew.</p>
+<p><b>General:</b> A receiving manager uploads a dated CSV (from IT's PDF/CSV export) via a desktop browser. The app parses it, writes items to Firebase Realtime Database, and iPads on the floor sync live — staff begin/complete items, record short WebM instructional videos keyed by item ID, and capture completion photos. Stats and timing data accumulate per item. Completed items auto-clean after 10 days. iPad vs desktop UI is chosen by user-agent detection.</p>
+
+<h2>Tech stack</h2>
+<table>
+  <tr><td class="label">Languages</td><td>JavaScript (JSX), HTML, CSS-in-JS (inline style objects)</td></tr>
+  <tr><td class="label">Framework</td><td>React 19 (single monolithic component), Vite 7 build</td></tr>
+  <tr><td class="label">Libraries</td><td>Firebase 12 SDK, lucide-react icons, pdf.js (via CDN)</td></tr>
+  <tr><td class="label">Backend</td><td>Firebase Realtime Database + Firebase Storage (no custom server)</td></tr>
+  <tr><td class="label">Build output</td><td>Static bundle in <code>dist/</code>, served as a SPA</td></tr>
+</table>
+
+<h2>Hosting &amp; remote resources</h2>
+<table>
+  <tr><td class="label">Live site</td><td class="value">https://produce-processor.netlify.app</td></tr>
+  <tr><td class="label">Hosting</td><td class="value">Netlify · site name <code>produce-processor</code> · auto-deploys on push to <code>master</code></td></tr>
+  <tr><td class="label">Firebase project</td><td class="value">process-6d2dc</td></tr>
+  <tr><td class="label">Realtime DB URL</td><td class="value">https://process-6d2dc-default-rtdb.firebaseio.com</td></tr>
+  <tr><td class="label">Storage bucket</td><td class="value">process-6d2dc.firebasestorage.app</td></tr>
+  <tr><td class="label">GitHub repo</td><td class="value">https://github.com/kjmacgrub/produce-processor</td></tr>
+  <tr><td class="label">Local checkout</td><td class="value">/Users/km/python3/source/produce-processor</td></tr>
+</table>
+
+<h2>Repo layout — files that matter</h2>
+<table>
+  <tr><td class="label"><code>src/App.jsx</code></td><td>Monolithic main component (~3,700 lines). All state, Firebase listeners, CSV/PDF parsing, video/photo logic, and UI live here.</td></tr>
+  <tr><td class="label"><code>src/firebase.js</code></td><td>Firebase init; reads config from <code>import.meta.env.VITE_FIREBASE_*</code>.</td></tr>
+  <tr><td class="label"><code>src/main.jsx</code></td><td>React entry point.</td></tr>
+  <tr><td class="label"><code>src/index.css</code></td><td>Global resets; most styling is inline in JSX.</td></tr>
+  <tr><td class="label"><code>package.json</code></td><td>Dependencies and npm scripts (<code>dev</code>, <code>build</code>, <code>preview</code>).</td></tr>
+  <tr><td class="label"><code>vite.config.js</code></td><td>Vite build config.</td></tr>
+  <tr><td class="label"><code>netlify.toml</code></td><td>Netlify build directives: <code>npm run build</code> → publish <code>dist/</code>.</td></tr>
+  <tr><td class="label"><code>.env.example</code></td><td>Template for Firebase credentials. Real values in <code>.env</code> (git-ignored) and Netlify env-vars panel.</td></tr>
+  <tr><td class="label"><code>index.html</code></td><td>Vite entry HTML (mounts React into <code>#root</code>).</td></tr>
+  <tr><td class="label"><code>public/</code></td><td>Static assets copied to the build root.</td></tr>
+  <tr><td class="label"><code>pdf-uploader.html</code></td><td>Standalone helper page for uploading CSVs to Storage.</td></tr>
+</table>
+
+<h2>Firebase data paths</h2>
+<table>
+  <tr><td class="label">Realtime DB</td><td><code>/items</code> (active), <code>/completedItems</code> (done, auto-cleaned after 10d), <code>/completionPhotos</code>, <code>/videoIndex</code>, <code>/timingData</code>, <code>/historicalTimes</code>, <code>/pdfDate</code>, <code>/totalCases</code></td></tr>
+  <tr><td class="label">Storage</td><td><code>produce-videos/{itemId}.webm</code> — instruction videos · <code>produce-csv/YYYY-MM-DD.csv</code> — daily upload</td></tr>
+</table>
+
+<h2>Develop &amp; deploy</h2>
+<table>
+  <tr><td class="label">Install deps</td><td><code>cd /Users/km/python3/source/produce-processor &amp;&amp; npm install</code></td></tr>
+  <tr><td class="label">Run locally</td><td><code>npm run dev</code> — Vite dev server at <code>http://localhost:5173</code> (requires <code>.env</code> with Firebase keys)</td></tr>
+  <tr><td class="label">Production build</td><td><code>npm run build</code> → outputs <code>dist/</code></td></tr>
+  <tr><td class="label">Preview build</td><td><code>npm run preview</code></td></tr>
+  <tr><td class="label">Deploy (auto)</td><td>Push to <code>master</code> → Netlify builds and publishes automatically.</td></tr>
+  <tr><td class="label">Deploy (manual)</td><td><code>npx netlify deploy --prod --dir=dist</code> from the project root</td></tr>
+  <tr><td class="label">Env vars</td><td>Netlify dashboard → Site settings → Environment variables (mirror <code>.env</code> keys with <code>VITE_FIREBASE_*</code> prefix)</td></tr>
+</table>
+
+<h2>Accounts required to maintain</h2>
+<ul>
+  <li><b>GitHub</b> (kjmacgrub/produce-processor) — collaborator access for code.</li>
+  <li><b>Netlify</b> — deploys, env vars, custom domain. Site: <code>produce-processor</code>.</li>
+  <li><b>Firebase console</b> (project <code>process-6d2dc</code>) — Realtime DB, Storage, API keys, security rules.</li>
+  <li>No CI service, no testing framework, no linter configured — testing is manual.</li>
+</ul>
+
+<div class="footer">
+Produce Processor · v2.15.0 · Ref B (handoff doc) · generated 2026-04-22 · primary contact: kjmacbcg@gmail.com
+</div>
+
+</body>
+</html>
