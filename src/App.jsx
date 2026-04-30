@@ -1774,7 +1774,7 @@ const ProduceProcessorApp = () => {
           </div>
 
           {/* Progress Bar and Welcome */}
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', position: 'relative' }}>
             <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
               {(() => {
                 const completedCases = completedItems.reduce((sum, item) => sum + (item.originalCases ?? item.cases), 0) + items.reduce((sum, item) => sum + (item.casesDone ?? 0), 0);
@@ -1782,17 +1782,6 @@ const ProduceProcessorApp = () => {
                 const casesToDo = Math.max(0, originalTotalCases - completedCases);
                 return (
                   <div>
-                    <div style={{
-                      fontSize: '0.85rem',
-                      fontWeight: '700',
-                      color: weekInfo.text,
-                      opacity: 0.85,
-                      marginTop: '0.75rem',
-                      marginBottom: '0.75rem',
-                      textAlign: 'center'
-                    }}>
-                      Daily total of {originalTotalCases} cases expected of {items.length + completedItems.length} items
-                    </div>
                     <div style={{
                       width: '100%',
                       height: '24px',
@@ -1813,7 +1802,7 @@ const ProduceProcessorApp = () => {
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      fontSize: '0.75rem',
+                      fontSize: '0.95rem',
                       fontWeight: '700',
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
@@ -1830,9 +1819,24 @@ const ProduceProcessorApp = () => {
                 );
               })()}
             </div>
+            <div style={{
+              position: 'absolute',
+              left: 'calc(50% + 340px)',
+              right: '1rem',
+              top: '12px',
+              transform: 'translateY(-50%)',
+              fontSize: '1.4rem',
+              fontWeight: '700',
+              color: weekInfo.text,
+              opacity: 0.85,
+              textAlign: 'left',
+              lineHeight: 1.15,
+            }}>
+              {originalTotalCases} cases and {items.length + completedItems.length} items expected
+            </div>
           </div>
 
-          <div style={{ marginTop: '0.5rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: '2rem', marginBottom: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bg, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
             <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem' }}>
               <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>Show</span>
@@ -1841,7 +1845,7 @@ const ProduceProcessorApp = () => {
             </span>
             <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bg, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
           </div>
-          <div style={{ marginBottom: '0.25rem', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ marginBottom: '0', display: 'flex', justifyContent: 'center' }}>
             <button onClick={() => { if (displayCount === null) { setDisplayCount(prevDisplayCountRef.current); } else { prevDisplayCountRef.current = displayCount; setDisplayCount(null); } }} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
           </div>
 
@@ -1853,7 +1857,7 @@ const ProduceProcessorApp = () => {
               color: weekInfo.text,
               opacity: 0.5,
               fontWeight: '600',
-              marginTop: '0.75rem',
+              marginTop: '0',
               cursor: 'pointer'
             }}
           >
