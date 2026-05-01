@@ -1950,7 +1950,8 @@ const ProduceProcessorApp = () => {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                 border: '2px solid transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: '0.75rem', flexWrap: 'wrap',
+                gap: '0.75rem', flexWrap: 'nowrap', whiteSpace: 'nowrap',
+                width: 'fit-content', justifySelf: 'center',
               }}>
                 <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem' }}>
                   <span style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>Show</span>
