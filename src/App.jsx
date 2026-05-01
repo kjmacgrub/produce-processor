@@ -1819,34 +1819,6 @@ const ProduceProcessorApp = () => {
                 );
               })()}
             </div>
-            <div style={{
-              position: 'absolute',
-              left: 'calc(50% + 340px)',
-              right: '1rem',
-              top: '12px',
-              transform: 'translateY(-50%)',
-              fontSize: '1.4rem',
-              fontWeight: '700',
-              color: weekInfo.text,
-              opacity: 0.85,
-              textAlign: 'left',
-              lineHeight: 1.15,
-            }}>
-              {originalTotalCases} cases and {items.length + completedItems.length} items expected
-            </div>
-          </div>
-
-          <div style={{ marginTop: '2rem', marginBottom: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bg, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>−</button>
-            <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem' }}>
-              <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>Show</span>
-              <span style={{ fontSize: '1.4rem', fontWeight: '800', color: weekInfo.text }}>#</span>
-              <span style={{ fontSize: '1rem', color: weekInfo.text, opacity: 0.6, fontWeight: '600' }}>items below</span>
-            </span>
-            <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: `2px solid ${weekInfo.border}`, background: weekInfo.bg, fontSize: '1.2rem', fontWeight: '700', color: weekInfo.text, cursor: 'pointer', lineHeight: 1 }}>+</button>
-          </div>
-          <div style={{ marginBottom: '0', display: 'flex', justifyContent: 'center' }}>
-            <button onClick={() => { if (displayCount === null) { setDisplayCount(prevDisplayCountRef.current); } else { prevDisplayCountRef.current = displayCount; setDisplayCount(null); } }} style={{ padding: '0.25rem 0.75rem', borderRadius: '8px', border: `2px solid ${weekInfo.border}`, background: displayCount === null ? 'rgba(0,0,0,0.2)' : weekInfo.bgLight, color: weekInfo.text, fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' }}>All</button>
           </div>
 
           <div
@@ -1969,6 +1941,42 @@ const ProduceProcessorApp = () => {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
           {/* Left column: Todo items */}
           <div style={{ flex: '1 1 0', minWidth: 'min(650px, 100%)', display: 'grid', gap: '0.75rem' }}>
+
+            {items.length > 0 && (
+              <div style={{
+                background: 'white',
+                borderRadius: '12px',
+                padding: '0.55rem 1.2rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                border: '2px solid transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: '0.75rem', flexWrap: 'wrap',
+              }}>
+                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>Show</span>
+                  <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#1e293b' }}>{displayCount ?? items.length}</span>
+                  <span style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>below</span>
+                </span>
+                <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '1.9rem', height: '1.9rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.1rem', fontWeight: '700', color: '#334155', cursor: 'pointer', lineHeight: 1 }}>−</button>
+                <button
+                  onClick={() => { if (displayCount === null) { setDisplayCount(prevDisplayCountRef.current); } else { prevDisplayCountRef.current = displayCount; setDisplayCount(null); } }}
+                  style={{
+                    padding: '0.3rem 0.85rem',
+                    borderRadius: '8px',
+                    border: displayCount === null ? '2px solid #0f766e' : '2px solid #cbd5e1',
+                    background: displayCount === null ? '#0f766e' : 'white',
+                    color: displayCount === null ? 'white' : '#334155',
+                    fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer',
+                  }}
+                >All</button>
+                <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '1.9rem', height: '1.9rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.1rem', fontWeight: '700', color: '#334155', cursor: 'pointer', lineHeight: 1 }}>+</button>
+                {displayCount !== null && items.length > displayCount && (
+                  <span style={{ color: '#b45309', fontSize: '0.95rem', fontWeight: '700', marginLeft: '0.25rem' }}>
+                    {items.length - displayCount} item{items.length - displayCount !== 1 ? 's' : ''} not shown
+                  </span>
+                )}
+              </div>
+            )}
 
             {[...items].sort((a, b) => {
               const ao = a.sortOrder ?? 9999, bo = b.sortOrder ?? 9999;
@@ -2105,11 +2113,15 @@ const ProduceProcessorApp = () => {
                           📝 {notes[pdfDate]?.itemNotes?.[item.id]?.text}
                         </span>
                       )}
-                      {item.carryover && (
-                        <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#fff', background: '#dc2626', border: '1px solid #b91c1c', borderRadius: '4px', padding: '0.2rem 0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>↩ From yesterday</span>
-                      )}
-                      {item.casesDone > 0 && (
-                        <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#065f46', background: '#d1fae5', border: '1px solid #10b981', borderRadius: '4px', padding: '0.1rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'flex-start' }}>{item.casesDone} of {item.originalCases} done</span>
+                      {(item.carryover || item.casesDone > 0) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {item.carryover && (
+                            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#fff', background: '#dc2626', border: '1px solid #b91c1c', borderRadius: '4px', padding: '0.2rem 0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>↩ From yesterday</span>
+                          )}
+                          {item.casesDone > 0 && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#065f46', background: '#d1fae5', border: '1px solid #10b981', borderRadius: '4px', padding: '0.1rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.casesDone} of {item.originalCases} done</span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -2186,27 +2198,41 @@ const ProduceProcessorApp = () => {
                       </div>
                       </div>
                       {!readOnlyMode && !selectMode && (
-                        <button
-                          onClick={() => openCasesPrompt(item)}
-                          style={{
-                            background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
-                            color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
-                            border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '3px solid #fbbf24' : 'none',
-                            borderRadius: '50%',
-                            width: '72px',
-                            height: '72px',
-                            cursor: 'pointer',
-                            fontWeight: '900',
-                            fontSize: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '0.75rem' : '1.3rem',
-                            flexShrink: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            lineHeight: 1.1
-                          }}
-                        >
-                          {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
-                        </button>
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <button
+                            onClick={() => openCasesPrompt(item)}
+                            style={{
+                              background: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#1e293b' : '#10b981',
+                              color: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '#fbbf24' : 'white',
+                              border: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '3px solid #fbbf24' : 'none',
+                              borderRadius: '50%',
+                              width: '72px',
+                              height: '72px',
+                              cursor: 'pointer',
+                              fontWeight: '900',
+                              fontSize: (itemsInProcess[item.id] || itemsPaused[item.id]) ? '0.75rem' : '1.3rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: 1.1
+                            }}
+                          >
+                            {(itemsInProcess[item.id] || itemsPaused[item.id]) ? 'Timing...' : 'Done'}
+                          </button>
+                          {stats && !itemsInProcess[item.id] && !itemsPaused[item.id] && (
+                            <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
+                              position: 'absolute', top: 'calc(100% + 0.3rem)', left: '50%', transform: 'translateX(-50%)',
+                              background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
+                              borderRadius: '6px', padding: '0.15rem 0.4rem', fontSize: '0.75rem',
+                              color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
+                              cursor: !isIPad ? 'pointer' : 'default',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2
+                            }}>
+                              <span>{formatTimeWithUnits(stats.average)}</span>
+                              <span style={{ fontSize: '0.55rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg / Case</span>
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -2242,19 +2268,6 @@ const ProduceProcessorApp = () => {
                           }}>
                             Timer
                           </button>
-                          {stats && (
-                            <span onClick={!isIPad ? () => setShowTimingEvents(sku) : undefined} style={{
-                              background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)',
-                              borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.8rem',
-                              color: '#0f766e', fontWeight: '600', whiteSpace: 'nowrap',
-                              cursor: !isIPad ? 'pointer' : 'default',
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3
-                            }}>
-                              <span>{formatTimeWithUnits(stats.average)}</span>
-                              <span style={{ fontSize: '0.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>Avg Time per Case</span>
-                              <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '500' }}>{stats.totalCases} cases timed</span>
-                            </span>
-                          )}
                         </div>
                         {/* Right slot: Photo */}
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '0.75rem' }}>
@@ -2451,11 +2464,6 @@ const ProduceProcessorApp = () => {
             );
           })}
 
-          {displayCount !== null && items.length > displayCount && (
-            <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.95rem', fontWeight: '600', marginTop: '0.25rem' }}>
-              {items.length - displayCount} item{items.length - displayCount !== 1 ? 's' : ''} not shown
-            </div>
-          )}
           </div>
 
           {/* Bulk-select floating toolbar */}
