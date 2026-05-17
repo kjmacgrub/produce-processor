@@ -75,7 +75,7 @@ const ProduceProcessorApp = () => {
   const [editingLocation, setEditingLocation] = useState(null);
   const [locationEditText, setLocationEditText] = useState('');
   const [showAddItem, setShowAddItem] = useState(false);
-  const [displayCount, setDisplayCount] = useState(2);
+  const [displayCount, setDisplayCount] = useState(null);
   const prevDisplayCountRef = useRef(2);
   const [newItemName, setNewItemName] = useState('');
   const [newItemLocation, setNewItemLocation] = useState('');
