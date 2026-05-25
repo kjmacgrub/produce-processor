@@ -1031,7 +1031,10 @@ const ProduceProcessorApp = () => {
       if (!instruction) continue;
 
       const name = (fields[nameIdx] || '').trim();
-      const cases = Math.round(parseFloat(fields[qtyIdx]) || 0);
+      // Round up: IT ships fractional quantity_expected on occasion; round up
+      // so we never under-process. Tracked upstream — drop the ceil when IT
+      // confirms integer-only quantities.
+      const cases = Math.ceil(parseFloat(fields[qtyIdx]) || 0);
       if (!name || cases <= 0) continue;
 
       // Priority: leading digit + separator (space, -, _, en/em dash)
