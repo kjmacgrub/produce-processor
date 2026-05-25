@@ -98,6 +98,8 @@ const ProduceProcessorApp = () => {
   const [reckoningItems, setReckoningItems] = useState([]);
   const [reckoningDecisions, setReckoningDecisions] = useState({});
   const [pendingLoad, setPendingLoad] = useState(null);
+  const [pendingV2Import, setPendingV2Import] = useState(null);
+  const [showV2ImportPrompt, setShowV2ImportPrompt] = useState(false);
   const [showCasesPrompt, setShowCasesPrompt] = useState(null);
   const [casesPromptValue, setCasesPromptValue] = useState(1);
   const [mediaVideoURLs, setMediaVideoURLs] = useState({});
@@ -240,6 +242,13 @@ const ProduceProcessorApp = () => {
     const unsub = onValue(dateRef, (snapshot) => { const date = snapshot.val(); if (date) setPdfDate(date); });
     return () => unsub();
   }, []);
+
+  // CSV_IMPORT_POLICY.md §7 — on-visit freshness check against Delivery's
+  // incoming-v2/. Runs once per mount; no background poll.
+  useEffect(() => {
+    if (!db || readOnlyMode) return;
+    checkV2Freshness();
+  }, [db, readOnlyMode]);
 
   // Load original total cases from Firebase
   useEffect(() => {
@@ -974,6 +983,161 @@ const ProduceProcessorApp = () => {
     setReckoningItems([]);
     setReckoningDecisions({});
     setPendingLoad(null);
+  };
+
+  // ---- V2 combined-CSV import (CSV_IMPORT_POLICY.md §7, §8) ----
+  // Parses the IT-supplied combined CSV (line 1 = delivery date, line 4 =
+  // DELIVERY_WORKSHEET_V<n>, line 6 = column header). Only rows with a non-empty
+  // processing_instructions value become processor items; priority is extracted
+  // from the leading digit per the format doc's legend.
+  const parseV2CSV = (text) => {
+    const lines = text.replace(/^﻿/, '').split(/\r?\n/);
+    if (lines.length < 7) throw new Error('V2 CSV too short — needs 6-line preamble + header');
+
+    const dateMatch = lines[0].match(/(\d{4}-\d{2}-\d{2})/);
+    if (!dateMatch) throw new Error('V2 CSV line 1 missing ISO date');
+    const csvDate = dateMatch[1];
+
+    if (!/^DELIVERY_WORKSHEET_V\d+\s*$/.test(lines[3].trim())) {
+      throw new Error('V2 CSV line 4 missing DELIVERY_WORKSHEET_V<n> marker');
+    }
+
+    const headerLine = lines[5];
+    const cols = headerLine.split(',').map(s => s.trim());
+    const idx = (name) => cols.indexOf(name);
+    const nameIdx = idx('item_name');
+    const qtyIdx = idx('quantity_expected');
+    const instrIdx = idx('processing_instructions');
+    if (nameIdx < 0 || qtyIdx < 0 || instrIdx < 0) {
+      throw new Error('V2 CSV missing required columns');
+    }
+
+    const parsedItems = [];
+    for (let i = 6; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      // CSV split honoring quotes
+      const fields = [];
+      let buf = '';
+      let inQ = false;
+      for (const ch of line) {
+        if (ch === '"') inQ = !inQ;
+        else if (ch === ',' && !inQ) { fields.push(buf.trim()); buf = ''; }
+        else buf += ch;
+      }
+      fields.push(buf.trim());
+
+      const instruction = (fields[instrIdx] || '').trim();
+      if (!instruction) continue;
+
+      const name = (fields[nameIdx] || '').trim();
+      const cases = Math.round(parseFloat(fields[qtyIdx]) || 0);
+      if (!name || cases <= 0) continue;
+
+      // Priority: leading digit + separator (space, -, _, en/em dash)
+      let priority = 'missing';
+      let location = instruction;
+      const m = instruction.match(/^(\d)[ \-_–—]\s*(.*)$/);
+      if (m) { priority = parseInt(m[1]); location = m[2].trim(); }
+
+      parsedItems.push({ name, priority, cases, location });
+    }
+
+    const totalCases = parsedItems.reduce((s, it) => s + it.cases, 0);
+    const sorted = [...parsedItems].sort((a, b) => {
+      const pa = a.priority === 'missing' ? 9999 : a.priority;
+      const pb = b.priority === 'missing' ? 9999 : b.priority;
+      if (pa !== pb) return pa - pb;
+      return a.name.localeCompare(b.name);
+    });
+    const itemsObject = {};
+    sorted.forEach((it, i) => {
+      const id = `item-${Date.now()}-${i}`;
+      itemsObject[id] = { id, sortOrder: i, ...it };
+    });
+    return { itemsObject, totalCases, csvDate };
+  };
+
+  const loadV2Silent = async (text, dateStr) => {
+    // Wipes current state and loads the v2 CSV. Used for silent loads and the
+    // §8 "Mark all done" branch — both replace the day wholesale.
+    const { itemsObject, totalCases, csvDate } = parseV2CSV(text);
+    const finalDate = dateStr || csvDate;
+    if (pdfDate && completedItems.length > 0) {
+      await snapshotProcessingToLog(pdfDate);
+    }
+    const itemsRef = ref(db, 'items');
+    await remove(itemsRef);
+    await set(itemsRef, itemsObject);
+    await set(ref(db, 'completedItems'), {});
+    await set(ref(db, 'totalCases'), totalCases);
+    await set(ref(db, 'originalTotalCases'), totalCases);
+    await set(ref(db, 'pdfDate'), finalDate);
+    setOriginalTotalCases(totalCases);
+  };
+
+  const checkV2Freshness = async () => {
+    if (!db || readOnlyMode) return;
+    try {
+      const resp = await fetch(`${DELIVERY_API}/csv-current`);
+      if (!resp.ok) return; // 404 or other: fall through to existing flow
+      const data = await resp.json();
+      const csvDate = data.delivery_date;
+
+      const [itemsSnap, dateSnap] = await Promise.all([
+        get(ref(db, 'items')),
+        get(ref(db, 'pdfDate')),
+      ]);
+      const currentItems = itemsSnap.val() ? Object.values(itemsSnap.val()) : [];
+      const currentDate = dateSnap.val() || '';
+
+      if (currentDate && currentDate === csvDate) return; // noop
+      if (currentDate && csvDate < currentDate) return;   // noop (defensive)
+
+      if (currentItems.length === 0) {
+        await loadV2Silent(data.text, csvDate);
+        return;
+      }
+
+      // Newer CSV + current day still has items → §8 prompt
+      setPendingV2Import({ text: data.text, csvDate, currentItems });
+      setShowV2ImportPrompt(true);
+    } catch (e) {
+      console.warn('V2 CSV freshness check failed:', e);
+    }
+  };
+
+  const cancelV2Import = () => {
+    setShowV2ImportPrompt(false);
+    setPendingV2Import(null);
+  };
+
+  const acceptV2MarkAllDone = async () => {
+    if (!pendingV2Import) return;
+    try {
+      await loadV2Silent(pendingV2Import.text, pendingV2Import.csvDate);
+      setShowV2ImportPrompt(false);
+      setPendingV2Import(null);
+    } catch (e) {
+      alert(`Failed to load new worksheet: ${e.message}`);
+    }
+  };
+
+  const acceptV2ReckonByItem = () => {
+    if (!pendingV2Import) return;
+    try {
+      const { itemsObject, totalCases, csvDate } = parseV2CSV(pendingV2Import.text);
+      setPendingLoad({ itemsObject, totalCases, dateStr: csvDate });
+      setReckoningItems(pendingV2Import.currentItems);
+      const defaults = {};
+      pendingV2Import.currentItems.forEach(it => { defaults[it.id] = { action: 'carry', cases: it.cases }; });
+      setReckoningDecisions(defaults);
+      setShowV2ImportPrompt(false);
+      setPendingV2Import(null);
+      setShowReckoning(true);
+    } catch (e) {
+      alert(`Failed to parse new worksheet: ${e.message}`);
+    }
   };
 
   // HANDLER FUNCTIONS
@@ -3898,6 +4062,44 @@ const ProduceProcessorApp = () => {
             </div>
           );
         })()}
+
+        {/* V2 Combined-CSV Import Prompt (CSV_IMPORT_POLICY.md §8) */}
+        {showV2ImportPrompt && pendingV2Import && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '1rem' }}>
+            <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+              <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.6rem', fontWeight: 800, color: '#1e293b' }}>
+                New worksheet available
+              </h2>
+              <p style={{ fontSize: '1.05rem', color: '#334155', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                A new processing file is available for <strong>{pendingV2Import.csvDate}</strong>.
+                The current file (<strong>{pdfDate || 'unknown date'}</strong>) still has{' '}
+                <strong>{pendingV2Import.currentItems.length}</strong> unprocessed item
+                {pendingV2Import.currentItems.length === 1 ? '' : 's'}.
+                What should happen to them?
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <button
+                  onClick={acceptV2MarkAllDone}
+                  style={{ padding: '0.9rem 1.5rem', borderRadius: '12px', border: 'none', background: '#0f766e', color: 'white', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer' }}
+                >
+                  Mark all done &amp; load new file
+                </button>
+                <button
+                  onClick={acceptV2ReckonByItem}
+                  style={{ padding: '0.9rem 1.5rem', borderRadius: '12px', border: '1px solid #0f766e', background: 'white', color: '#0f766e', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer' }}
+                >
+                  Reckon item-by-item
+                </button>
+                <button
+                  onClick={cancelV2Import}
+                  style={{ padding: '0.9rem 1.5rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: 600, fontSize: '1.05rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Reckoning Modal */}
         {showReckoning && (
