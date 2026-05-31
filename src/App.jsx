@@ -992,7 +992,10 @@ const ProduceProcessorApp = () => {
   // from the leading digit per the format doc's legend.
   const parseV2CSV = (text) => {
     const lines = text.replace(/^﻿/, '').split(/\r?\n/);
-    if (lines.length < 7) throw new Error('V2 CSV too short — needs 6-line preamble + header');
+    // 5-line preamble + header on line 6 (index 5). A header-only file with no
+    // data rows is valid — e.g. a Sunday with no deliveries — and parses to an
+    // empty item set rather than throwing.
+    if (lines.length < 6) throw new Error('V2 CSV too short — needs 5-line preamble + header');
 
     const dateMatch = lines[0].match(/(\d{4}-\d{2}-\d{2})/);
     if (!dateMatch) throw new Error('V2 CSV line 1 missing ISO date');
@@ -2025,6 +2028,23 @@ const ProduceProcessorApp = () => {
         )}
 
 
+        {/* No deliveries today — a file is loaded for the day but has zero
+            items to process (e.g. a Sunday with no produce deliveries). */}
+        {items.length === 0 && pdfDate && (
+          <div style={{
+            background: 'white',
+            borderRadius: '24px',
+            padding: '5rem 2rem',
+            textAlign: 'center',
+            boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
+            color: '#64748b'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🗓️</div>
+            <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>No deliveries today</h2>
+            <p style={{ fontSize: '1.1rem' }}>Today's worksheet has no produce to process.</p>
+          </div>
+        )}
+
         {/* No items message - View mode */}
         {items.length === 0 && !pdfDate && !readOnlyMode && (
           <div style={{
@@ -2041,7 +2061,7 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {items.length === 0 && readOnlyMode && (
+        {items.length === 0 && !pdfDate && readOnlyMode && (
           <div style={{
             background: 'white',
             borderRadius: '24px',
