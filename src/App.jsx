@@ -613,25 +613,50 @@ const ProduceProcessorApp = () => {
           const url = await getDownloadURL(fileRef);
           const response = await fetch(url);
           const text = await response.text();
+          // v2 combined CSV (cached from Delivery) vs Clover processing report —
+          // the marker tells them apart so selection routes to the right parser.
+          const fileType = text.includes('DELIVERY_WORKSHEET_V') ? 'v2' : 'csv';
           // Try first line for date
           const firstLine = text.split(/\r?\n/)[0];
           const dateMatch = firstLine.match(/(\d{4}-\d{2}-\d{2})/);
-          if (dateMatch) return { filename: fileRef.name, date: dateMatch[1], fileType: 'csv' };
+          if (dateMatch) return { filename: fileRef.name, date: dateMatch[1], fileType };
           // Fallback: try filename for date
           const filenameMatch = fileRef.name.match(/(\d{4}-\d{2}-\d{2})/);
-          if (filenameMatch) return { filename: fileRef.name, date: filenameMatch[1], fileType: 'csv' };
+          if (filenameMatch) return { filename: fileRef.name, date: filenameMatch[1], fileType };
           // Fallback: try any line in the file for a date
           const anyDateMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
-          if (anyDateMatch) return { filename: fileRef.name, date: anyDateMatch[1], fileType: 'csv' };
+          if (anyDateMatch) return { filename: fileRef.name, date: anyDateMatch[1], fileType };
           console.warn(`⚠️ No date found in file: ${fileRef.name}`);
           return null;
         } catch (error) { console.error(`❌ Error reading file ${fileRef.name}:`, error); return null; }
       }));
       const validFiles = filesWithDates.filter(Boolean);
-      validFiles.sort((a, b) => b.date.localeCompare(a.date));
-      console.log(`✅ Valid files with dates:`, validFiles);
-      return validFiles;
+      // One entry per date. If both a Clover report and a v2 worksheet exist for
+      // the same day (transition overlap), prefer the v2 worksheet.
+      const byDate = {};
+      for (const f of validFiles) {
+        const existing = byDate[f.date];
+        if (!existing || (f.fileType === 'v2' && existing.fileType !== 'v2')) byDate[f.date] = f;
+      }
+      const deduped = Object.values(byDate);
+      deduped.sort((a, b) => b.date.localeCompare(a.date));
+      console.log(`✅ Valid files with dates:`, deduped);
+      return deduped;
     } catch (error) { console.error('Error listing files:', error); return []; }
+  };
+
+  // Cache a v2 combined CSV into produce-csv/ so it shows up in the main-page
+  // date selector alongside Clover uploads. Stable per-date name → re-caching
+  // the same day overwrites rather than duplicating. Best-effort; the date list
+  // is non-critical, so failures are logged and ignored.
+  const cacheV2CsvForDateList = async (text, dateStr) => {
+    if (!storage || !dateStr) return;
+    try {
+      const fileRef = sRef(storage, `produce-csv/v2-${dateStr}.csv`);
+      await uploadBytes(fileRef, new Blob([text], { type: 'text/csv' }), { contentType: 'text/csv' });
+    } catch (e) {
+      console.warn('Failed to cache v2 CSV for the date list:', e);
+    }
   };
 
   const loadCSVFromStorage = async (fileInfo) => {
@@ -641,6 +666,19 @@ const ProduceProcessorApp = () => {
       const url = await getDownloadURL(storageRef);
       const response = await fetch(url);
       const text = await response.text();
+      if (fileInfo.fileType === 'v2') {
+        // v2 combined CSV → parse/load via the v2 path. Mirror the freshness
+        // flow: replace silently if nothing's in process, else §8 prompt.
+        const itemsSnap = await get(ref(db, 'items'));
+        const currentItems = itemsSnap.val() ? Object.values(itemsSnap.val()) : [];
+        if (currentItems.length === 0) {
+          await loadV2Silent(text, fileInfo.date);
+        } else {
+          setPendingV2Import({ text, csvDate: fileInfo.date, currentItems });
+          setShowV2ImportPrompt(true);
+        }
+        return;
+      }
       await processCSVData(text, fileInfo.date);
     } catch (error) { console.error('Error loading CSV:', error); alert('Could not load CSV: ' + error.message); }
   };
@@ -1141,6 +1179,10 @@ const ProduceProcessorApp = () => {
         setSyncStatus(manual ? { kind: 'success', message: `Already up to date (${currentDate}).` } : null);
         return;
       }
+
+      // A newer v2 day exists — cache it so it appears in the main-page date
+      // selector, whichever branch handles the load below.
+      cacheV2CsvForDateList(data.text, csvDate);
 
       if (currentItems.length === 0) {
         await loadV2Silent(data.text, csvDate);
