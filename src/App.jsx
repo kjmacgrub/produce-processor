@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { ref, onValue, get, set, remove, push, child, update } from 'firebase/database';
 import { ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { Upload, Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote } from 'lucide-react';
+import { Upload, Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote, RefreshCw } from 'lucide-react';
 
 const ProduceProcessorApp = () => {
   const [items, setItems] = useState([]);
@@ -100,6 +100,8 @@ const ProduceProcessorApp = () => {
   const [pendingLoad, setPendingLoad] = useState(null);
   const [pendingV2Import, setPendingV2Import] = useState(null);
   const [showV2ImportPrompt, setShowV2ImportPrompt] = useState(false);
+  // Visible result of the Delivery freshness check. {kind:'error'|'success'|'info', message} or null.
+  const [syncStatus, setSyncStatus] = useState(null);
   const [showCasesPrompt, setShowCasesPrompt] = useState(null);
   const [casesPromptValue, setCasesPromptValue] = useState(1);
   const [mediaVideoURLs, setMediaVideoURLs] = useState({});
@@ -249,6 +251,13 @@ const ProduceProcessorApp = () => {
     if (!db || readOnlyMode) return;
     checkV2Freshness();
   }, [db, readOnlyMode]);
+
+  // Auto-dismiss non-error sync banners; errors stay until tapped or replaced.
+  useEffect(() => {
+    if (!syncStatus || syncStatus.kind === 'error') return;
+    const t = setTimeout(() => setSyncStatus(null), 6000);
+    return () => clearTimeout(t);
+  }, [syncStatus]);
 
   // Load original total cases from Firebase
   useEffect(() => {
@@ -1082,12 +1091,39 @@ const ProduceProcessorApp = () => {
     setOriginalTotalCases(totalCases);
   };
 
-  const checkV2Freshness = async () => {
+  // Fetch /csv-current with one retry — absorbs a Cloud Run cold-start blip.
+  // Returns {status:404} when no worksheet exists, {status:200, data} otherwise.
+  // Throws (after the retry) on network failure or a non-ok, non-404 status.
+  const fetchCsvCurrent = async () => {
+    let lastErr;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const resp = await fetch(`${DELIVERY_API}/csv-current`);
+        if (resp.status === 404) return { status: 404 };
+        if (!resp.ok) throw new Error(`Delivery responded ${resp.status}`);
+        return { status: 200, data: await resp.json() };
+      } catch (e) {
+        lastErr = e;
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+    throw lastErr;
+  };
+
+  // CSV_IMPORT_POLICY.md §7 freshness check. Runs automatically on mount and
+  // on demand via the "Check for new data" menu button (manual === true).
+  // Failures are surfaced in a visible banner (syncStatus) instead of being
+  // swallowed silently, so a broken handoff is diagnosable rather than invisible.
+  const checkV2Freshness = async ({ manual = false } = {}) => {
     if (!db || readOnlyMode) return;
+    if (manual) setSyncStatus({ kind: 'info', message: 'Checking Delivery for new data…' });
     try {
-      const resp = await fetch(`${DELIVERY_API}/csv-current`);
-      if (!resp.ok) return; // 404 or other: fall through to existing flow
-      const data = await resp.json();
+      const result = await fetchCsvCurrent();
+      if (result.status === 404) {
+        setSyncStatus(manual ? { kind: 'info', message: 'No worksheet available from Delivery yet.' } : null);
+        return;
+      }
+      const data = result.data;
       const csvDate = data.delivery_date;
 
       const [itemsSnap, dateSnap] = await Promise.all([
@@ -1097,19 +1133,28 @@ const ProduceProcessorApp = () => {
       const currentItems = itemsSnap.val() ? Object.values(itemsSnap.val()) : [];
       const currentDate = dateSnap.val() || '';
 
-      if (currentDate && currentDate === csvDate) return; // noop
-      if (currentDate && csvDate < currentDate) return;   // noop (defensive)
+      if (currentDate && currentDate === csvDate) {
+        setSyncStatus(manual ? { kind: 'success', message: `Already up to date (${csvDate}).` } : null);
+        return;
+      }
+      if (currentDate && csvDate < currentDate) {
+        setSyncStatus(manual ? { kind: 'success', message: `Already up to date (${currentDate}).` } : null);
+        return;
+      }
 
       if (currentItems.length === 0) {
         await loadV2Silent(data.text, csvDate);
+        setSyncStatus({ kind: 'success', message: `Loaded new data for ${csvDate}.` });
         return;
       }
 
       // Newer CSV + current day still has items → §8 prompt
+      setSyncStatus(null);
       setPendingV2Import({ text: data.text, csvDate, currentItems });
       setShowV2ImportPrompt(true);
     } catch (e) {
       console.warn('V2 CSV freshness check failed:', e);
+      setSyncStatus({ kind: 'error', message: `Couldn't sync with Delivery: ${e.message}. Open the menu and tap "Check for new data" to retry.` });
     }
   };
 
@@ -4086,6 +4131,38 @@ const ProduceProcessorApp = () => {
           );
         })()}
 
+        {/* Delivery sync status banner — surfaces freshness-check results,
+            especially failures that used to be swallowed silently. Tap to dismiss. */}
+        {syncStatus && (
+          <div
+            onClick={() => setSyncStatus(null)}
+            style={{
+              position: 'fixed',
+              top: '12px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 2200,
+              maxWidth: '92%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.75rem 1.1rem',
+              borderRadius: '12px',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+              background: syncStatus.kind === 'error' ? '#fef2f2' : syncStatus.kind === 'success' ? '#f0fdf4' : '#eff6ff',
+              color: syncStatus.kind === 'error' ? '#b91c1c' : syncStatus.kind === 'success' ? '#065f46' : '#1e40af',
+              border: `2px solid ${syncStatus.kind === 'error' ? '#fecaca' : syncStatus.kind === 'success' ? '#bbf7d0' : '#bfdbfe'}`,
+            }}
+          >
+            {syncStatus.kind === 'error' ? <AlertCircle size={18} /> : <RefreshCw size={18} />}
+            <span>{syncStatus.message}</span>
+            <span style={{ opacity: 0.6, marginLeft: '0.25rem', fontSize: '1.2rem', lineHeight: 1 }}>&times;</span>
+          </div>
+        )}
+
         {/* V2 Combined-CSV Import Prompt (CSV_IMPORT_POLICY.md §8) */}
         {showV2ImportPrompt && pendingV2Import && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '1rem' }}>
@@ -4308,6 +4385,28 @@ const ProduceProcessorApp = () => {
                     await handleCloverUpload(e);
                   }}
                 />
+
+                <button
+                  onClick={() => { setShowMenu(false); checkV2Freshness({ manual: true }); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    background: '#eff6ff',
+                    border: '2px solid #bfdbfe',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '700',
+                    color: '#1e40af',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left'
+                  }}
+                >
+                  <RefreshCw size={22} />
+                  Check for new data
+                </button>
 
                 <button
                   onClick={() => {
