@@ -2116,8 +2116,10 @@ const ProduceProcessorApp = () => {
 
 
         {/* No deliveries today — a file is loaded for the day but has zero
-            items to process (e.g. a Sunday with no produce deliveries). */}
-        {items.length === 0 && pdfDate && (
+            items to process (e.g. a Sunday with no produce deliveries).
+            Only when nothing was completed either; otherwise the day had
+            deliveries and they're all done. */}
+        {items.length === 0 && pdfDate && completedItems.length === 0 && (
           <div style={{
             background: 'white',
             borderRadius: '24px',
@@ -2129,6 +2131,22 @@ const ProduceProcessorApp = () => {
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🗓️</div>
             <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>No deliveries today</h2>
             <p style={{ fontSize: '1.1rem' }}>Today's worksheet has no produce to process.</p>
+          </div>
+        )}
+
+        {/* All items done — the day's deliveries are fully processed. */}
+        {items.length === 0 && pdfDate && completedItems.length > 0 && (
+          <div style={{
+            background: 'white',
+            borderRadius: '24px',
+            padding: '5rem 2rem',
+            textAlign: 'center',
+            boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
+            color: '#64748b'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
+            <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>All items done</h2>
+            <p style={{ fontSize: '1.1rem' }}>Every item on today's worksheet has been processed.</p>
           </div>
         )}
 
