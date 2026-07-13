@@ -98,8 +98,11 @@ const ProduceProcessorApp = () => {
   const [reckoningItems, setReckoningItems] = useState([]);
   const [reckoningDecisions, setReckoningDecisions] = useState({});
   const [pendingLoad, setPendingLoad] = useState(null);
-  const [pendingV2Import, setPendingV2Import] = useState(null);
-  const [showV2ImportPrompt, setShowV2ImportPrompt] = useState(false);
+  // Unfinished items stashed when a new day auto-swaps in. Firebase-backed so it
+  // survives reload and syncs across iPads. {fromDate, items:[...]} or null.
+  // Surfaced as a "(N unfinished…)" link under the progress bar; tapping it opens
+  // the reckoning modal to carry each item forward or archive it.
+  const [carryoverPending, setCarryoverPending] = useState(null);
   // Visible result of the Delivery freshness check. {kind:'error'|'success'|'info', message} or null.
   const [syncStatus, setSyncStatus] = useState(null);
   const [showCasesPrompt, setShowCasesPrompt] = useState(null);
@@ -245,11 +248,37 @@ const ProduceProcessorApp = () => {
     return () => unsub();
   }, []);
 
-  // CSV_IMPORT_POLICY.md §7 — on-visit freshness check against Delivery's
-  // incoming-v2/. Runs once per mount; no background poll.
+  // Pending-carryover stash (unfinished items from the day that was auto-archived).
+  useEffect(() => {
+    if (!db) return;
+    const r = ref(db, 'carryoverPending');
+    const unsub = onValue(r, (snapshot) => setCarryoverPending(snapshot.val() || null));
+    return () => unsub();
+  }, []);
+
+  // Keep a ref to the latest freshness-check closure so the interval/focus
+  // handlers below always run with current state (pdfDate, completedItems,
+  // timing/notes/photos) instead of the stale closure captured at mount. Without
+  // this, a swap fired hours later would archive an empty/wrong day.
+  const checkFreshnessRef = useRef(null);
+  useEffect(() => { checkFreshnessRef.current = checkV2Freshness; });
+
+  // CSV_IMPORT_POLICY.md §7 — freshness check against Delivery's incoming-v2/.
+  // Runs on mount, every 5 min, and whenever the tab regains focus/visibility so
+  // an iPad left open overnight auto-swaps in the new day without a manual reload.
   useEffect(() => {
     if (!db || readOnlyMode) return;
-    checkV2Freshness();
+    const run = () => checkFreshnessRef.current?.();
+    run();
+    const intervalId = setInterval(run, 5 * 60 * 1000);
+    const onVisible = () => { if (document.visibilityState === 'visible') run(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, [db, readOnlyMode]);
 
   // Auto-dismiss non-error sync banners; errors stay until tapped or replaced.
@@ -668,14 +697,15 @@ const ProduceProcessorApp = () => {
       const text = await response.text();
       if (fileInfo.fileType === 'v2') {
         // v2 combined CSV → parse/load via the v2 path. Mirror the freshness
-        // flow: replace silently if nothing's in process, else §8 prompt.
+        // flow: replace silently if nothing's in process, else stash the
+        // unfinished items and swap in (surfaced via the "(N unfinished…)" link).
         const itemsSnap = await get(ref(db, 'items'));
         const currentItems = itemsSnap.val() ? Object.values(itemsSnap.val()) : [];
         if (currentItems.length === 0) {
           await loadV2Silent(text, fileInfo.date);
         } else {
-          setPendingV2Import({ text, csvDate: fileInfo.date, currentItems });
-          setShowV2ImportPrompt(true);
+          const n = await stashUnfinishedAndLoadV2(text, fileInfo.date, currentItems, pdfDate);
+          setSyncStatus({ kind: 'success', message: `Loaded ${fileInfo.date}. ${n} unfinished item${n === 1 ? '' : 's'} saved — tap "(unfinished…)" under the progress bar to carry them over or archive them.` });
         }
         return;
       }
@@ -947,8 +977,17 @@ const ProduceProcessorApp = () => {
   const snapshotProcessingToLog = async (dateKey) => {
     if (!dateKey) return;
     try {
+      // Read completed items fresh from Firebase rather than React state — a
+      // background auto-swap (fired from a stale interval/focus closure, or at
+      // cold mount before listeners hydrate) must still archive the real day.
+      let completed = completedItems;
+      try {
+        const snap = await get(ref(db, 'completedItems'));
+        completed = snap.val() ? Object.values(snap.val()) : [];
+      } catch (_) { /* fall back to React state */ }
+      if (!completed.length) return; // nothing processed → no log to write
       const payload = {
-        completedItems: completedItems.map(item => ({
+        completedItems: completed.map(item => ({
           sku: item.id || '',
           itemName: item.name || '',
           cases: item.cases || 0,
@@ -1004,7 +1043,35 @@ const ProduceProcessorApp = () => {
   };
 
   const finishReckoning = async () => {
-    if (!pendingLoad || !db) return;
+    if (!db) return;
+
+    // Carryover-review mode (opened from the "(N unfinished…)" link): the new day
+    // is already loaded, so append the carried items to the current list and bump
+    // the totals, then clear the stash. No re-archive / no reset of the day.
+    if (!pendingLoad) {
+      const carryItems = reckoningItems.filter(item => reckoningDecisions[item.id]?.action === 'carry');
+      const additions = {};
+      let carryTotal = 0;
+      carryItems.forEach((item, idx) => {
+        const newId = `carryover-${Date.now()}-${idx}`;
+        const cases = reckoningDecisions[item.id]?.cases ?? item.cases;
+        carryTotal += cases;
+        additions[newId] = { ...item, id: newId, cases, casesDone: 0, sortOrder: idx - carryItems.length, carryover: true };
+      });
+      if (Object.keys(additions).length > 0) {
+        await update(ref(db, 'items'), additions);
+        const newTotal = originalTotalCases + carryTotal;
+        await set(ref(db, 'totalCases'), newTotal);
+        await set(ref(db, 'originalTotalCases'), newTotal);
+        setOriginalTotalCases(newTotal);
+      }
+      await remove(ref(db, 'carryoverPending'));
+      setShowReckoning(false);
+      setReckoningItems([]);
+      setReckoningDecisions({});
+      return;
+    }
+
     // Snapshot current day's processing data to daily log before clearing
     if (pdfDate && completedItems.length > 0) {
       await snapshotProcessingToLog(pdfDate);
@@ -1116,8 +1183,13 @@ const ProduceProcessorApp = () => {
     // §8 "Mark all done" branch — both replace the day wholesale.
     const { itemsObject, totalCases, csvDate } = parseV2CSV(text);
     const finalDate = dateStr || csvDate;
-    if (pdfDate && completedItems.length > 0) {
-      await snapshotProcessingToLog(pdfDate);
+    // Archive the outgoing day before wiping. Read its date fresh from Firebase
+    // (React state may be stale during a background swap); snapshotProcessingToLog
+    // reads the completed items fresh and no-ops if there were none.
+    const prevSnap = await get(ref(db, 'pdfDate'));
+    const prevDate = prevSnap.val() || pdfDate || '';
+    if (prevDate && prevDate !== finalDate) {
+      await snapshotProcessingToLog(prevDate);
     }
     const itemsRef = ref(db, 'items');
     await remove(itemsRef);
@@ -1127,6 +1199,19 @@ const ProduceProcessorApp = () => {
     await set(ref(db, 'originalTotalCases'), totalCases);
     await set(ref(db, 'pdfDate'), finalDate);
     setOriginalTotalCases(totalCases);
+  };
+
+  // Stash the current day's unfinished items, then swap the new v2 day in. Shared
+  // by the automatic freshness check and manual v2-day loads so neither blocks on
+  // a prompt. The stash surfaces as the "(N unfinished…)" link under the progress
+  // bar. "Replace with newest": each swap overwrites any prior unreviewed stash.
+  const stashUnfinishedAndLoadV2 = async (text, dateStr, currentItems, fromDate) => {
+    const unfinished = currentItems
+      .map(it => ({ ...it, cases: Math.max(1, (it.cases ?? 0) - (it.casesDone ?? 0)), casesDone: 0 }))
+      .filter(it => (it.cases ?? 0) > 0);
+    await set(ref(db, 'carryoverPending'), { fromDate: fromDate || '', items: unfinished });
+    await loadV2Silent(text, dateStr);
+    return unfinished.length;
   };
 
   // Fetch /csv-current with one retry — absorbs a Cloud Run cold-start blip.
@@ -1190,47 +1275,31 @@ const ProduceProcessorApp = () => {
         return;
       }
 
-      // Newer CSV + current day still has items → §8 prompt
-      setSyncStatus(null);
-      setPendingV2Import({ text: data.text, csvDate, currentItems });
-      setShowV2ImportPrompt(true);
+      // Newer CSV + current day still has unprocessed items. Instead of blocking
+      // on a prompt (rarely answered promptly), stash the unfinished items and
+      // swap the day in automatically. The stash surfaces as a "(N unfinished…)"
+      // link under the progress bar for later item-by-item reckoning.
+      const n = await stashUnfinishedAndLoadV2(data.text, csvDate, currentItems, currentDate || pdfDate);
+      setSyncStatus({ kind: 'success', message: `Loaded ${csvDate}. ${n} unfinished item${n === 1 ? '' : 's'} saved — tap "(unfinished…)" under the progress bar to carry them over or archive them.` });
     } catch (e) {
       console.warn('V2 CSV freshness check failed:', e);
       setSyncStatus({ kind: 'error', message: `Couldn't sync with Delivery: ${e.message}. Open the menu and tap "Check for new data" to retry.` });
     }
   };
 
-  const cancelV2Import = () => {
-    setShowV2ImportPrompt(false);
-    setPendingV2Import(null);
-  };
-
-  const acceptV2MarkAllDone = async () => {
-    if (!pendingV2Import) return;
-    try {
-      await loadV2Silent(pendingV2Import.text, pendingV2Import.csvDate);
-      setShowV2ImportPrompt(false);
-      setPendingV2Import(null);
-    } catch (e) {
-      alert(`Failed to load new worksheet: ${e.message}`);
-    }
-  };
-
-  const acceptV2ReckonByItem = () => {
-    if (!pendingV2Import) return;
-    try {
-      const { itemsObject, totalCases, csvDate } = parseV2CSV(pendingV2Import.text);
-      setPendingLoad({ itemsObject, totalCases, dateStr: csvDate });
-      setReckoningItems(pendingV2Import.currentItems);
-      const defaults = {};
-      pendingV2Import.currentItems.forEach(it => { defaults[it.id] = { action: 'carry', cases: it.cases }; });
-      setReckoningDecisions(defaults);
-      setShowV2ImportPrompt(false);
-      setPendingV2Import(null);
-      setShowReckoning(true);
-    } catch (e) {
-      alert(`Failed to parse new worksheet: ${e.message}`);
-    }
+  // Open the reckoning modal seeded from the stashed unfinished items (the
+  // "(N unfinished…)" link under the progress bar). pendingLoad stays null, which
+  // tells finishReckoning to append carried items to today's already-loaded list
+  // rather than rebuild the whole day (the manual-upload path).
+  const openCarryoverReckoning = () => {
+    const list = carryoverPending?.items || [];
+    if (!list.length) return;
+    setPendingLoad(null);
+    setReckoningItems(list);
+    const defaults = {};
+    list.forEach(it => { defaults[it.id] = { action: 'carry', cases: it.cases }; });
+    setReckoningDecisions(defaults);
+    setShowReckoning(true);
   };
 
   // HANDLER FUNCTIONS
@@ -2070,7 +2139,17 @@ const ProduceProcessorApp = () => {
                       paddingRight: '2px'
                     }}>
                       <span>{completedCases} cases done</span>
-                      <span>{casesToDo} cases to do</span>
+                      <span>
+                        {casesToDo} cases to do
+                        {carryoverPending?.items?.length > 0 && (
+                          <span
+                            onClick={openCarryoverReckoning}
+                            style={{ marginLeft: '0.4rem', color: '#b45309', textDecoration: 'underline', cursor: 'pointer', textTransform: 'none', letterSpacing: 'normal' }}
+                          >
+                            ({carryoverPending.items.length} unfinished…)
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 );
@@ -4223,51 +4302,13 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {/* V2 Combined-CSV Import Prompt (CSV_IMPORT_POLICY.md §8) */}
-        {showV2ImportPrompt && pendingV2Import && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '1rem' }}>
-            <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
-              <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.6rem', fontWeight: 800, color: '#1e293b' }}>
-                New worksheet available
-              </h2>
-              <p style={{ fontSize: '1.05rem', color: '#334155', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-                A new processing file is available for <strong>{pendingV2Import.csvDate}</strong>.
-                The current file (<strong>{pdfDate || 'unknown date'}</strong>) still has{' '}
-                <strong>{pendingV2Import.currentItems.length}</strong> unprocessed item
-                {pendingV2Import.currentItems.length === 1 ? '' : 's'}.
-                What should happen to them?
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <button
-                  onClick={acceptV2MarkAllDone}
-                  style={{ padding: '0.9rem 1.5rem', borderRadius: '12px', border: 'none', background: '#0f766e', color: 'white', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer' }}
-                >
-                  Mark all done &amp; load new file
-                </button>
-                <button
-                  onClick={acceptV2ReckonByItem}
-                  style={{ padding: '0.9rem 1.5rem', borderRadius: '12px', border: '1px solid #0f766e', background: 'white', color: '#0f766e', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer' }}
-                >
-                  Reckon item-by-item
-                </button>
-                <button
-                  onClick={cancelV2Import}
-                  style={{ padding: '0.9rem 1.5rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: 600, fontSize: '1.05rem', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Reckoning Modal */}
         {showReckoning && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
             <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
-              <h2 style={{ margin: '0 0 0.4rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', textAlign: 'center' }}>Before we start today...</h2>
+              <h2 style={{ margin: '0 0 0.4rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', textAlign: 'center' }}>{pendingLoad ? 'Before we start today...' : 'Unfinished items'}</h2>
               <p style={{ margin: '0 0 1.5rem 0', fontSize: '1rem', color: '#64748b', textAlign: 'center' }}>
-                {reckoningItems.length} item{reckoningItems.length !== 1 ? 's' : ''} weren't finished yesterday. What should I do with them?
+                {reckoningItems.length} item{reckoningItems.length !== 1 ? 's' : ''} weren't finished{pendingLoad ? ' yesterday' : ` on ${carryoverPending?.fromDate || 'the previous day'}`}. Carry each into today's list, or mark it done to archive it.
               </p>
               <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 {reckoningItems.map(item => {
