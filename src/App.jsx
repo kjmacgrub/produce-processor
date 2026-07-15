@@ -2144,7 +2144,7 @@ const ProduceProcessorApp = () => {
                         {carryoverPending?.items?.length > 0 && (
                           <span
                             onClick={openCarryoverReckoning}
-                            style={{ marginLeft: '0.4rem', color: '#b45309', textDecoration: 'underline', cursor: 'pointer', textTransform: 'none', letterSpacing: 'normal' }}
+                            style={{ marginLeft: '0.4rem', color: '#fbbf24', background: '#1a1a1a', border: '1px solid #fbbf24', borderRadius: '999px', padding: '0.1rem 0.55rem', fontWeight: '800', textDecoration: 'underline', cursor: 'pointer', textTransform: 'none', letterSpacing: 'normal', whiteSpace: 'nowrap' }}
                           >
                             ({carryoverPending.items.length} unfinished…)
                           </span>
@@ -4557,10 +4557,10 @@ const ProduceProcessorApp = () => {
                   Manage Photos & Videos
                 </button>
 
-                {!isIPad && (
+                {items.length > 0 && (
                   <button
                     onClick={async () => {
-                      if (!window.confirm('Mark ALL remaining items as done?')) return;
+                      if (!window.confirm(`Mark ALL ${items.length} remaining item${items.length === 1 ? '' : 's'} as done?`)) return;
                       setShowMenu(false);
                       for (const item of items) { await finalizeCompletion(item, null); }
                     }}
