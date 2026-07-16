@@ -1042,6 +1042,17 @@ const ProduceProcessorApp = () => {
     }
   };
 
+  // Back out of the reckoning modal without committing anything. In carryover
+  // mode (!pendingLoad) the stash is left untouched, so the "(N unfinished…)"
+  // link stays available to reopen later. In pending-load mode this abandons the
+  // queued day-swap. Either way the processor is no longer trapped on the screen.
+  const cancelReckoning = () => {
+    setShowReckoning(false);
+    setReckoningItems([]);
+    setReckoningDecisions({});
+    setPendingLoad(null);
+  };
+
   const finishReckoning = async () => {
     if (!db) return;
 
@@ -4305,7 +4316,14 @@ const ProduceProcessorApp = () => {
         {/* Reckoning Modal */}
         {showReckoning && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
-            <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ position: 'relative', background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
+              <button
+                onClick={cancelReckoning}
+                aria-label="Close"
+                style={{ position: 'absolute', top: '1rem', right: '1rem', width: '2.4rem', height: '2.4rem', borderRadius: '50%', border: 'none', background: '#f1f5f9', color: '#64748b', fontSize: '1.5rem', lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                &times;
+              </button>
               <h2 style={{ margin: '0 0 0.4rem 0', fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', textAlign: 'center' }}>{pendingLoad ? 'Before we start today...' : 'Unfinished items'}</h2>
               <p style={{ margin: '0 0 1.5rem 0', fontSize: '1rem', color: '#64748b', textAlign: 'center' }}>
                 {reckoningItems.length} item{reckoningItems.length !== 1 ? 's' : ''} weren't finished{pendingLoad ? ' yesterday' : ` on ${carryoverPending?.fromDate || 'the previous day'}`}. Carry each into today's list, or mark it done to archive it.
@@ -4347,6 +4365,12 @@ const ProduceProcessorApp = () => {
                 style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: 'none', background: '#0f766e', color: 'white', fontSize: '1.2rem', fontWeight: '800', cursor: 'pointer' }}
               >
                 Let's go →
+              </button>
+              <button
+                onClick={cancelReckoning}
+                style={{ width: '100%', padding: '0.75rem', marginTop: '0.6rem', borderRadius: '12px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Cancel
               </button>
             </div>
           </div>
