@@ -2157,7 +2157,7 @@ const ProduceProcessorApp = () => {
                             onClick={openCarryoverReckoning}
                             style={{ marginLeft: '0.4rem', color: '#fbbf24', background: '#1a1a1a', border: '1px solid #fbbf24', borderRadius: '999px', padding: '0.1rem 0.55rem', fontWeight: '800', textDecoration: 'underline', cursor: 'pointer', textTransform: 'none', letterSpacing: 'normal', whiteSpace: 'nowrap' }}
                           >
-                            ({carryoverPending.items.length} unfinished…)
+                            ({carryoverPending.items.length} unfinished from yesterday…)
                           </span>
                         )}
                       </span>
@@ -4328,6 +4328,23 @@ const ProduceProcessorApp = () => {
               <p style={{ margin: '0 0 1.5rem 0', fontSize: '1rem', color: '#64748b', textAlign: 'center' }}>
                 {reckoningItems.length} item{reckoningItems.length !== 1 ? 's' : ''} weren't finished{pendingLoad ? ' yesterday' : ` on ${carryoverPending?.fromDate || 'the previous day'}`}. Carry each into today's list, or mark it done to archive it.
               </p>
+              {(() => {
+                const allDone = reckoningItems.length > 0 && reckoningItems.every(item => (reckoningDecisions[item.id]?.action ?? 'carry') === 'done');
+                return (
+                  <button
+                    onClick={() => setReckoningDecisions(d => {
+                      const next = { ...d };
+                      reckoningItems.forEach(item => {
+                        next[item.id] = { ...(next[item.id] ?? { cases: item.cases }), action: allDone ? 'carry' : 'done' };
+                      });
+                      return next;
+                    })}
+                    style={{ display: 'block', margin: '0 auto 1rem auto', padding: '0.55rem 1.1rem', borderRadius: '10px', border: '2px solid ' + (allDone ? '#16a34a' : '#cbd5e1'), background: allDone ? '#16a34a' : 'white', color: allDone ? 'white' : '#475569', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    {allDone ? '✓ All marked done' : 'Mark all as done'}
+                  </button>
+                );
+              })()}
               <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 {reckoningItems.map(item => {
                   const decision = reckoningDecisions[item.id] ?? { action: 'carry', cases: item.cases };
