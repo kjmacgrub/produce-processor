@@ -2119,22 +2119,32 @@ const ProduceProcessorApp = () => {
                 const casesToDo = Math.max(0, originalTotalCases - completedCases);
                 return (
                   <div>
-                    <div style={{
-                      width: '100%',
-                      height: '24px',
-                      background: '#e2e8f0',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                      position: 'relative'
-                    }}>
+                    <div style={{ position: 'relative' }}>
                       <div style={{
-                        width: `${completedPercentage}%`,
-                        height: '100%',
-                        background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-                        transition: 'width 0.5s ease',
-                        borderRadius: '20px'
-                      }} />
+                        width: '100%',
+                        height: '24px',
+                        background: '#e2e8f0',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                        position: 'relative'
+                      }}>
+                        <div style={{
+                          width: `${completedPercentage}%`,
+                          height: '100%',
+                          background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                          transition: 'width 0.5s ease',
+                          borderRadius: '20px'
+                        }} />
+                      </div>
+                      {carryoverPending?.items?.length > 0 && (
+                        <span
+                          onClick={openCarryoverReckoning}
+                          style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fbbf24', background: '#1a1a1a', border: '2px solid #fbbf24', borderRadius: '999px', padding: '0.3rem 0.9rem', fontSize: '0.95rem', fontWeight: '800', textDecoration: 'underline', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 3px 12px rgba(0,0,0,0.4)', zIndex: 2 }}
+                        >
+                          {carryoverPending.items.length} unfinished from yesterday…
+                        </span>
+                      )}
                     </div>
                     <div style={{
                       display: 'flex',
@@ -2150,17 +2160,7 @@ const ProduceProcessorApp = () => {
                       paddingRight: '2px'
                     }}>
                       <span>{completedCases} cases done</span>
-                      <span>
-                        {casesToDo} cases to do
-                        {carryoverPending?.items?.length > 0 && (
-                          <span
-                            onClick={openCarryoverReckoning}
-                            style={{ marginLeft: '0.4rem', color: '#fbbf24', background: '#1a1a1a', border: '1px solid #fbbf24', borderRadius: '999px', padding: '0.1rem 0.55rem', fontWeight: '800', textDecoration: 'underline', cursor: 'pointer', textTransform: 'none', letterSpacing: 'normal', whiteSpace: 'nowrap' }}
-                          >
-                            ({carryoverPending.items.length} unfinished from yesterday…)
-                          </span>
-                        )}
-                      </span>
+                      <span>{casesToDo} cases to do</span>
                     </div>
                   </div>
                 );
@@ -2219,7 +2219,7 @@ const ProduceProcessorApp = () => {
             color: '#64748b'
           }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🗓️</div>
-            <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>No deliveries today</h2>
+            <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>No items for processing</h2>
             <p style={{ fontSize: '1.1rem' }}>Today's worksheet has no produce to process.</p>
           </div>
         )}
@@ -4331,18 +4331,26 @@ const ProduceProcessorApp = () => {
               {(() => {
                 const allDone = reckoningItems.length > 0 && reckoningItems.every(item => (reckoningDecisions[item.id]?.action ?? 'carry') === 'done');
                 return (
-                  <button
-                    onClick={() => setReckoningDecisions(d => {
-                      const next = { ...d };
-                      reckoningItems.forEach(item => {
-                        next[item.id] = { ...(next[item.id] ?? { cases: item.cases }), action: allDone ? 'carry' : 'done' };
-                      });
-                      return next;
-                    })}
-                    style={{ display: 'block', margin: '0 auto 1rem auto', padding: '0.55rem 1.1rem', borderRadius: '10px', border: '2px solid ' + (allDone ? '#16a34a' : '#cbd5e1'), background: allDone ? '#16a34a' : 'white', color: allDone ? 'white' : '#475569', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}
-                  >
-                    {allDone ? '✓ All marked done' : 'Mark all as done'}
-                  </button>
+                  <div style={{ position: 'sticky', top: 0, zIndex: 1, background: 'white', marginLeft: '-2rem', marginRight: '-2rem', padding: '0.25rem 2rem 1rem 2rem', marginBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setReckoningDecisions(d => {
+                        const next = { ...d };
+                        reckoningItems.forEach(item => {
+                          next[item.id] = { ...(next[item.id] ?? { cases: item.cases }), action: allDone ? 'carry' : 'done' };
+                        });
+                        return next;
+                      })}
+                      style={{ padding: '0.55rem 1.1rem', borderRadius: '10px', border: '2px solid ' + (allDone ? '#16a34a' : '#cbd5e1'), background: allDone ? '#16a34a' : 'white', color: allDone ? 'white' : '#475569', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      {allDone ? '✓ All marked done' : 'Mark all as done'}
+                    </button>
+                    <button
+                      onClick={finishReckoning}
+                      style={{ padding: '0.55rem 1.4rem', borderRadius: '10px', border: 'none', background: '#0f766e', color: 'white', fontSize: '0.9rem', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      Let's go →
+                    </button>
+                  </div>
                 );
               })()}
               <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.5rem' }}>
