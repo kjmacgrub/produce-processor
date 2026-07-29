@@ -2356,7 +2356,10 @@ const ProduceProcessorApp = () => {
                 <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '1.9rem', height: '1.9rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.1rem', fontWeight: '700', color: '#334155', cursor: 'pointer', lineHeight: 1 }}>+</button>
                 {displayCount !== null && items.length > displayCount && (
                   <span style={{
-                    color: '#b45309', fontSize: '0.95rem', fontWeight: '700',
+                    color: '#451a03', fontSize: '0.95rem', fontWeight: '800',
+                    background: '#fbbf24', border: '2px solid #f59e0b',
+                    padding: '0.3rem 0.7rem', borderRadius: '999px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
                     position: 'absolute', left: '100%', marginLeft: '0.75rem',
                     top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none',
                   }}>
