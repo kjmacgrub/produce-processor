@@ -2334,10 +2334,11 @@ const ProduceProcessorApp = () => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 gap: '0.75rem', flexWrap: 'nowrap', whiteSpace: 'nowrap',
                 width: 'fit-content', justifySelf: 'center',
+                position: 'relative',
               }}>
                 <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem' }}>
                   <span style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>Show</span>
-                  <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#1e293b' }}>{displayCount ?? items.length}</span>
+                  <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#1e293b', display: 'inline-block', minWidth: '2.4ch', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{displayCount ?? items.length}</span>
                   <span style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>below</span>
                 </span>
                 <button onClick={() => setDisplayCount(c => Math.max(1, (c ?? items.length) - 1))} style={{ width: '1.9rem', height: '1.9rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.1rem', fontWeight: '700', color: '#334155', cursor: 'pointer', lineHeight: 1 }}>−</button>
@@ -2354,7 +2355,11 @@ const ProduceProcessorApp = () => {
                 >All</button>
                 <button onClick={() => setDisplayCount(c => Math.min(items.length, (c ?? items.length) + 1))} style={{ width: '1.9rem', height: '1.9rem', borderRadius: '50%', border: '2px solid #cbd5e1', background: 'white', fontSize: '1.1rem', fontWeight: '700', color: '#334155', cursor: 'pointer', lineHeight: 1 }}>+</button>
                 {displayCount !== null && items.length > displayCount && (
-                  <span style={{ color: '#b45309', fontSize: '0.95rem', fontWeight: '700', marginLeft: '0.25rem' }}>
+                  <span style={{
+                    color: '#b45309', fontSize: '0.95rem', fontWeight: '700',
+                    position: 'absolute', left: '100%', marginLeft: '0.75rem',
+                    top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none',
+                  }}>
                     {items.length - displayCount} item{items.length - displayCount !== 1 ? 's' : ''} not shown
                   </span>
                 )}
