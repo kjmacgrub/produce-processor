@@ -248,6 +248,16 @@ const ProduceProcessorApp = () => {
     return () => unsub();
   }, []);
 
+  // Fresh data for a day starts collapsed to 2 items so the iPad shows only what's
+  // up next; the −/+/All controls still override it for the rest of that day.
+  // Deliberately not persisted: a refresh snaps back to 2, so a new squad or
+  // staff person picking up the iPad always starts from the default view.
+  useEffect(() => {
+    if (!pdfDate) return;
+    setDisplayCount(2);
+    prevDisplayCountRef.current = 2;
+  }, [pdfDate]);
+
   // Pending-carryover stash (unfinished items from the day that was auto-archived).
   useEffect(() => {
     if (!db) return;
