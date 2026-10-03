@@ -1856,9 +1856,11 @@ const ProduceProcessorApp = () => {
     )}
     <div style={{
       minHeight: '100vh',
+      // Light page background shared across the Clover Leaves (same as the
+      // Delivery Leaf and the monitor). Read-only mode keeps its blue.
       background: readOnlyMode
         ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
-        : 'linear-gradient(135deg, #0f766e 0%, #14532d 100%)',
+        : '#f5f5f7',
       padding: 'clamp(0.5rem, 3vw, 2rem)',
       fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       maxWidth: '100vw',
