@@ -93,6 +93,7 @@ const ProduceProcessorApp = () => {
   const [commits, setCommits] = useState([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState({ left: 16, top: 16, width: 340 });
   const [showMediaManager, setShowMediaManager] = useState(false);
   const [mediaManagerItem, setMediaManagerItem] = useState(null);
   const [mediaSearch, setMediaSearch] = useState('');
@@ -2116,7 +2117,13 @@ const ProduceProcessorApp = () => {
 
           {/* Hamburger Menu Button */}
           <button
-            onClick={() => setShowMenu(true)}
+            onClick={(e) => {
+              // Anchor the menu's top-left corner just below the icon, kept inside the viewport
+              const r = e.currentTarget.getBoundingClientRect();
+              const width = Math.min(340, window.innerWidth - 16);
+              setMenuAnchor({ left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), top: r.bottom + 6, width });
+              setShowMenu(true);
+            }}
             aria-label="Menu"
             style={{
               position: 'absolute',
@@ -4505,22 +4512,22 @@ const ProduceProcessorApp = () => {
               right: 0,
               bottom: 0,
               background: 'rgba(0, 0, 0, 0.4)',
-              zIndex: 1000,
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'center'
+              zIndex: 1000
             }}
           >
             <div
               style={{
+                position: 'fixed',
+                left: menuAnchor.left,
+                top: menuAnchor.top,
+                width: menuAnchor.width,
+                boxSizing: 'border-box',
                 background: 'white',
-                borderRadius: '24px 24px 0 0',
-                padding: '1.5rem',
-                maxWidth: '600px',
-                width: '90%',
-                maxHeight: '60vh',
+                borderRadius: '16px',
+                padding: '1.25rem',
+                maxHeight: `calc(100vh - ${menuAnchor.top}px - 16px)`,
                 overflow: 'auto',
-                boxShadow: '0 -10px 40px rgba(0,0,0,0.2)'
+                boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
               }}
               onClick={(e) => e.stopPropagation()}
             >
