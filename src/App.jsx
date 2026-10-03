@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { ref, onValue, get, set, remove, push, child, update } from 'firebase/database';
 import { ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { Upload, Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote, RefreshCw } from 'lucide-react';
+import { Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote, RefreshCw } from 'lucide-react';
 
 const ProduceProcessorApp = () => {
   const [items, setItems] = useState([]);
@@ -125,7 +125,6 @@ const ProduceProcessorApp = () => {
   const [dailyLogSearchResults, setDailyLogSearchResults] = useState(null);
 
   const fileInputRef = useRef(null);
-  const cloverUploadRef = useRef(null);
   const videoInputRef = useRef(null);
   const videoPreviewRef = useRef(null);
   const nativeCameraInputRef = useRef(null);
@@ -1254,17 +1253,16 @@ const ProduceProcessorApp = () => {
     throw lastErr;
   };
 
-  // CSV_IMPORT_POLICY.md §7 freshness check. Runs automatically on mount and
-  // on demand via the "Check for new data" menu button (manual === true).
+  // CSV_IMPORT_POLICY.md §7 freshness check. Runs automatically (see the
+  // mount/interval/focus effect above).
   // Failures are surfaced in a visible banner (syncStatus) instead of being
   // swallowed silently, so a broken handoff is diagnosable rather than invisible.
-  const checkV2Freshness = async ({ manual = false } = {}) => {
+  const checkV2Freshness = async () => {
     if (!db || readOnlyMode) return;
-    if (manual) setSyncStatus({ kind: 'info', message: 'Checking Delivery for new data…' });
     try {
       const result = await fetchCsvCurrent();
       if (result.status === 404) {
-        setSyncStatus(manual ? { kind: 'info', message: 'No worksheet available from Delivery yet.' } : null);
+        setSyncStatus(null);
         return;
       }
       const data = result.data;
@@ -1278,11 +1276,11 @@ const ProduceProcessorApp = () => {
       const currentDate = dateSnap.val() || '';
 
       if (currentDate && currentDate === csvDate) {
-        setSyncStatus(manual ? { kind: 'success', message: `Already up to date (${csvDate}).` } : null);
+        setSyncStatus(null);
         return;
       }
       if (currentDate && csvDate < currentDate) {
-        setSyncStatus(manual ? { kind: 'success', message: `Already up to date (${currentDate}).` } : null);
+        setSyncStatus(null);
         return;
       }
 
@@ -1304,7 +1302,7 @@ const ProduceProcessorApp = () => {
       setSyncStatus({ kind: 'success', message: `Loaded ${csvDate}. ${n} unfinished item${n === 1 ? '' : 's'} saved — tap "(unfinished…)" under the progress bar to carry them over or archive them.` });
     } catch (e) {
       console.warn('V2 CSV freshness check failed:', e);
-      setSyncStatus({ kind: 'error', message: `Couldn't sync with Delivery: ${e.message}. Open the menu and tap "Check for new data" to retry.` });
+      setSyncStatus({ kind: 'error', message: `Couldn't sync with Delivery: ${e.message}. It will retry automatically.` });
     }
   };
 
@@ -1335,24 +1333,6 @@ const ProduceProcessorApp = () => {
       const arrayBuffer = await file.arrayBuffer();
       await processPDFData(arrayBuffer);
     }
-  };
-
-  const handleCloverUpload = async (event) => {
-    if (!storage || !db) return;
-    const file = event.target.files[0];
-    event.target.value = '';
-    if (!file) return;
-    const namePattern = /^\d{4}-\d{2}-\d{2}-produce-processing-report\.csv$/i;
-    if (!namePattern.test(file.name)) {
-      if (!window.confirm(`The filename "${file.name}" doesn't match the expected format (YYYY-MM-DD-produce-processing-report.csv). Upload anyway?`)) return;
-    }
-    try {
-      const storageRef = sRef(storage, `produce-csv/${file.name}`);
-      await uploadBytes(storageRef, file, { contentType: 'text/csv' });
-      const text = await file.text();
-      await processCSVData(text);
-      setShowMenu(false);
-    } catch (error) { console.error('Error uploading Clover file:', error); alert('Upload failed: ' + error.message); }
   };
 
   const handleVideoUpload = (event, item) => {
@@ -2262,7 +2242,7 @@ const ProduceProcessorApp = () => {
           }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>☰</div>
             <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>No file loaded</h2>
-            <p style={{ fontSize: '1.1rem' }}>Tap the menu in the top-right corner<br />to upload today's Clover file.</p>
+            <p style={{ fontSize: '1.1rem' }}>Today's worksheet loads automatically<br />once Delivery has it.</p>
           </div>
         )}
 
@@ -4496,86 +4476,6 @@ const ProduceProcessorApp = () => {
                     }} />
                   )}
                 </button>
-                <a
-                  href="https://inventory.intranet.psfc.coop/login/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setShowMenu(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    padding: '1rem 1.25rem',
-                    background: '#f8fafc',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    cursor: 'pointer',
-                    width: '100%',
-                    textAlign: 'left',
-                    textDecoration: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <img src="/clover-icon.png" alt="" width="22" height="22" style={{ objectFit: 'contain' }} />
-                  Open Clover
-                </a>
-
-                <button
-                  onClick={() => cloverUploadRef.current?.click()}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    padding: '1rem 1.25rem',
-                    background: '#f0fdf4',
-                    border: '2px solid #10b981',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    fontWeight: '700',
-                    color: '#065f46',
-                    cursor: 'pointer',
-                    width: '100%',
-                    textAlign: 'left'
-                  }}
-                >
-                  <Upload size={22} />
-                  Load Clover data file
-                </button>
-                <input
-                  ref={cloverUploadRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  style={{ display: 'none' }}
-                  onChange={async (e) => {
-                    await handleCloverUpload(e);
-                  }}
-                />
-
-                <button
-                  onClick={() => { setShowMenu(false); checkV2Freshness({ manual: true }); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    padding: '1rem 1.25rem',
-                    background: '#eff6ff',
-                    border: '2px solid #bfdbfe',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    fontWeight: '700',
-                    color: '#1e40af',
-                    cursor: 'pointer',
-                    width: '100%',
-                    textAlign: 'left'
-                  }}
-                >
-                  <RefreshCw size={22} />
-                  Check for new data
-                </button>
-
                 <button
                   onClick={() => {
                     setShowMenu(false);
