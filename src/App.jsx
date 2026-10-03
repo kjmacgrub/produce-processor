@@ -94,6 +94,9 @@ const ProduceProcessorApp = () => {
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showMediaManager, setShowMediaManager] = useState(false);
+  const [mediaManagerItem, setMediaManagerItem] = useState(null);
+  const [mediaSearch, setMediaSearch] = useState('');
+  const [mediaCaptureItem, setMediaCaptureItem] = useState(null);
   const [showReckoning, setShowReckoning] = useState(false);
   const [reckoningItems, setReckoningItems] = useState([]);
   const [reckoningDecisions, setReckoningDecisions] = useState({});
@@ -130,6 +133,8 @@ const ProduceProcessorApp = () => {
   const nativeCameraInputRef = useRef(null);
   const itemPhotoInputRef = useRef(null);
   const playbackVideoRef = useRef(null);
+  const recordingCancelledRef = useRef(false);
+  const photosSyncedRef = useRef(false);
   const longPressTimerRef = useRef(null);
 
   // Fetch O/S items from Delivery app
@@ -322,7 +327,7 @@ const ProduceProcessorApp = () => {
   useEffect(() => {
     if (!db) return;
     const photosRef = ref(db, 'completionPhotos');
-    const unsub = onValue(photosRef, (snapshot) => { const data = snapshot.val(); if (data) { setCompletionPhotos(data); } else { setCompletionPhotos({}); } setPhotosLoaded(true); });
+    const unsub = onValue(photosRef, (snapshot) => { photosSyncedRef.current = true; const data = snapshot.val(); if (data) { setCompletionPhotos(data); } else { setCompletionPhotos({}); } setPhotosLoaded(true); });
     return () => unsub();
   }, []);
 
@@ -342,14 +347,15 @@ const ProduceProcessorApp = () => {
     return () => unsub();
   }, []);
 
-  // Load video URLs for media manager
+  // Load the video URL for the item open in the media manager
   useEffect(() => {
     if (!showMediaManager) { setMediaVideoURLs({}); return; }
-    Object.keys(videos).forEach(async (sku) => {
-      const url = await getVideoURL(sku);
-      if (url) setMediaVideoURLs(prev => ({ ...prev, [sku]: url }));
-    });
-  }, [showMediaManager, videos]);
+    const sku = mediaManagerItem?.sku;
+    if (!sku || !videos[sku]?.exists) return;
+    let cancelled = false;
+    getVideoURL(sku).then(url => { if (url && !cancelled) setMediaVideoURLs(prev => ({ ...prev, [sku]: url })); });
+    return () => { cancelled = true; };
+  }, [showMediaManager, mediaManagerItem, videos]);
 
   // Load video index from Firebase (real-time sync across devices)
   useEffect(() => {
@@ -448,8 +454,9 @@ const ProduceProcessorApp = () => {
           }
         } catch (error) { console.error('Error migrating video index:', error); }
       }
+      // Local cache is only a stopgap until Firebase answers; never overwrite synced photos with it
       const loadedPhotos = await loadAllCompletionPhotosFromDB();
-      setCompletionPhotos(loadedPhotos);
+      if (!photosSyncedRef.current) setCompletionPhotos(loadedPhotos);
       if (db) {
         try {
           const migrationFlag = localStorage.getItem('timingDataMigrated');
@@ -604,7 +611,7 @@ const ProduceProcessorApp = () => {
       else throw new Error('Unknown video data format');
       if (!blob || blob.size === 0) throw new Error('Video blob is empty or invalid');
       await uploadBytes(storageRef, blob, { contentType: videoData.type || 'video/webm', customMetadata: { sku, uploadedAt: new Date().toISOString() } });
-      if (db) await set(ref(db, `videoIndex/${sku}`), { exists: true, filename, storageRef: `produce-videos/${filename}`, name: videoData.itemName });
+      if (db) await set(ref(db, `videoIndex/${sku}`), { exists: true, filename, storageRef: `produce-videos/${filename}`, name: videoData.itemName, updatedAt: Date.now() });
     } catch (error) { console.error('Error uploading video:', error); throw error; }
   };
 
@@ -1382,15 +1389,17 @@ const ProduceProcessorApp = () => {
       if (!MediaRecorder.isTypeSupported(options.mimeType)) options = {};
       const recorder = new MediaRecorder(stream, options);
       const chunks = [];
+      recordingCancelledRef.current = false;
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.onstop = async () => {
+        if (recordingCancelledRef.current) return;
         if (chunks.length === 0) { alert('No video data was recorded.'); setIsRecording(false); setRecordingItemId(null); setShowVideoUpload(null); return; }
         const mimeType = recorder.mimeType || 'video/webm';
         const blob = new Blob(chunks, { type: mimeType });
         try {
           await saveVideoToDB(sku, { data: blob, name: `recording-${Date.now()}.webm`, type: blob.type, itemName: getDisplayName(item.name) });
           const refreshedVideos = await loadAllVideosFromDB();
-          setVideos(refreshedVideos);
+          setVideos(prev => Object.fromEntries(Object.entries(refreshedVideos).map(([k, v]) => [k, { ...prev[k], ...v }])));
           setIsRecording(false); setRecordingItemId(null); setShowVideoUpload(null);
         } catch (error) { console.error('Error saving video:', error); alert('Error saving video.'); setIsRecording(false); setRecordingItemId(null); setShowVideoUpload(null); }
       };
@@ -1410,6 +1419,7 @@ const ProduceProcessorApp = () => {
   };
 
   const cancelRecording = () => {
+    recordingCancelledRef.current = true;
     if (mediaRecorder && isRecording) mediaRecorder.stop();
     if (mediaStream) { mediaStream.getTracks().forEach(track => track.stop()); setMediaStream(null); }
     setIsRecording(false); setRecordingItemId(null); setShowVideoUpload(null);
@@ -4031,7 +4041,7 @@ const ProduceProcessorApp = () => {
 
         {/* Video Upload/Recording Section */}
         {!readOnlyMode && showVideoUpload && (() => {
-          const item = items.find(i => i.id === showVideoUpload);
+          const item = items.find(i => i.id === showVideoUpload) || (mediaCaptureItem?.id === showVideoUpload ? mediaCaptureItem : null);
           if (!item) return null;
 
           return (
@@ -4051,7 +4061,7 @@ const ProduceProcessorApp = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                zIndex: 1000,
+                zIndex: 1001,
                 padding: '2rem'
               }}
             >
@@ -4503,7 +4513,7 @@ const ProduceProcessorApp = () => {
 
 
                 <button
-                  onClick={() => { setShowMenu(false); setShowMediaManager(true); }}
+                  onClick={() => { setShowMenu(false); setMediaManagerItem(null); setMediaSearch(''); setShowMediaManager(true); }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -4523,33 +4533,6 @@ const ProduceProcessorApp = () => {
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
                   Manage Photos & Videos
                 </button>
-
-                {items.length > 0 && (
-                  <button
-                    onClick={async () => {
-                      if (!window.confirm(`Mark ALL ${items.length} remaining item${items.length === 1 ? '' : 's'} as done?`)) return;
-                      setShowMenu(false);
-                      for (const item of items) { await finalizeCompletion(item, null); }
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '1rem 1.25rem',
-                      background: '#fff1f2',
-                      border: '2px solid #fecdd3',
-                      borderRadius: '12px',
-                      fontSize: '1rem',
-                      fontWeight: '700',
-                      color: '#dc2626',
-                      cursor: 'pointer',
-                      width: '100%',
-                      textAlign: 'left'
-                    }}
-                  >
-                    ☢️ Mark ALL done
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -4828,90 +4811,195 @@ const ProduceProcessorApp = () => {
           const allItems = [...items, ...completedItems];
           const skuToName = {};
           allItems.forEach(item => { const sku = getSKU(item.name); if (sku) skuToName[sku] = getDisplayName(item.name); });
-          const allSKUs = [...new Set([...Object.keys(completionPhotos), ...Object.keys(videos)])];
+          const nameFor = (sku) => completionPhotos[sku]?.name || videos[sku]?.name || skuToName[sku] || `SKU ${sku}`;
+          const byName = (a, b) => nameFor(a).localeCompare(nameFor(b));
+          const hasMedia = (sku) => !!completionPhotos[sku] || !!videos[sku]?.exists;
+          const mediaSKUs = [...new Set([...Object.keys(completionPhotos), ...Object.keys(videos)])].filter(hasMedia).sort(byName);
+          const noMediaSKUs = Object.keys(skuToName).filter(sku => !hasMedia(sku)).sort(byName);
+          const terms = mediaSearch.toLowerCase().split(/\s+/).filter(Boolean);
+          const matches = (sku) => { const hay = `${nameFor(sku)} ${sku}`.toLowerCase(); return terms.every(t => hay.includes(t)); };
+          const shownMedia = mediaSKUs.filter(matches);
+          const shownNoMedia = noMediaSKUs.filter(matches);
+          const closeManager = () => { setShowMediaManager(false); setMediaManagerItem(null); };
+          const touch = isIPad || isPhone;
+          const actionBtn = (bg) => ({ background: bg, color: 'white', border: 'none', borderRadius: '10px', padding: '0.7rem 1.25rem', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' });
+          const stickyHeader = { position: 'sticky', top: 0, zIndex: 2, background: 'white', margin: '-1.5rem -1.5rem 0', padding: '1.5rem 1.5rem 1rem' };
+          const sectionLabel = { fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', margin: '0.5rem 0 0.25rem' };
+          const emptyBox = { height: '160px', borderRadius: '12px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: '600' };
+
+          const renderRow = (sku) => {
+            const name = nameFor(sku);
+            const photo = completionPhotos[sku];
+            const hasVideo = videos[sku]?.exists;
+            return (
+              <button
+                key={sku}
+                onClick={() => setMediaManagerItem({ sku, name })}
+                style={{ background: '#f8fafc', border: 'none', borderRadius: '14px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              >
+                <div style={{ flex: 1, minWidth: 0, fontWeight: '700', fontSize: '1rem', color: '#1e293b' }}>
+                  {name}
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '400' }}>#{sku}</div>
+                </div>
+                {photo && (
+                  <img src={photo.data} alt="" style={{ width: '56px', height: '44px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #e2e8f0', flexShrink: 0 }} />
+                )}
+                {hasVideo && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#059669', color: 'white', borderRadius: '8px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
+                    <Play size={14} /> Video
+                  </span>
+                )}
+                <span style={{ color: '#94a3b8', fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>›</span>
+              </button>
+            );
+          };
+
+          const renderDetail = () => {
+            const { sku, name } = mediaManagerItem;
+            const photo = completionPhotos[sku];
+            const hasVideo = videos[sku]?.exists;
+            const videoURL = mediaVideoURLs[sku];
+            const target = { id: `media-${sku}`, name: `${name} #${sku}` };
+            const card = { flex: '1 1 300px', background: '#f8fafc', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' };
+            return (
+              <>
+                <div style={stickyHeader}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                      onClick={() => setMediaManagerItem(null)}
+                      style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}
+                    >‹ All items</button>
+                    <button
+                      onClick={closeManager}
+                      style={{ background: 'none', border: 'none', fontSize: '1.8rem', color: '#64748b', cursor: 'pointer' }}
+                    >&times;</button>
+                  </div>
+                  <h2 style={{ margin: '0.75rem 0 0', fontSize: '1.5rem', fontWeight: '800', color: '#1e293b' }}>
+                    {name} <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '400' }}>#{sku}</span>
+                  </h2>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                  <div style={card}>
+                    <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#1e293b' }}>Photo</div>
+                    {photo ? (
+                      <img src={photo.data} alt={name} style={{ width: '100%', maxHeight: '50vh', objectFit: 'contain', borderRadius: '12px', background: '#e2e8f0' }} />
+                    ) : (
+                      <div style={emptyBox}>No photo yet</div>
+                    )}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => { setItemPhotoTarget(target); itemPhotoInputRef.current?.click(); }}
+                        style={actionBtn('#6366f1')}
+                      >{touch ? (photo ? '📷 Retake Photo' : '📷 Take Photo') : (photo ? 'Replace Photo' : 'Add Photo')}</button>
+                      {photo && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Delete photo for ${name}?`)) return;
+                            await deleteCompletionPhotoFromDB(sku);
+                            setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
+                          }}
+                          style={actionBtn('#ef4444')}
+                        >Delete Photo</button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={card}>
+                    <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#1e293b' }}>Video</div>
+                    {hasVideo ? (
+                      videoURL ? (
+                        <video
+                          key={`${videoURL}-${videos[sku]?.updatedAt || ''}`}
+                          src={videoURL}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          style={{ width: '100%', maxHeight: '50vh', borderRadius: '12px', background: '#000' }}
+                        />
+                      ) : (
+                        <div style={{ ...emptyBox, border: 'none', background: '#1e293b' }}>Loading video...</div>
+                      )
+                    ) : (
+                      <div style={emptyBox}>No video yet</div>
+                    )}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => { setMediaCaptureItem(target); setShowVideoUpload(target.id); if (isPhone) startRecording(target); }}
+                        style={actionBtn('#0f766e')}
+                      >{isPhone ? (hasVideo ? 'Re-record Video' : 'Record Video') : (hasVideo ? 'Replace Video' : 'Add Video')}</button>
+                      {hasVideo && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Delete video for ${name}?`)) return;
+                            await deleteVideoFromDB(sku);
+                            setVideos(prev => { const u = {...prev}; delete u[sku]; return u; });
+                            setMediaVideoURLs(prev => { const u = {...prev}; delete u[sku]; return u; });
+                          }}
+                          style={actionBtn('#ef4444')}
+                        >Delete Video</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          };
+
           return (
             <div
-              onClick={() => setShowMediaManager(false)}
+              onClick={closeManager}
               style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, overflow: 'auto' }}
             >
               <div
                 onClick={e => e.stopPropagation()}
                 style={{ background: 'white', minHeight: '100vh', padding: '1.5rem', maxWidth: '900px', margin: '0 auto' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: '800', color: '#1e293b' }}>Photos & Videos</h2>
-                  <button
-                    onClick={() => setShowMediaManager(false)}
-                    style={{ background: 'none', border: 'none', fontSize: '1.8rem', color: '#64748b', cursor: 'pointer' }}
-                  >&times;</button>
-                </div>
+                {mediaManagerItem ? renderDetail() : (
+                  <>
+                    <div style={stickyHeader}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: '800', color: '#1e293b' }}>Photos & Videos</h2>
+                        <button
+                          onClick={closeManager}
+                          style={{ background: 'none', border: 'none', fontSize: '1.8rem', color: '#64748b', cursor: 'pointer' }}
+                        >&times;</button>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          value={mediaSearch}
+                          onChange={e => setMediaSearch(e.target.value)}
+                          placeholder="Search by name or SKU"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.75rem 2.75rem 0.75rem 1rem', fontSize: '1.05rem', border: '2px solid #e2e8f0', borderRadius: '12px', outline: 'none', color: '#1e293b' }}
+                        />
+                        {mediaSearch && (
+                          <button
+                            onClick={() => setMediaSearch('')}
+                            aria-label="Clear search"
+                            style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '1.4rem', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem 0.5rem' }}
+                          >&times;</button>
+                        )}
+                      </div>
+                    </div>
 
-                {!photosLoaded ? (
-                  <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>Loading...</div>
-                ) : allSKUs.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>No photos or videos found.</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {allSKUs.map(sku => {
-                      const name = completionPhotos[sku]?.name || videos[sku]?.name || skuToName[sku] || `SKU #${sku}`;
-                      const photo = completionPhotos[sku];
-                      const hasVideo = videos[sku]?.exists;
-                      const videoURL = mediaVideoURLs[sku];
-                      return (
-                        <div key={sku} style={{ background: '#f8fafc', borderRadius: '16px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                          <div style={{ flex: '1 1 150px', fontWeight: '700', fontSize: '1rem', color: '#1e293b' }}>
-                            {name}
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '400' }}>#{sku}</div>
-                          </div>
-
-                          {photo && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                              <img
-                                src={photo.data}
-                                alt={name}
-                                style={{ width: '100px', height: '80px', objectFit: 'cover', borderRadius: '10px', border: '2px solid #e2e8f0' }}
-                              />
-                              <button
-                                onClick={async () => {
-                                  if (!confirm(`Delete photo for ${name}?`)) return;
-                                  await deleteCompletionPhotoFromDB(sku);
-                                  setCompletionPhotos(prev => { const u = {...prev}; delete u[sku]; return u; });
-                                }}
-                                style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.3rem 0.75rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
-                              >Delete Photo</button>
-                            </div>
-                          )}
-
-                          {hasVideo && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                              {videoURL ? (
-                                <video
-                                  src={videoURL}
-                                  muted
-                                  preload="metadata"
-                                  style={{ width: '100px', height: '80px', objectFit: 'cover', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#000' }}
-                                  onLoadedMetadata={e => { e.target.currentTime = 0.1; }}
-                                />
-                              ) : (
-                                <div style={{ width: '100px', height: '80px', borderRadius: '10px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-                                </div>
-                              )}
-                              <button
-                                onClick={async () => {
-                                  if (!confirm(`Delete video for ${name}?`)) return;
-                                  await deleteVideoFromDB(sku);
-                                  setVideos(prev => { const u = {...prev}; delete u[sku]; return u; });
-                                  setMediaVideoURLs(prev => { const u = {...prev}; delete u[sku]; return u; });
-                                }}
-                                style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '0.3rem 0.75rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
-                              >Delete Video</button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                    {!photosLoaded ? (
+                      <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>Loading...</div>
+                    ) : mediaSKUs.length === 0 && noMediaSKUs.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>No photos or videos found.</div>
+                    ) : shownMedia.length === 0 && shownNoMedia.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>No items match “{mediaSearch.trim()}”.</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {shownMedia.length > 0 && <div style={sectionLabel}>With a photo or video ({shownMedia.length})</div>}
+                        {shownMedia.map(renderRow)}
+                        {shownNoMedia.length > 0 && <div style={{ ...sectionLabel, marginTop: shownMedia.length > 0 ? '1.25rem' : '0.5rem' }}>Today's items with no photo or video ({shownNoMedia.length})</div>}
+                        {shownNoMedia.map(renderRow)}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
