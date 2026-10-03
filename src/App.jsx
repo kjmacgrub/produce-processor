@@ -97,6 +97,9 @@ const ProduceProcessorApp = () => {
   const [mediaManagerItem, setMediaManagerItem] = useState(null);
   const [mediaSearch, setMediaSearch] = useState('');
   const [mediaCaptureItem, setMediaCaptureItem] = useState(null);
+  const [catalog, setCatalog] = useState(null);
+  const [catalogStatus, setCatalogStatus] = useState(null);
+  const catalogById = useMemo(() => Object.fromEntries((catalog?.items || []).map(c => [c.id, c])), [catalog]);
   const [showReckoning, setShowReckoning] = useState(false);
   const [reckoningItems, setReckoningItems] = useState([]);
   const [reckoningDecisions, setReckoningDecisions] = useState({});
@@ -135,6 +138,7 @@ const ProduceProcessorApp = () => {
   const playbackVideoRef = useRef(null);
   const recordingCancelledRef = useRef(false);
   const photosSyncedRef = useRef(false);
+  const catalogInputRef = useRef(null);
   const longPressTimerRef = useRef(null);
 
   // Fetch O/S items from Delivery app
@@ -356,6 +360,12 @@ const ProduceProcessorApp = () => {
     getVideoURL(sku).then(url => { if (url && !cancelled) setMediaVideoURLs(prev => ({ ...prev, [sku]: url })); });
     return () => { cancelled = true; };
   }, [showMediaManager, mediaManagerItem, videos]);
+
+  // Load the item catalog the first time the media manager opens
+  useEffect(() => {
+    if (!showMediaManager || catalog) return;
+    loadCatalog().then(c => { if (c) setCatalog(c); }).catch(error => console.error('Error loading catalog:', error));
+  }, [showMediaManager]);
 
   // Load video index from Firebase (real-time sync across devices)
   useEffect(() => {
@@ -645,6 +655,74 @@ const ProduceProcessorApp = () => {
   const saveVideoToDB = saveVideoToStorage;
   const deleteVideoFromDB = deleteVideoFromStorage;
   const loadAllVideosFromDB = listAllVideosFromStorage;
+
+  // ITEM CATALOG — the store's full item list (id, name, active) that the media
+  // manager searches. loadCatalog is the one place that knows where it comes from:
+  // for now a slimmed copy of the inventory export kept in Firebase; swap this for
+  // a Delivery API fetch once a catalog endpoint exists.
+  const loadCatalog = async () => {
+    if (!db) return null;
+    const val = (await get(ref(db, 'catalog'))).val();
+    if (!val || !val.items) return null;
+    return { meta: val.meta || {}, items: firebaseToArray(val.items) };
+  };
+
+  // Parses the "Inventory data export" CSV: a short preamble, then a header row
+  // with at least name and id columns. Keeps only id, name and active.
+  const parseCatalogCSV = (text) => {
+    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
+    const splitRow = (line) => {
+      const out = [];
+      let buf = '';
+      let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { if (inQ && line[i + 1] === '"') { buf += '"'; i++; } else inQ = !inQ; }
+        else if (ch === ',' && !inQ) { out.push(buf); buf = ''; }
+        else buf += ch;
+      }
+      out.push(buf);
+      return out;
+    };
+    const headerOf = (line) => splitRow(line).map(c => c.trim().toLowerCase());
+    const headerIndex = lines.findIndex(line => { const cols = headerOf(line); return cols.includes('name') && cols.includes('id'); });
+    if (headerIndex < 0) throw new Error('no header row with "name" and "id" columns');
+    const cols = headerOf(lines[headerIndex]);
+    const nameIdx = cols.indexOf('name');
+    const idIdx = cols.indexOf('id');
+    const activeIdx = cols.indexOf('active');
+    const seen = new Set();
+    const parsed = [];
+    for (let i = headerIndex + 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const fields = splitRow(lines[i]);
+      const id = (fields[idIdx] || '').trim();
+      const name = (fields[nameIdx] || '').trim();
+      if (!/^\d+$/.test(id) || !name || seen.has(id)) continue;
+      seen.add(id);
+      parsed.push({ id, name, active: activeIdx < 0 ? true : /^true$/i.test((fields[activeIdx] || '').trim()) });
+    }
+    const generated = lines.slice(0, headerIndex).join(' ').match(/generated ([\d-]+ [\d:]+)/);
+    return { items: parsed, generatedAt: generated ? generated[1] : null };
+  };
+
+  const handleCatalogUpload = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file || !db) return;
+    try {
+      setCatalogStatus(`Reading ${file.name}...`);
+      const { items: parsed, generatedAt } = parseCatalogCSV(await file.text());
+      if (parsed.length === 0) throw new Error('no items found in that file');
+      const next = {
+        meta: { generatedAt, uploadedAt: new Date().toISOString(), count: parsed.length, activeCount: parsed.filter(c => c.active).length },
+        items: parsed
+      };
+      await set(ref(db, 'catalog'), next);
+      setCatalog(next);
+      setCatalogStatus(`Catalog updated from ${file.name}`);
+    } catch (error) { console.error('Error updating catalog:', error); setCatalogStatus(`Could not update catalog: ${error.message}`); }
+  };
 
   // FIREBASE STORAGE - DATA FILE FUNCTIONS
   const listAvailableCSVs = async () => {
@@ -1150,6 +1228,7 @@ const ProduceProcessorApp = () => {
     const cols = headerLine.split(',').map(s => s.trim());
     const idx = (name) => cols.indexOf(name);
     const nameIdx = idx('item_name');
+    const idIdx = idx('item_id');
     const qtyIdx = idx('quantity_expected');
     const instrIdx = idx('processing_instructions');
     if (nameIdx < 0 || qtyIdx < 0 || instrIdx < 0) {
@@ -1187,7 +1266,11 @@ const ProduceProcessorApp = () => {
       const m = instruction.match(/^(\d)[ \-_–—]\s*(.*)$/);
       if (m) { priority = parseInt(m[1]); location = m[2].trim(); }
 
-      parsedItems.push({ name, priority, cases, location });
+      // item_id is the store's catalog ID — the key photos, videos and timing
+      // are stored under. Old-format names carried it as "#<id>"; v2 has a column.
+      const sku = idIdx >= 0 ? (fields[idIdx] || '').trim() : '';
+
+      parsedItems.push({ name, priority, cases, location, ...(/^\d+$/.test(sku) ? { sku } : {}) });
     }
 
     const totalCases = parsedItems.reduce((s, it) => s + it.cases, 0);
@@ -1346,7 +1429,7 @@ const ProduceProcessorApp = () => {
     if (readOnlyMode) return;
     const file = event.target.files[0];
     if (!file) return;
-    const sku = getSKU(item.name);
+    const sku = getItemSKU(item);
     if (!sku) return;
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -1367,7 +1450,7 @@ const ProduceProcessorApp = () => {
   };
 
   const startRecording = async (item) => {
-    const sku = getSKU(item.name);
+    const sku = getItemSKU(item);
     if (!sku) { alert('Cannot record video: item has no SKU number.'); return; }
     try {
       let stream;
@@ -1607,7 +1690,7 @@ const ProduceProcessorApp = () => {
 
   const finalizeCompletion = async (item, pd) => {
     if (readOnlyMode || !db) return;
-    const sku = getSKU(item.name);
+    const sku = getItemSKU(item);
     if (pd && sku) { await saveCompletionPhotoToDB(sku, pd, getDisplayName(item.name)); setCompletionPhotos(prev => ({ ...prev, [sku]: { ...pd, name: getDisplayName(item.name) } })); }
     let totalTime = null;
     if (itemsInProcess[item.id]) totalTime = (Date.now() - itemsInProcess[item.id]) / 1000;
@@ -1718,8 +1801,10 @@ const ProduceProcessorApp = () => {
 
   const formatTime = (seconds) => { const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60); return `${mins}:${secs.toString().padStart(2, '0')}`; };
   const formatTimeWithUnits = (seconds) => { if (seconds < 60) return `${Math.floor(seconds)} sec`; const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60); return secs > 0 ? `${mins} min ${secs} sec` : `${mins} min`; };
-  const getDisplayName = (fullName) => fullName.split('#')[0].trim();
-  const getSKU = (fullName) => { const match = fullName.match(/#(\d+)/); return match ? match[1] : null; };
+  // The SKU marker is "#" + the 7-digit catalog id. Any other "#" ("1# bags", "#94225" PLUs) is part of the name.
+  const getDisplayName = (fullName) => fullName.replace(/#\d{7}(?!\d)[\s\S]*$/, '').trim();
+  const getSKU = (fullName) => { const match = fullName.match(/#(\d{7})(?!\d)/); return match ? match[1] : null; };
+  const getItemSKU = (item) => item.sku || getSKU(item.name);
 
   const formatDateWithDay = (dateString) => {
     if (!dateString) return '';
@@ -2377,7 +2462,7 @@ const ProduceProcessorApp = () => {
               if (pa !== pb) return pa - pb;
               return (a.name || '').localeCompare(b.name || '');
             }).slice(0, displayCount ?? undefined).map((item, idx, sortedArr) => {
-            const sku = getSKU(item.name);
+            const sku = getItemSKU(item);
             const stats = sku ? getStats(sku) : null;
             const hasVideo = sku ? videos[sku] : null;
             const hasPhoto = sku ? completionPhotos[sku] : null;
@@ -2918,7 +3003,7 @@ const ProduceProcessorApp = () => {
                 </div>
 
                 {[...completedItems].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)).map(item => {
-                  const sku = getSKU(item.name);
+                  const sku = getItemSKU(item);
                   const photo = sku ? completionPhotos[sku] : null;
                   const completedStats = sku ? getStats(sku) : null;
 
@@ -3300,7 +3385,7 @@ const ProduceProcessorApp = () => {
               textAlign: 'center'
             }}>
               {(() => {
-                const sku = getSKU(showPhotoChoice.name);
+                const sku = getItemSKU(showPhotoChoice);
                 const existingPhoto = completionPhotos[sku];
 
                 if (existingPhoto) {
@@ -4025,7 +4110,7 @@ const ProduceProcessorApp = () => {
           onChange={(e) => {
             const file = e.target.files && e.target.files[0];
             if (!file || !itemPhotoTarget) return;
-            const sku = getSKU(itemPhotoTarget.name);
+            const sku = getItemSKU(itemPhotoTarget);
             if (!sku) return;
             const reader = new FileReader();
             reader.onloadend = async () => {
@@ -4810,16 +4895,27 @@ const ProduceProcessorApp = () => {
         {showMediaManager && (() => {
           const allItems = [...items, ...completedItems];
           const skuToName = {};
-          allItems.forEach(item => { const sku = getSKU(item.name); if (sku) skuToName[sku] = getDisplayName(item.name); });
-          const nameFor = (sku) => completionPhotos[sku]?.name || videos[sku]?.name || skuToName[sku] || `SKU ${sku}`;
+          allItems.forEach(item => { const sku = getItemSKU(item); if (sku) skuToName[sku] = getDisplayName(item.name); });
+          const nameFor = (sku) => catalogById[sku]?.name || completionPhotos[sku]?.name || videos[sku]?.name || skuToName[sku] || `SKU ${sku}`;
           const byName = (a, b) => nameFor(a).localeCompare(nameFor(b));
           const hasMedia = (sku) => !!completionPhotos[sku] || !!videos[sku]?.exists;
           const mediaSKUs = [...new Set([...Object.keys(completionPhotos), ...Object.keys(videos)])].filter(hasMedia).sort(byName);
           const noMediaSKUs = Object.keys(skuToName).filter(sku => !hasMedia(sku)).sort(byName);
           const terms = mediaSearch.toLowerCase().split(/\s+/).filter(Boolean);
-          const matches = (sku) => { const hay = `${nameFor(sku)} ${sku}`.toLowerCase(); return terms.every(t => hay.includes(t)); };
+          const matches = (sku) => {
+            const hay = `${catalogById[sku]?.name || ''} ${completionPhotos[sku]?.name || ''} ${videos[sku]?.name || ''} ${skuToName[sku] || ''} ${sku}`.toLowerCase();
+            return terms.every(t => hay.includes(t));
+          };
           const shownMedia = mediaSKUs.filter(matches);
           const shownNoMedia = noMediaSKUs.filter(matches);
+          // Catalog rows only appear while searching — the full list is too long to browse
+          const CATALOG_LIMIT = 50;
+          const catalogItems = catalog?.items || [];
+          const catalogMatches = terms.length === 0 ? [] : catalogItems
+            .filter(c => !hasMedia(c.id) && !skuToName[c.id] && matches(c.id))
+            .sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
+          const shownCatalog = catalogMatches.slice(0, CATALOG_LIMIT);
+          const isDesktop = !isIPad && !isPhone;
           const closeManager = () => { setShowMediaManager(false); setMediaManagerItem(null); };
           const touch = isIPad || isPhone;
           const actionBtn = (bg) => ({ background: bg, color: 'white', border: 'none', borderRadius: '10px', padding: '0.7rem 1.25rem', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer' });
@@ -4841,6 +4937,9 @@ const ProduceProcessorApp = () => {
                   {name}
                   <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '400' }}>#{sku}</div>
                 </div>
+                {catalogById[sku] && !catalogById[sku].active && (
+                  <span style={{ background: '#e2e8f0', color: '#64748b', borderRadius: '8px', padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: '700', flexShrink: 0 }}>Inactive</span>
+                )}
                 {photo && (
                   <img src={photo.data} alt="" style={{ width: '56px', height: '44px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #e2e8f0', flexShrink: 0 }} />
                 )}
@@ -4859,7 +4958,7 @@ const ProduceProcessorApp = () => {
             const photo = completionPhotos[sku];
             const hasVideo = videos[sku]?.exists;
             const videoURL = mediaVideoURLs[sku];
-            const target = { id: `media-${sku}`, name: `${name} #${sku}` };
+            const target = { id: `media-${sku}`, name, sku };
             const card = { flex: '1 1 300px', background: '#f8fafc', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' };
             return (
               <>
@@ -4983,13 +5082,30 @@ const ProduceProcessorApp = () => {
                           >&times;</button>
                         )}
                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.6rem', fontSize: '0.85rem', color: '#64748b' }}>
+                        <span>
+                          {catalog
+                            ? `Catalog: ${catalogItems.length.toLocaleString()} items (${catalogItems.filter(c => c.active).length.toLocaleString()} active)${catalog.meta?.generatedAt ? `, exported ${catalog.meta.generatedAt}` : ''}`
+                            : 'No catalog loaded — search covers only today\'s items and items that already have a photo or video.'}
+                        </span>
+                        {isDesktop && (
+                          <>
+                            <input ref={catalogInputRef} type="file" accept=".csv" onChange={handleCatalogUpload} style={{ display: 'none' }} />
+                            <button
+                              onClick={() => catalogInputRef.current?.click()}
+                              style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '0.3rem 0.75rem', fontSize: '0.85rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}
+                            >{catalog ? 'Update catalog' : 'Load catalog'}</button>
+                          </>
+                        )}
+                        {catalogStatus && <span style={{ fontWeight: '600', color: catalogStatus.startsWith('Could not') ? '#dc2626' : '#0f766e' }}>{catalogStatus}</span>}
+                      </div>
                     </div>
 
                     {!photosLoaded ? (
                       <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>Loading...</div>
-                    ) : mediaSKUs.length === 0 && noMediaSKUs.length === 0 ? (
+                    ) : mediaSKUs.length === 0 && noMediaSKUs.length === 0 && catalogItems.length === 0 ? (
                       <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>No photos or videos found.</div>
-                    ) : shownMedia.length === 0 && shownNoMedia.length === 0 ? (
+                    ) : terms.length > 0 && shownMedia.length === 0 && shownNoMedia.length === 0 && shownCatalog.length === 0 ? (
                       <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '3rem' }}>No items match “{mediaSearch.trim()}”.</div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -4997,6 +5113,14 @@ const ProduceProcessorApp = () => {
                         {shownMedia.map(renderRow)}
                         {shownNoMedia.length > 0 && <div style={{ ...sectionLabel, marginTop: shownMedia.length > 0 ? '1.25rem' : '0.5rem' }}>Today's items with no photo or video ({shownNoMedia.length})</div>}
                         {shownNoMedia.map(renderRow)}
+                        {shownCatalog.length > 0 && <div style={{ ...sectionLabel, marginTop: shownMedia.length + shownNoMedia.length > 0 ? '1.25rem' : '0.5rem' }}>Catalog items with no photo or video ({catalogMatches.length})</div>}
+                        {shownCatalog.map(c => renderRow(c.id))}
+                        {catalogMatches.length > CATALOG_LIMIT && (
+                          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', margin: '0.5rem 0' }}>Showing the first {CATALOG_LIMIT} of {catalogMatches.length.toLocaleString()}. Keep typing to narrow it down.</div>
+                        )}
+                        {terms.length === 0 && catalogItems.length > 0 && (
+                          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.95rem', margin: '1.5rem 0' }}>Search to find any of the {catalogItems.length.toLocaleString()} catalog items.</div>
+                        )}
                       </div>
                     )}
                   </>
