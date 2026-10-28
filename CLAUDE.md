@@ -56,4 +56,8 @@ const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in doc
 
 Firebase credentials go in `.env` (git-ignored). See `.env.example` for required `VITE_FIREBASE_*` keys.
 
+### Sandbox mode (local development against live Firebase)
+
+Set `VITE_DB_ROOT=sandbox` in a git-ignored `.env.local`. Every Realtime Database path then lives under `sandbox/` (`sandbox/items`, `sandbox/completedItems`, …) via the `dbRef()` helper in `src/firebase.js`, so a local build never reads or writes the production tree. A yellow **SANDBOX** pill shows in the header when it is on. The sandbox seeds itself: the Delivery freshness check loads today's CSV into `sandbox/items` on first run. Storage (videos, CSVs) is *not* namespaced — recording or uploading a video from a sandbox build still writes to the shared bucket. Production (Netlify) has no `VITE_DB_ROOT` and uses the bare paths. Always use `dbRef(path)`, never `ref(db, path)`, when adding database code.
+
 Deployed on Netlify; `netlify.toml` sets build command and publish directory.

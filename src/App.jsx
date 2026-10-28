@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ref, onValue, get, set, remove, push, child, update } from 'firebase/database';
+import { onValue, get, set, remove, push, child, update } from 'firebase/database';
 import { ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
-import { db, storage } from './firebase';
-import { Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote, RefreshCw } from 'lucide-react';
+import { db, storage, dbRef, DB_ROOT } from './firebase';
+import { Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote, RefreshCw, ListOrdered, LayoutList, Maximize2 } from 'lucide-react';
+import FocusView from './FocusView';
+import SetupPage from './SetupPage';
+import { sortItems } from './itemOrder';
 
 const ProduceProcessorApp = () => {
   const [items, setItems] = useState([]);
@@ -94,6 +97,37 @@ const ProduceProcessorApp = () => {
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState({ left: 16, top: 16, width: 340 });
+  // Redesign: the supervisor's setup page and the processor's one-item-at-a-time
+  // view. 'focus' shows one big tile; 'list' is the classic two-column layout.
+  const [showSetup, setShowSetup] = useState(false);
+  const [viewMode, setViewMode] = useState(() => { try { return localStorage.getItem('pp.viewMode') || 'focus'; } catch { return 'focus'; } });
+  useEffect(() => { try { localStorage.setItem('pp.viewMode', viewMode); } catch { /* private mode */ } }, [viewMode]);
+
+  // Which day's list has been set up. Shared in Firebase so once a supervisor
+  // finishes setup on one device, every other device goes straight to processing.
+  const [setupDoneDate, setSetupDoneDate] = useState(undefined); // undefined = not loaded yet
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onValue(dbRef('setupDoneDate'), (snap) => setSetupDoneDate(snap.val() || ''));
+    return () => unsub();
+  }, []);
+
+  // A new day's data (the 3am push, or a manual load) opens the setup page
+  // first. Once per date per session, so closing it without finishing doesn't
+  // bounce the user back in on every items change.
+  const autoSetupShownFor = useRef(null);
+  useEffect(() => {
+    if (setupDoneDate === undefined || !pdfDate || items.length === 0) return;
+    if (setupDoneDate === pdfDate || autoSetupShownFor.current === pdfDate) return;
+    autoSetupShownFor.current = pdfDate;
+    setShowSetup(true);
+  }, [setupDoneDate, pdfDate, items.length]);
+
+  const finishSetup = async () => {
+    setShowSetup(false);
+    setViewMode('focus');
+    if (db && pdfDate) await set(dbRef('setupDoneDate'), pdfDate);
+  };
   const [showMediaManager, setShowMediaManager] = useState(false);
   const [mediaManagerItem, setMediaManagerItem] = useState(null);
   const [mediaSearch, setMediaSearch] = useState('');
@@ -153,7 +187,7 @@ const ProduceProcessorApp = () => {
   // Check Firebase connection
   useEffect(() => {
     if (!db) return;
-    const connectedRef = ref(db, '.info/connected');
+    const connectedRef = dbRef('.info/connected');
     const unsub = onValue(connectedRef, (snap) => {
       setFirebaseConnected(snap.val() === true);
     });
@@ -175,7 +209,7 @@ const ProduceProcessorApp = () => {
   // Load timing data from Firebase
   useEffect(() => {
     if (!db) return;
-    const timingRef = ref(db, 'timingData');
+    const timingRef = dbRef('timingData');
     const unsub = onValue(timingRef, (snapshot) => { const data = snapshot.val(); if (data) setTimingData(data); });
     return () => unsub();
   }, []);
@@ -241,7 +275,7 @@ const ProduceProcessorApp = () => {
   // Load items from Firebase
   useEffect(() => {
     if (!db) return;
-    const itemsRef = ref(db, 'items');
+    const itemsRef = dbRef('items');
     const unsub = onValue(itemsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) { const arr = Object.keys(data).map(key => ({ ...data[key], id: key })); arr.sort((a, b) => a.priority - b.priority); setItems(arr); } else { setItems([]); }
@@ -252,7 +286,7 @@ const ProduceProcessorApp = () => {
   // Load file date from Firebase
   useEffect(() => {
     if (!db) return;
-    const dateRef = ref(db, 'pdfDate');
+    const dateRef = dbRef('pdfDate');
     const unsub = onValue(dateRef, (snapshot) => { const date = snapshot.val(); if (date) setPdfDate(date); });
     return () => unsub();
   }, []);
@@ -270,7 +304,7 @@ const ProduceProcessorApp = () => {
   // Pending-carryover stash (unfinished items from the day that was auto-archived).
   useEffect(() => {
     if (!db) return;
-    const r = ref(db, 'carryoverPending');
+    const r = dbRef('carryoverPending');
     const unsub = onValue(r, (snapshot) => setCarryoverPending(snapshot.val() || null));
     return () => unsub();
   }, []);
@@ -310,7 +344,7 @@ const ProduceProcessorApp = () => {
   // Load original total cases from Firebase
   useEffect(() => {
     if (!db) return;
-    const totalRef = ref(db, 'totalCases');
+    const totalRef = dbRef('totalCases');
     const unsub = onValue(totalRef, (snapshot) => { setOriginalTotalCases(snapshot.val() || 0); });
     return () => unsub();
   }, []);
@@ -318,7 +352,7 @@ const ProduceProcessorApp = () => {
   // Load completed items from Firebase
   useEffect(() => {
     if (!db) return;
-    const completedRef = ref(db, 'completedItems');
+    const completedRef = dbRef('completedItems');
     const unsub = onValue(completedRef, (snapshot) => {
       const data = snapshot.val();
       if (data) { const arr = Object.keys(data).map(key => ({ ...data[key], id: key })); arr.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)); setCompletedItems(arr); } else { setCompletedItems([]); }
@@ -331,7 +365,7 @@ const ProduceProcessorApp = () => {
   // Load completion photos from Firebase
   useEffect(() => {
     if (!db) return;
-    const photosRef = ref(db, 'completionPhotos');
+    const photosRef = dbRef('completionPhotos');
     const unsub = onValue(photosRef, (snapshot) => { photosSyncedRef.current = true; const data = snapshot.val(); if (data) { setCompletionPhotos(data); } else { setCompletionPhotos({}); } setPhotosLoaded(true); });
     return () => unsub();
   }, []);
@@ -339,7 +373,7 @@ const ProduceProcessorApp = () => {
   // Load historical times from Firebase
   useEffect(() => {
     if (!db) return;
-    const timesRef = ref(db, 'historicalTimes');
+    const timesRef = dbRef('historicalTimes');
     const unsub = onValue(timesRef, (snapshot) => { const data = snapshot.val(); setHistoricalTimes(data || {}); });
     return () => unsub();
   }, []);
@@ -347,7 +381,7 @@ const ProduceProcessorApp = () => {
   // Load timing events from Firebase
   useEffect(() => {
     if (!db) return;
-    const eventsRef = ref(db, 'timingEvents');
+    const eventsRef = dbRef('timingEvents');
     const unsub = onValue(eventsRef, (snapshot) => { const data = snapshot.val(); setTimingEventsBySKU(data || {}); });
     return () => unsub();
   }, []);
@@ -371,7 +405,7 @@ const ProduceProcessorApp = () => {
   // Load video index from Firebase (real-time sync across devices)
   useEffect(() => {
     if (!db) return;
-    const videoIndexRef = ref(db, 'videoIndex');
+    const videoIndexRef = dbRef('videoIndex');
     const unsub = onValue(videoIndexRef, (snapshot) => {
       const data = snapshot.val();
       setVideos(data || {});
@@ -382,7 +416,7 @@ const ProduceProcessorApp = () => {
   // Load historical priorities from Firebase
   useEffect(() => {
     if (!db) return;
-    const prioritiesRef = ref(db, 'historicalPriorities');
+    const prioritiesRef = dbRef('historicalPriorities');
     const unsub = onValue(prioritiesRef, (snapshot) => {
       const data = snapshot.val();
       const priorities = firebaseToArray(data);
@@ -402,7 +436,7 @@ const ProduceProcessorApp = () => {
   // Load notes from Firebase
   useEffect(() => {
     if (!db) return;
-    const notesRef = ref(db, 'notes');
+    const notesRef = dbRef('notes');
     const unsub = onValue(notesRef, (snapshot) => { setNotes(snapshot.val() || {}); });
     return () => unsub();
   }, []);
@@ -412,14 +446,14 @@ const ProduceProcessorApp = () => {
     if (!db) return;
     const cleanupOldNotes = async () => {
       try {
-        const notesRef = ref(db, 'notes');
+        const notesRef = dbRef('notes');
         const snapshot = await get(notesRef);
         const data = snapshot.val();
         if (!data) return;
         const tenDaysAgo = new Date(Date.now() - (10 * 24 * 60 * 60 * 1000));
         for (const dateKey in data) {
           if (new Date(dateKey + 'T00:00:00') < tenDaysAgo) {
-            await remove(ref(db, `notes/${dateKey}`));
+            await remove(dbRef(`notes/${dateKey}`));
           }
         }
       } catch (error) { console.error('Error cleaning up old notes:', error); }
@@ -434,14 +468,14 @@ const ProduceProcessorApp = () => {
     if (!db) return;
     const cleanupOldCompletedItems = async () => {
       try {
-        const completedRef = ref(db, 'completedItems');
+        const completedRef = dbRef('completedItems');
         const snapshot = await get(completedRef);
         const completedData = snapshot.val();
         if (!completedData) return;
         const tenDaysAgo = new Date(Date.now() - (10 * 24 * 60 * 60 * 1000));
         for (const key in completedData) {
           if (new Date(completedData[key].completedAt) < tenDaysAgo) {
-            await remove(ref(db, `completedItems/${key}`));
+            await remove(dbRef(`completedItems/${key}`));
           }
         }
       } catch (error) { console.error('Error cleaning up old completed items:', error); }
@@ -458,10 +492,10 @@ const ProduceProcessorApp = () => {
       // Migrate existing Storage videos into the Realtime DB index (one-time, for pre-existing videos)
       if (db) {
         try {
-          const snapshot = await get(ref(db, 'videoIndex'));
+          const snapshot = await get(dbRef('videoIndex'));
           if (!snapshot.exists()) {
             const storageVideos = await listAllVideosFromStorage();
-            if (Object.keys(storageVideos).length > 0) await set(ref(db, 'videoIndex'), storageVideos);
+            if (Object.keys(storageVideos).length > 0) await set(dbRef('videoIndex'), storageVideos);
           }
         } catch (error) { console.error('Error migrating video index:', error); }
       }
@@ -474,8 +508,8 @@ const ProduceProcessorApp = () => {
           if (!migrationFlag) {
             const loadedTimes = await loadAllHistoricalTimesFromDB();
             const loadedEvents = await loadAllTimingEventsFromDB();
-            if (Object.keys(loadedTimes).length > 0) await set(ref(db, 'historicalTimes'), loadedTimes);
-            if (Object.keys(loadedEvents).length > 0) await set(ref(db, 'timingEvents'), loadedEvents);
+            if (Object.keys(loadedTimes).length > 0) await set(dbRef('historicalTimes'), loadedTimes);
+            if (Object.keys(loadedEvents).length > 0) await set(dbRef('timingEvents'), loadedEvents);
             localStorage.setItem('timingDataMigrated', 'true');
           }
         } catch (error) { console.error('Error during timing data migration:', error); }
@@ -534,7 +568,7 @@ const ProduceProcessorApp = () => {
       const idb = await openDB();
       const tx = idb.transaction(['completionPhotos'], 'readwrite');
       tx.objectStore('completionPhotos').put({ id: sku, data: pd.data, timestamp: pd.timestamp, name: itemName });
-      if (db) await set(ref(db, `completionPhotos/${sku}`), { data: pd.data, timestamp: pd.timestamp, name: itemName });
+      if (db) await set(dbRef(`completionPhotos/${sku}`), { data: pd.data, timestamp: pd.timestamp, name: itemName });
     } catch (error) { console.error('Error saving completion photo:', error); alert('Error saving photo.'); }
   };
 
@@ -543,7 +577,7 @@ const ProduceProcessorApp = () => {
       const idb = await openDB();
       const tx = idb.transaction(['completionPhotos'], 'readwrite');
       tx.objectStore('completionPhotos').delete(sku);
-      if (db) await remove(ref(db, `completionPhotos/${sku}`));
+      if (db) await remove(dbRef(`completionPhotos/${sku}`));
     } catch (error) { console.error('Error deleting completion photo:', error); }
   };
 
@@ -622,7 +656,7 @@ const ProduceProcessorApp = () => {
       else throw new Error('Unknown video data format');
       if (!blob || blob.size === 0) throw new Error('Video blob is empty or invalid');
       await uploadBytes(storageRef, blob, { contentType: videoData.type || 'video/webm', customMetadata: { sku, uploadedAt: new Date().toISOString() } });
-      if (db) await set(ref(db, `videoIndex/${sku}`), { exists: true, filename, storageRef: `produce-videos/${filename}`, name: videoData.itemName, updatedAt: Date.now() });
+      if (db) await set(dbRef(`videoIndex/${sku}`), { exists: true, filename, storageRef: `produce-videos/${filename}`, name: videoData.itemName, updatedAt: Date.now() });
     } catch (error) { console.error('Error uploading video:', error); throw error; }
   };
 
@@ -630,7 +664,7 @@ const ProduceProcessorApp = () => {
     if (!storage) return;
     try {
       await deleteObject(sRef(storage, `produce-videos/${sku}.webm`));
-      if (db) await remove(ref(db, `videoIndex/${sku}`));
+      if (db) await remove(dbRef(`videoIndex/${sku}`));
     } catch (error) { if (error.code !== 'storage/object-not-found') console.error('Error deleting video:', error); }
   };
 
@@ -663,7 +697,7 @@ const ProduceProcessorApp = () => {
   // a Delivery API fetch once a catalog endpoint exists.
   const loadCatalog = async () => {
     if (!db) return null;
-    const val = (await get(ref(db, 'catalog'))).val();
+    const val = (await get(dbRef('catalog'))).val();
     if (!val || !val.items) return null;
     return { meta: val.meta || {}, items: firebaseToArray(val.items) };
   };
@@ -719,7 +753,7 @@ const ProduceProcessorApp = () => {
         meta: { generatedAt, uploadedAt: new Date().toISOString(), count: parsed.length, activeCount: parsed.filter(c => c.active).length },
         items: parsed
       };
-      await set(ref(db, 'catalog'), next);
+      await set(dbRef('catalog'), next);
       setCatalog(next);
       setCatalogStatus(`Catalog updated from ${file.name}`);
     } catch (error) { console.error('Error updating catalog:', error); setCatalogStatus(`Could not update catalog: ${error.message}`); }
@@ -794,7 +828,7 @@ const ProduceProcessorApp = () => {
         // v2 combined CSV → parse/load via the v2 path. Mirror the freshness
         // flow: replace silently if nothing's in process, else stash the
         // unfinished items and swap in (surfaced via the "(N unfinished…)" link).
-        const itemsSnap = await get(ref(db, 'items'));
+        const itemsSnap = await get(dbRef('items'));
         const currentItems = itemsSnap.val() ? Object.values(itemsSnap.val()) : [];
         if (currentItems.length === 0) {
           await loadV2Silent(text, fileInfo.date);
@@ -854,7 +888,7 @@ const ProduceProcessorApp = () => {
         const dateMatch = lines[0].match(/(\d{4}-\d{2}-\d{2})/);
         csvDate = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
       }
-      const existingSnap = await get(ref(db, 'items'));
+      const existingSnap = await get(dbRef('items'));
       const existingItems = existingSnap.val() ? Object.values(existingSnap.val()) : [];
       if (existingItems.length > 0) {
         setPendingLoad({ itemsObject, totalCases, dateStr: csvDate });
@@ -864,11 +898,11 @@ const ProduceProcessorApp = () => {
         setReckoningDecisions(defaults);
         setShowReckoning(true);
       } else {
-        await set(ref(db, 'items'), itemsObject);
-        await set(ref(db, 'completedItems'), {});
-        await set(ref(db, 'totalCases'), totalCases);
+        await set(dbRef('items'), itemsObject);
+        await set(dbRef('completedItems'), {});
+        await set(dbRef('totalCases'), totalCases);
         setOriginalTotalCases(totalCases);
-        await set(ref(db, 'pdfDate'), csvDate);
+        await set(dbRef('pdfDate'), csvDate);
       }
     } catch (error) { console.error('Error processing CSV:', error); alert('Error processing CSV: ' + error.message); }
   };
@@ -893,7 +927,7 @@ const ProduceProcessorApp = () => {
       let extractedDate = null;
       if (dateMatch) extractedDate = dateMatch[1];
       else if (dateHint) { const parts = dateHint.split('-'); extractedDate = `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`; }
-      if (extractedDate) { setPdfDate(extractedDate); await set(ref(db, 'pdfDate'), extractedDate); }
+      if (extractedDate) { setPdfDate(extractedDate); await set(dbRef('pdfDate'), extractedDate); }
       let cleanText = fullText.replace(/First character determines priority.*?area\./gi, '');
       cleanText = cleanText.replace(/Cases\s+(Process on ground floor|Top Priority|Next Priority|Not Refrigerated|Do by belt|U)\s+Instructions/gi, '');
       cleanText = cleanText.replace(/Thursday|Wednesday|Monday|Tuesday|Friday|Saturday|Sunday/gi, '');
@@ -950,18 +984,18 @@ const ProduceProcessorApp = () => {
         return a.name.localeCompare(b.name);
       });
       const newItems = {};
-      sortedForOrderPdf.forEach((item, index) => { const key = push(child(ref(db), 'items')).key; newItems[key] = { ...item, sortOrder: index }; });
+      sortedForOrderPdf.forEach((item, index) => { const key = push(child(dbRef(), 'items')).key; newItems[key] = { ...item, sortOrder: index }; });
       const pdfDateStr = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
       const newPriorities = [...new Set(parsedItems.map(item => item.priority))];
-      const snap = await get(ref(db, 'historicalPriorities'));
+      const snap = await get(dbRef('historicalPriorities'));
       const currentPriorities = firebaseToArray(snap.val());
       const combined = [...new Set([...currentPriorities, ...newPriorities])].sort((a, b) => {
         const aN = typeof a === 'number' && a > 0, bN = typeof b === 'number' && b > 0;
         if (aN && bN) return a - b; if (aN) return -1; if (bN) return 1;
         if (a === 'missing') return -1; if (b === 'missing') return 1; return 0;
       });
-      await set(ref(db, 'historicalPriorities'), combined);
-      const existingSnapPdf = await get(ref(db, 'items'));
+      await set(dbRef('historicalPriorities'), combined);
+      const existingSnapPdf = await get(dbRef('items'));
       const existingItemsPdf = existingSnapPdf.val() ? Object.values(existingSnapPdf.val()) : [];
       if (existingItemsPdf.length > 0) {
         setPendingLoad({ itemsObject: newItems, totalCases, dateStr: pdfDateStr, isPdf: true });
@@ -971,12 +1005,12 @@ const ProduceProcessorApp = () => {
         setReckoningDecisions(defaults);
         setShowReckoning(true);
       } else {
-        const itemsRef2 = ref(db, 'items');
+        const itemsRef2 = dbRef('items');
         await remove(itemsRef2);
         await update(itemsRef2, newItems);
-        await remove(ref(db, 'completedItems'));
-        await set(ref(db, 'pdfDate'), pdfDateStr);
-        await set(ref(db, 'originalTotalCases'), totalCases);
+        await remove(dbRef('completedItems'));
+        await set(dbRef('pdfDate'), pdfDateStr);
+        await set(dbRef('originalTotalCases'), totalCases);
       }
     } catch (error) { console.error('Error processing PDF:', error); alert('Error processing PDF: ' + error.message); }
   };
@@ -987,21 +1021,21 @@ const ProduceProcessorApp = () => {
     try {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const dateSnapshot = await get(ref(db, 'pdfDate'));
+      const dateSnapshot = await get(dbRef('pdfDate'));
       const firebaseDate = dateSnapshot.val();
       if (firebaseDate !== todayStr) {
-        await remove(ref(db, 'items')); await remove(ref(db, 'completedItems')); await remove(ref(db, 'pdfDate')); await remove(ref(db, 'totalCases'));
+        await remove(dbRef('items')); await remove(dbRef('completedItems')); await remove(dbRef('pdfDate')); await remove(dbRef('totalCases'));
         setItems([]); setCompletedItems([]); setPdfDate(''); setOriginalTotalCases(0); setActiveItem(null); setIsProcessing(false); setStartTime(null);
         setItemsInProcess({}); setItemsPaused({}); setPausedElapsedTime({}); setElapsedTimes({});
         setRefreshMessage('No data for today. Local data cleared.'); setTimeout(() => setRefreshMessage(''), 3000); return;
       }
       if (!pdfDate || pdfDate !== todayStr) {
         setRefreshMessage('Loading today\'s data...');
-        const itemsSnap = await get(ref(db, 'items'));
+        const itemsSnap = await get(dbRef('items'));
         if (itemsSnap.val()) setItems(Object.keys(itemsSnap.val()).map(id => ({ id, ...itemsSnap.val()[id] })));
-        const compSnap = await get(ref(db, 'completedItems'));
+        const compSnap = await get(dbRef('completedItems'));
         if (compSnap.val()) setCompletedItems(Object.keys(compSnap.val()).map(id => ({ id, ...compSnap.val()[id] })));
-        const totalSnap = await get(ref(db, 'totalCases'));
+        const totalSnap = await get(dbRef('totalCases'));
         if (totalSnap.val()) setOriginalTotalCases(totalSnap.val());
         setPdfDate(todayStr);
         setRefreshMessage('Today\'s data loaded!'); setTimeout(() => setRefreshMessage(''), 3000);
@@ -1011,10 +1045,10 @@ const ProduceProcessorApp = () => {
 
   const clearCurrentFile = async () => {
     if (!db) return;
-    await remove(ref(db, 'items'));
-    await remove(ref(db, 'completedItems'));
-    await remove(ref(db, 'pdfDate'));
-    await remove(ref(db, 'totalCases'));
+    await remove(dbRef('items'));
+    await remove(dbRef('completedItems'));
+    await remove(dbRef('pdfDate'));
+    await remove(dbRef('totalCases'));
     setItems([]); setCompletedItems([]); setPdfDate(''); setOriginalTotalCases(0);
     setActiveItem(null); setIsProcessing(false); setStartTime(null);
     setItemsInProcess({}); setItemsPaused({}); setPausedElapsedTime({}); setElapsedTimes({});
@@ -1023,7 +1057,7 @@ const ProduceProcessorApp = () => {
   // --- Notes helpers ---
   const saveItemNote = async (itemId, text, itemName) => {
     if (!db || !pdfDate) return;
-    const noteRef = ref(db, `notes/${pdfDate}/itemNotes/${itemId}`);
+    const noteRef = dbRef(`notes/${pdfDate}/itemNotes/${itemId}`);
     if (text.trim()) {
       await set(noteRef, { text: text.trim(), itemName, updatedAt: new Date().toISOString() });
     } else {
@@ -1035,10 +1069,10 @@ const ProduceProcessorApp = () => {
     if (!db || !pdfDate) return;
     if (noteId === 'new') {
       if (!text.trim()) return;
-      const notesRef = ref(db, `notes/${pdfDate}/freeformNotes`);
+      const notesRef = dbRef(`notes/${pdfDate}/freeformNotes`);
       await push(notesRef, { text: text.trim(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     } else {
-      const noteRef = ref(db, `notes/${pdfDate}/freeformNotes/${noteId}`);
+      const noteRef = dbRef(`notes/${pdfDate}/freeformNotes/${noteId}`);
       if (text.trim()) {
         await update(noteRef, { text: text.trim(), updatedAt: new Date().toISOString() });
       } else {
@@ -1050,14 +1084,14 @@ const ProduceProcessorApp = () => {
   const saveBrowserNote = async (dateKey, type, noteId, text, itemName) => {
     if (!db) return;
     if (type === 'item') {
-      const noteRef = ref(db, `notes/${dateKey}/itemNotes/${noteId}`);
+      const noteRef = dbRef(`notes/${dateKey}/itemNotes/${noteId}`);
       if (text.trim()) {
         await update(noteRef, { text: text.trim(), updatedAt: new Date().toISOString() });
       } else {
         await remove(noteRef);
       }
     } else {
-      const noteRef = ref(db, `notes/${dateKey}/freeformNotes/${noteId}`);
+      const noteRef = dbRef(`notes/${dateKey}/freeformNotes/${noteId}`);
       if (text.trim()) {
         await update(noteRef, { text: text.trim(), updatedAt: new Date().toISOString() });
       } else {
@@ -1077,7 +1111,7 @@ const ProduceProcessorApp = () => {
       // cold mount before listeners hydrate) must still archive the real day.
       let completed = completedItems;
       try {
-        const snap = await get(ref(db, 'completedItems'));
+        const snap = await get(dbRef('completedItems'));
         completed = snap.val() ? Object.values(snap.val()) : [];
       } catch (_) { /* fall back to React state */ }
       if (!completed.length) return; // nothing processed → no log to write
@@ -1165,13 +1199,13 @@ const ProduceProcessorApp = () => {
         additions[newId] = { ...item, id: newId, cases, casesDone: 0, sortOrder: idx - carryItems.length, carryover: true };
       });
       if (Object.keys(additions).length > 0) {
-        await update(ref(db, 'items'), additions);
+        await update(dbRef('items'), additions);
         const newTotal = originalTotalCases + carryTotal;
-        await set(ref(db, 'totalCases'), newTotal);
-        await set(ref(db, 'originalTotalCases'), newTotal);
+        await set(dbRef('totalCases'), newTotal);
+        await set(dbRef('originalTotalCases'), newTotal);
         setOriginalTotalCases(newTotal);
       }
-      await remove(ref(db, 'carryoverPending'));
+      await remove(dbRef('carryoverPending'));
       setShowReckoning(false);
       setReckoningItems([]);
       setReckoningDecisions({});
@@ -1191,14 +1225,14 @@ const ProduceProcessorApp = () => {
     });
     const combined = { ...carryObject, ...itemsObject };
     const carryTotal = carryItems.reduce((sum, item) => sum + (reckoningDecisions[item.id]?.cases ?? item.cases), 0);
-    const itemsRef = ref(db, 'items');
+    const itemsRef = dbRef('items');
     await remove(itemsRef);
     if (isPdf) { await update(itemsRef, combined); } else { await set(itemsRef, combined); }
-    await set(ref(db, 'completedItems'), {});
-    await set(ref(db, 'totalCases'), totalCases + carryTotal);
-    await set(ref(db, 'originalTotalCases'), totalCases + carryTotal);
+    await set(dbRef('completedItems'), {});
+    await set(dbRef('totalCases'), totalCases + carryTotal);
+    await set(dbRef('originalTotalCases'), totalCases + carryTotal);
     setOriginalTotalCases(totalCases + carryTotal);
-    await set(ref(db, 'pdfDate'), dateStr);
+    await set(dbRef('pdfDate'), dateStr);
     setShowReckoning(false);
     setReckoningItems([]);
     setReckoningDecisions({});
@@ -1297,18 +1331,18 @@ const ProduceProcessorApp = () => {
     // Archive the outgoing day before wiping. Read its date fresh from Firebase
     // (React state may be stale during a background swap); snapshotProcessingToLog
     // reads the completed items fresh and no-ops if there were none.
-    const prevSnap = await get(ref(db, 'pdfDate'));
+    const prevSnap = await get(dbRef('pdfDate'));
     const prevDate = prevSnap.val() || pdfDate || '';
     if (prevDate && prevDate !== finalDate) {
       await snapshotProcessingToLog(prevDate);
     }
-    const itemsRef = ref(db, 'items');
+    const itemsRef = dbRef('items');
     await remove(itemsRef);
     await set(itemsRef, itemsObject);
-    await set(ref(db, 'completedItems'), {});
-    await set(ref(db, 'totalCases'), totalCases);
-    await set(ref(db, 'originalTotalCases'), totalCases);
-    await set(ref(db, 'pdfDate'), finalDate);
+    await set(dbRef('completedItems'), {});
+    await set(dbRef('totalCases'), totalCases);
+    await set(dbRef('originalTotalCases'), totalCases);
+    await set(dbRef('pdfDate'), finalDate);
     setOriginalTotalCases(totalCases);
   };
 
@@ -1320,7 +1354,7 @@ const ProduceProcessorApp = () => {
     const unfinished = currentItems
       .map(it => ({ ...it, cases: Math.max(1, (it.cases ?? 0) - (it.casesDone ?? 0)), casesDone: 0 }))
       .filter(it => (it.cases ?? 0) > 0);
-    await set(ref(db, 'carryoverPending'), { fromDate: fromDate || '', items: unfinished });
+    await set(dbRef('carryoverPending'), { fromDate: fromDate || '', items: unfinished });
     await loadV2Silent(text, dateStr);
     return unfinished.length;
   };
@@ -1360,8 +1394,8 @@ const ProduceProcessorApp = () => {
       const csvDate = data.delivery_date;
 
       const [itemsSnap, dateSnap] = await Promise.all([
-        get(ref(db, 'items')),
-        get(ref(db, 'pdfDate')),
+        get(dbRef('items')),
+        get(dbRef('pdfDate')),
       ]);
       const currentItems = itemsSnap.val() ? Object.values(itemsSnap.val()) : [];
       const currentDate = dateSnap.val() || '';
@@ -1515,7 +1549,7 @@ const ProduceProcessorApp = () => {
     if (readOnlyMode || !startTime || !activeItem || !db) return;
     const duration = (Date.now() - startTime) / 1000;
     const itemTimings = timingData[activeItem.id] || [];
-    await set(ref(db, `timingData/${activeItem.id}`), [...itemTimings, { duration, timestamp: new Date().toISOString() }]);
+    await set(dbRef(`timingData/${activeItem.id}`), [...itemTimings, { duration, timestamp: new Date().toISOString() }]);
     setIsProcessing(false); setStartTime(null); setActiveItem(null);
   };
 
@@ -1523,8 +1557,8 @@ const ProduceProcessorApp = () => {
     if (readOnlyMode || !db) return;
     let priority = newPriority === 'missing' ? 'missing' : parseInt(newPriority);
     if (typeof priority === 'number' && isNaN(priority)) return;
-    await set(ref(db, `items/${itemId}/priority`), priority);
-    const snap = await get(ref(db, 'historicalPriorities'));
+    await set(dbRef(`items/${itemId}/priority`), priority);
+    const snap = await get(dbRef('historicalPriorities'));
     const currentPriorities = firebaseToArray(snap.val());
     if (!currentPriorities.includes(priority)) {
       const updated = [...currentPriorities, priority].sort((a, b) => {
@@ -1532,7 +1566,7 @@ const ProduceProcessorApp = () => {
         if (aN && bN) return a - b; if (aN) return -1; if (bN) return 1;
         if (a === 'missing') return -1; if (b === 'missing') return 1; return 0;
       });
-      await set(ref(db, 'historicalPriorities'), updated);
+      await set(dbRef('historicalPriorities'), updated);
     }
   };
 
@@ -1556,7 +1590,7 @@ const ProduceProcessorApp = () => {
     updates[`items/${item.id}/sortOrder`] = aboveSortOrder;
     updates[`items/${item.id}/priority`] = above.priority;
     updates[`items/${above.id}/sortOrder`] = itemSortOrder;
-    await update(ref(db), updates);
+    await update(dbRef(), updates);
   };
 
   const moveItemDown = async (itemId) => {
@@ -1579,7 +1613,7 @@ const ProduceProcessorApp = () => {
     updates[`items/${item.id}/sortOrder`] = belowSortOrder;
     updates[`items/${item.id}/priority`] = below.priority;
     updates[`items/${below.id}/sortOrder`] = itemSortOrder;
-    await update(ref(db), updates);
+    await update(dbRef(), updates);
   };
 
   const moveItemToTop = async (itemId) => {
@@ -1598,7 +1632,7 @@ const ProduceProcessorApp = () => {
     const topSortOrder = sorted[0].sortOrder ?? 0;
     updates[`items/${itemId}/sortOrder`] = topSortOrder - 1;
     updates[`items/${itemId}/priority`] = sorted[0].priority;
-    await update(ref(db), updates);
+    await update(dbRef(), updates);
   };
 
   const moveItemToBottom = async (itemId) => {
@@ -1617,10 +1651,10 @@ const ProduceProcessorApp = () => {
     const updates = {};
     updates[`items/${itemId}/sortOrder`] = (last.sortOrder ?? sorted.length - 1) + 1;
     updates[`items/${itemId}/priority`] = last.priority;
-    await update(ref(db), updates);
+    await update(dbRef(), updates);
   };
 
-  const updateLocation = async (itemId, newLocation) => { if (readOnlyMode || !db) return; await set(ref(db, `items/${itemId}/location`), newLocation); };
+  const updateLocation = async (itemId, newLocation) => { if (readOnlyMode || !db) return; await set(dbRef(`items/${itemId}/location`), newLocation); };
 
   const addNewItem = async () => {
     if (readOnlyMode || !db) return;
@@ -1629,14 +1663,14 @@ const ProduceProcessorApp = () => {
     const cases = parseInt(newItemCases);
     if (isNaN(cases) || cases < 1) { alert('Please enter a valid number of cases'); return; }
     const newItem = { id: `adhoc-${Date.now()}`, name: newItemName.trim(), location: newItemLocation.trim(), cases, priority: newItemPriority === 'missing' ? 'missing' : parseInt(newItemPriority) };
-    await set(ref(db, `items/${newItem.id}`), newItem);
+    await set(dbRef(`items/${newItem.id}`), newItem);
     if (newItemPriority !== 'missing') {
       const p = parseInt(newItemPriority);
-      const snap = await get(ref(db, 'historicalPriorities'));
+      const snap = await get(dbRef('historicalPriorities'));
       const cur = firebaseToArray(snap.val());
       if (!cur.includes(p)) {
         const updated = [...cur, p].sort((a, b) => { const aN = typeof a === 'number' && a > 0, bN = typeof b === 'number' && b > 0; if (aN && bN) return a - b; if (aN) return -1; if (bN) return 1; if (a === 'missing') return -1; if (b === 'missing') return 1; return 0; });
-        await set(ref(db, 'historicalPriorities'), updated);
+        await set(dbRef('historicalPriorities'), updated);
       }
     }
     setNewItemName(''); setNewItemLocation(''); setNewItemCases('1'); setNewItemPriority('missing'); setShowAddItem(false);
@@ -1644,9 +1678,9 @@ const ProduceProcessorApp = () => {
 
   const deletePriority = async (priorityToDelete) => {
     if (readOnlyMode || !db) return;
-    const snap = await get(ref(db, 'historicalPriorities'));
+    const snap = await get(dbRef('historicalPriorities'));
     const cur = firebaseToArray(snap.val());
-    await set(ref(db, 'historicalPriorities'), cur.filter(p => p !== priorityToDelete));
+    await set(dbRef('historicalPriorities'), cur.filter(p => p !== priorityToDelete));
   };
 
   const handleBeginProcessing = (itemId) => {
@@ -1685,7 +1719,7 @@ const ProduceProcessorApp = () => {
       const prevDone = item.casesDone ?? 0;
       const nowDone = prevDone + casesPromptValue;
       const remaining = item.cases - casesPromptValue;
-      await update(ref(db, `items/${item.id}`), { cases: remaining, casesDone: nowDone, originalCases });
+      await update(dbRef(`items/${item.id}`), { cases: remaining, casesDone: nowDone, originalCases });
     }
   };
 
@@ -1701,16 +1735,16 @@ const ProduceProcessorApp = () => {
       const timingEvent = { totalTime, cases: item.cases, timePerCase, timestamp: new Date().toISOString() };
       const allEvents = timingEventsBySKU[sku] || [];
       const newEvents = [...allEvents, timingEvent];
-      await set(ref(db, `timingEvents/${sku}`), newEvents);
+      await set(dbRef(`timingEvents/${sku}`), newEvents);
       const avgTimePerCase = newEvents.reduce((sum, e) => sum + e.timePerCase, 0) / newEvents.length;
-      await set(ref(db, `historicalTimes/${sku}`), avgTimePerCase);
+      await set(dbRef(`historicalTimes/${sku}`), avgTimePerCase);
       setItemsInProcess(prev => { const u = { ...prev }; delete u[item.id]; return u; });
       setItemsPaused(prev => { const u = { ...prev }; delete u[item.id]; return u; });
       setPausedElapsedTime(prev => { const u = { ...prev }; delete u[item.id]; return u; });
       setElapsedTimes(prev => { const u = { ...prev }; delete u[item.id]; return u; });
     }
-    await set(ref(db, `completedItems/${item.id}`), { ...item, completedAt: new Date().toISOString() });
-    await remove(ref(db, `items/${item.id}`));
+    await set(dbRef(`completedItems/${item.id}`), { ...item, completedAt: new Date().toISOString() });
+    await remove(dbRef(`items/${item.id}`));
     setShowCompletionCamera(null);
   };
 
@@ -1746,8 +1780,31 @@ const ProduceProcessorApp = () => {
   const undoComplete = async (item) => {
     if (readOnlyMode || !db) return;
     const { completedAt, ...activeItem } = item;
-    await set(ref(db, `items/${item.id}`), activeItem);
-    await remove(ref(db, `completedItems/${item.id}`));
+    await set(dbRef(`items/${item.id}`), activeItem);
+    await remove(dbRef(`completedItems/${item.id}`));
+  };
+
+  // Setup page: take an item off today's list without processing it (shorted,
+  // late truck, …). It parks under completedItems with removed: true so the
+  // progress bar can leave it out of both numerator and denominator, and the
+  // setup page can put it back.
+  const removeItemForToday = async (item) => {
+    if (readOnlyMode || !db) return;
+    await set(dbRef(`completedItems/${item.id}`), { ...item, completedAt: new Date().toISOString(), removed: true });
+    await remove(dbRef(`items/${item.id}`));
+  };
+
+  const restoreRemovedItem = async (item) => {
+    if (readOnlyMode || !db) return;
+    const { completedAt, removed, ...activeItem } = item;
+    await set(dbRef(`items/${item.id}`), activeItem);
+    await remove(dbRef(`completedItems/${item.id}`));
+  };
+
+  // Drop a running/paused timer without recording anything.
+  const cancelTimer = (itemId) => {
+    const drop = (prev) => { const u = { ...prev }; delete u[itemId]; return u; };
+    setItemsInProcess(drop); setItemsPaused(drop); setPausedElapsedTime(drop); setElapsedTimes(drop);
   };
 
   const deleteTimingEvent = async (sku, eventIndex) => {
@@ -1757,9 +1814,9 @@ const ProduceProcessorApp = () => {
     const updatedEvents = events.filter((_, index) => index !== eventIndex);
     if (db) {
       if (updatedEvents.length > 0) {
-        await set(ref(db, `timingEvents/${sku}`), updatedEvents);
+        await set(dbRef(`timingEvents/${sku}`), updatedEvents);
       } else {
-        await remove(ref(db, `timingEvents/${sku}`));
+        await remove(dbRef(`timingEvents/${sku}`));
       }
     }
     setTimingEventsBySKU(prev => ({ ...prev, [sku]: updatedEvents }));
@@ -2145,33 +2202,6 @@ const ProduceProcessorApp = () => {
             </svg>
           </button>
 
-          {/* Delivery App Nav Link */}
-          <a
-            href="https://delivery-app-481756503401.us-east1.run.app"
-            aria-label="Delivery"
-            style={{
-              position: 'absolute',
-              top: '1.15rem',
-              left: '3.5rem',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.5rem',
-              color: weekInfo.text,
-              opacity: 0.7,
-              zIndex: 10,
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="4" y1="3" x2="4" y2="21"/>
-              <line x1="20" y1="3" x2="20" y2="21"/>
-              <line x1="12" y1="4" x2="12" y2="6"/>
-              <line x1="12" y1="9" x2="12" y2="11"/>
-              <line x1="12" y1="14" x2="12" y2="16"/>
-              <line x1="12" y1="19" x2="12" y2="21"/>
-            </svg>
-          </a>
-
           {/* Julian Day / Week */}
           <div style={{
             position: 'absolute',
@@ -2208,9 +2238,13 @@ const ProduceProcessorApp = () => {
           <div style={{ textAlign: 'center', position: 'relative' }}>
             <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
               {(() => {
-                const completedCases = completedItems.reduce((sum, item) => sum + (item.originalCases ?? item.cases), 0) + items.reduce((sum, item) => sum + (item.casesDone ?? 0), 0);
-                const completedPercentage = originalTotalCases > 0 ? (completedCases / originalTotalCases) * 100 : 0;
-                const casesToDo = Math.max(0, originalTotalCases - completedCases);
+                // Items taken off the list on the setup page don't count as done
+                // and come out of the day's expected total.
+                const removedCases = completedItems.filter(i => i.removed).reduce((sum, item) => sum + (item.originalCases ?? item.cases), 0);
+                const completedCases = completedItems.filter(i => !i.removed).reduce((sum, item) => sum + (item.originalCases ?? item.cases), 0) + items.reduce((sum, item) => sum + (item.casesDone ?? 0), 0);
+                const expectedCases = Math.max(0, originalTotalCases - removedCases);
+                const completedPercentage = expectedCases > 0 ? (completedCases / expectedCases) * 100 : 0;
+                const casesToDo = Math.max(0, expectedCases - completedCases);
                 return (
                   <div>
                     <div style={{ position: 'relative' }}>
@@ -2262,6 +2296,15 @@ const ProduceProcessorApp = () => {
             </div>
           </div>
 
+          {DB_ROOT && (
+            <div title={`Realtime Database paths are prefixed with "${DB_ROOT}/" — production data is untouched`} style={{
+              position: 'absolute', bottom: '0.9rem', left: '1.5rem',
+              background: '#1e293b', color: '#fbbf24', border: '2px solid #fbbf24', borderRadius: '999px',
+              padding: '0.15rem 0.7rem', fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase',
+            }}>
+              Sandbox · {DB_ROOT}/
+            </div>
+          )}
           <div
             onClick={() => { setShowChangelog(true); fetchCommits(); }}
             style={{
@@ -2328,9 +2371,8 @@ const ProduceProcessorApp = () => {
             boxShadow: '0 25px 70px rgba(0,0,0,0.25)',
             color: '#64748b'
           }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-            <h2 style={{ marginBottom: '0.75rem', color: '#1e293b', fontSize: '1.8rem' }}>All items done</h2>
-            <p style={{ fontSize: '1.1rem' }}>Every item on today's worksheet has been processed.</p>
+            <h2 style={{ margin: '0 0 1rem', color: '#1e293b', fontSize: 'clamp(3rem, 8vw, 5.5rem)', fontWeight: '800', lineHeight: 1.05, letterSpacing: '-0.02em' }}>All items done</h2>
+            <p style={{ margin: 0, fontSize: 'clamp(1.4rem, 3vw, 2.2rem)', fontWeight: '600' }}>Every item on today's worksheet has been processed.</p>
           </div>
         )}
 
@@ -2413,7 +2455,35 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {/* Items List - Two Column Layout */}
+        {/* Focus view — one item at a time (redesign) */}
+        {viewMode === 'focus' && items.length > 0 && (() => {
+          const sorted = sortItems(items);
+          const item = sorted[0];
+          const sku = getItemSKU(item);
+          return (
+            <FocusView
+              item={item}
+              remainingCount={sorted.length - 1}
+              sku={sku}
+              stats={sku ? getStats(sku) : null}
+              hasVideo={!!(sku && videos[sku])}
+              photo={sku ? completionPhotos[sku] : null}
+              noteText={notes[pdfDate]?.itemNotes?.[item.id]?.text || ''}
+              isOos={oosItems.has(getDisplayName(item.name).toLowerCase())}
+              timer={{ running: !!itemsInProcess[item.id], paused: !!itemsPaused[item.id], elapsed: elapsedTimes[item.id] || 0 }}
+              onDone={markComplete}
+              onToggleTimer={handleBeginProcessing}
+              onCancelTimer={cancelTimer}
+              onWatchVideo={setPlayingVideo}
+              getDisplayName={getDisplayName}
+              formatTime={formatTime}
+              formatTimeWithUnits={formatTimeWithUnits}
+            />
+          );
+        })()}
+
+        {/* Items List - Two Column Layout (classic) */}
+        {viewMode === 'list' && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
           {/* Left column: Todo items */}
           <div style={{ flex: '1 1 0', minWidth: 'min(650px, 100%)', display: 'grid', gap: '0.75rem' }}>
@@ -3166,8 +3236,30 @@ const ProduceProcessorApp = () => {
             </div>
             )}
           </div>
+        )}
 
         </>
+        )}
+
+        {/* Setup page (redesign) */}
+        {showSetup && (
+          <SetupPage
+            items={sortItems(items)}
+            removedItems={completedItems.filter(i => i.removed)}
+            dateLabel={pdfDate ? formatDateWithDay(pdfDate) : 'No data file loaded'}
+            onClose={finishSetup}
+            carryoverCount={carryoverPending?.items?.length || 0}
+            onReviewCarryover={openCarryoverReckoning}
+            onMoveUp={moveItemUp}
+            onMoveDown={moveItemDown}
+            onMoveTop={moveItemToTop}
+            onMoveBottom={moveItemToBottom}
+            onRemove={removeItemForToday}
+            onRestore={restoreRemovedItem}
+            onAddItem={() => setShowAddItem(true)}
+            onUpdateLocation={updateLocation}
+            getDisplayName={getDisplayName}
+          />
         )}
 
         {/* Add Item Dialog */}
@@ -4551,6 +4643,28 @@ const ProduceProcessorApp = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  onClick={() => { setShowMenu(false); setShowSetup(true); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem',
+                    background: '#0f766e', color: 'white', border: 'none', borderRadius: '12px',
+                    fontSize: '1rem', fontWeight: '700', cursor: 'pointer', width: '100%', textAlign: 'left',
+                  }}
+                >
+                  <ListOrdered size={22} />
+                  Set up today's list
+                </button>
+                <button
+                  onClick={() => { setShowMenu(false); setViewMode(viewMode === 'focus' ? 'list' : 'focus'); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem',
+                    background: '#f8fafc', border: 'none', borderRadius: '12px',
+                    fontSize: '1rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer', width: '100%', textAlign: 'left',
+                  }}
+                >
+                  {viewMode === 'focus' ? <LayoutList size={22} /> : <Maximize2 size={22} />}
+                  {viewMode === 'focus' ? 'Switch to list view' : 'Switch to one-at-a-time view'}
+                </button>
                 <button
                   onClick={() => { setShowMenu(false); setShowNotesBrowser(true); setNotesBrowserDate(pdfDate || null); }}
                   style={{
