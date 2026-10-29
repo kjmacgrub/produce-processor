@@ -530,6 +530,24 @@ const ProduceProcessorApp = () => {
     if (pdfDate && showLanding) setShowLanding(false);
   }, [pdfDate]);
 
+  // Pull-to-refresh also checks for a new deploy. A Home-Screen web app on the
+  // iPad never reloads the page on its own, so without this the old bundle keeps
+  // running after a release. Compares the hashed bundle name in the live
+  // index.html against the one this page loaded; a mismatch reloads the page.
+  // No-op in dev, where Vite serves unhashed modules.
+  const reloadIfNewBuild = async () => {
+    try {
+      const current = document.querySelector('script[type="module"][src*="/assets/index-"]')?.getAttribute('src');
+      if (!current) return false;
+      const resp = await fetch(`/?nocache=${Date.now()}`, { cache: 'no-store' });
+      if (!resp.ok) return false;
+      const html = await resp.text();
+      const live = html.match(/\/assets\/index-[^"']+\.js/)?.[0];
+      if (live && !current.endsWith(live)) { window.location.reload(); return true; }
+    } catch (e) { console.warn('Build check failed:', e); }
+    return false;
+  };
+
   // Pull-to-refresh detection
   useEffect(() => {
     let startY = 0;
@@ -540,7 +558,13 @@ const ProduceProcessorApp = () => {
         if (distance > 0 && distance < 150) { setPullDistance(distance); setIsPulling(true); }
       }
     };
-    const handleTouchEnd = () => { if (isPulling && pullDistance > 80) checkAndSyncData(); setIsPulling(false); setPullDistance(0); startY = 0; };
+    const handleTouchEnd = async () => {
+      const triggered = isPulling && pullDistance > 80;
+      setIsPulling(false); setPullDistance(0); startY = 0;
+      if (!triggered) return;
+      if (await reloadIfNewBuild()) return;
+      checkAndSyncData();
+    };
     document.addEventListener('touchstart', handleTouchStart);
     document.addEventListener('touchmove', handleTouchMove);
     document.addEventListener('touchend', handleTouchEnd);
@@ -2317,7 +2341,7 @@ const ProduceProcessorApp = () => {
               cursor: 'pointer'
             }}
           >
-            v2.15 · {__COMMIT_HASH__}
+            v2.16 · {__COMMIT_HASH__}
           </div>
 
         </div>
