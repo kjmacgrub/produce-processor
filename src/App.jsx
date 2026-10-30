@@ -551,7 +551,17 @@ const ProduceProcessorApp = () => {
   // Pull-to-refresh detection
   useEffect(() => {
     let startY = 0;
-    const handleTouchStart = (e) => { if (selectMode) return; if (window.scrollY === 0) startY = e.touches[0].clientY; };
+    // In focus mode the page itself never scrolls (scrollY is always 0); the
+    // tile's content column does. A finger dragging down inside a scrolled
+    // column is scrolling it back up, not pulling to refresh.
+    const insideScrolledBox = (el) => {
+      for (let n = el; n && n !== document.body; n = n.parentElement) if (n.scrollTop > 0) return true;
+      return false;
+    };
+    const handleTouchStart = (e) => {
+      if (selectMode) return;
+      startY = window.scrollY === 0 && !insideScrolledBox(e.target) ? e.touches[0].clientY : 0;
+    };
     const handleTouchMove = (e) => {
       if (window.scrollY === 0 && startY > 0) {
         const distance = e.touches[0].clientY - startY;
@@ -1914,6 +1924,10 @@ const ProduceProcessorApp = () => {
   };
 
   // SECTION:JSX
+  // Focus mode fills the viewport (see the page shell below). Everything else
+  // (landing, classic list) keeps the normal scrolling page.
+  const focusFits = viewMode === 'focus' && items.length > 0 && !showLanding;
+
   return (
     <>
     <style>{`
@@ -1935,8 +1949,7 @@ const ProduceProcessorApp = () => {
         }}>NOT TODAY'S DATA</div>
       </div>
     )}
-    <div style={{
-      minHeight: '100vh',
+    <div className={focusFits ? 'pp-page pp-page-fit' : 'pp-page'} style={{
       // Light page background shared across the Clover Leaves (same as the
       // Delivery Leaf and the monitor). Read-only mode keeps its blue.
       background: readOnlyMode
@@ -1946,9 +1959,17 @@ const ProduceProcessorApp = () => {
       fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       maxWidth: '100vw',
       overflowX: 'hidden',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      // Focus mode: the page is exactly one viewport tall (100dvh, so the iPad
+      // Safari toolbar is accounted for in both orientations) and the focus
+      // tile flexes to fill whatever the header leaves. Nothing hangs off the
+      // bottom of the screen; long item content scrolls inside the tile.
+      ...(focusFits ? { display: 'flex', flexDirection: 'column' } : {}),
     }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{
+        maxWidth: '1200px', margin: '0 auto', width: '100%',
+        ...(focusFits ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}),
+      }}>
 
         {/* Pull-to-refresh indicator */}
         {isPulling && (

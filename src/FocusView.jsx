@@ -40,7 +40,11 @@ export default function FocusView({
         border: '2px solid transparent',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 'calc(100vh - 290px)',
+        // Fills whatever the page leaves below the header (the page shell is
+        // one viewport tall in focus mode), so the tile fits both portrait and
+        // landscape without a magic header-height constant.
+        flex: 1,
+        minHeight: 0,
         position: 'relative',
         overflow: 'hidden',
         animation: 'focusTileIn 0.25s ease-out',
@@ -50,7 +54,7 @@ export default function FocusView({
 
       {/* Top strip: position in the day + cases */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 'none',
         padding: '0.9rem 1.5rem', borderBottom: '1px solid #e2e8f0', gap: '1rem', flexWrap: 'wrap',
       }}>
         <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -75,7 +79,10 @@ export default function FocusView({
 
       {/* Body: content on the left, big arrow on the right */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0, padding: 'clamp(1.25rem, 3vw, 2.5rem)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Content column scrolls on its own if an item outgrows the tile
+            (long instructions, running timer + video + photo in portrait);
+            the Done arrow beside it stays full height and always on screen. */}
+        <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 'clamp(1.25rem, 3vw, 2.5rem)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div>
             <h1 style={{
               margin: 0,
@@ -113,7 +120,7 @@ export default function FocusView({
           </div>
 
           {/* Media + timer row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: 'auto', flex: 'none' }}>
             {hasVideo && (
               <button onClick={() => onWatchVideo(sku)} style={bigBtn('#059669')}>
                 <Play size={26} /> Watch video
