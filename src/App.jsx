@@ -2223,7 +2223,8 @@ const ProduceProcessorApp = () => {
           transition: 'background 0.3s',
         }}>
 
-          {/* Other Apps — drops down links to the sibling apps */}
+          {/* Other Apps — drops down links to the sibling apps (same tab, so the
+              matching button over there brings the processor straight back) */}
           <button
             onClick={(e) => {
               const r = e.currentTarget.getBoundingClientRect();
@@ -4700,8 +4701,6 @@ const ProduceProcessorApp = () => {
               <a
                 role="menuitem"
                 href="https://delivery-app-481756503401.us-east1.run.app"
-                target="_blank"
-                rel="noopener noreferrer"
                 onClick={() => setShowOtherApps(false)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.9rem 1rem',
