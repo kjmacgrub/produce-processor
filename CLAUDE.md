@@ -60,4 +60,8 @@ Firebase credentials go in `.env` (git-ignored). See `.env.example` for required
 
 Set `VITE_DB_ROOT=sandbox` in a git-ignored `.env.local`. Every Realtime Database path then lives under `sandbox/` (`sandbox/items`, `sandbox/completedItems`, …) via the `dbRef()` helper in `src/firebase.js`, so a local build never reads or writes the production tree. A yellow **SANDBOX** pill shows in the header when it is on. The sandbox seeds itself: the Delivery freshness check loads today's CSV into `sandbox/items` on first run. Storage (videos, CSVs) is *not* namespaced — recording or uploading a video from a sandbox build still writes to the shared bucket. Production (Netlify) has no `VITE_DB_ROOT` and uses the bare paths. Always use `dbRef(path)`, never `ref(db, path)`, when adding database code.
 
-Deployed on Netlify; `netlify.toml` sets build command and publish directory.
+## Deploy
+
+Production hosting is **Firebase Hosting** at https://process-6d2dc.web.app (project `process-6d2dc`, config in `firebase.json` / `.firebaserc`). Deploy with `npm run deploy`, which builds and runs `firebase deploy --only hosting`. `.env.production` pins `VITE_DB_ROOT` empty so a production build never inherits a developer's sandbox root from `.env.local`.
+
+The site was on Netlify (https://produce-processor.netlify.app, `netlify.toml`) until November 2026; Netlify's free-plan credit limit paused deploys, so it is being retired. Pushing to GitHub no longer deploys anything — run `npm run deploy`.
