@@ -4783,7 +4783,7 @@ const ProduceProcessorApp = () => {
                   }}
                 >
                   {viewMode === 'focus' ? <LayoutList size={22} /> : <Maximize2 size={22} />}
-                  {viewMode === 'focus' ? 'Switch to list view' : 'Switch to one-at-a-time view'}
+                  {viewMode === 'focus' ? 'List view' : 'One-at-a-time view'}
                 </button>
                 <button
                   onClick={() => { setShowMenu(false); setShowNotesBrowser(true); setNotesBrowserDate(pdfDate || null); }}
