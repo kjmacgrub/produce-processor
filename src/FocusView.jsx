@@ -24,7 +24,6 @@ export default function FocusView({
   onWatchVideo,
   getDisplayName,
   formatTime,
-  formatTimeWithUnits,
 }) {
   const [showPhoto, setShowPhoto] = useState(false);
   // How many cases the processor says they actually did. Defaults to the
@@ -209,9 +208,8 @@ export default function FocusView({
             )}
 
             {stats && (
-              <div style={{ fontSize: '0.85rem', color: '#0f766e', fontWeight: '600', background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.25)', borderRadius: '8px', padding: '0.4rem 0.7rem', lineHeight: 1.25 }}>
-                <div style={{ fontSize: '1.05rem', fontWeight: '800' }}>{formatTimeWithUnits(stats.average)}</div>
-                <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Avg / case</div>
+              <div style={{ fontSize: '1.05rem', color: '#0f766e', fontWeight: '800', background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.25)', borderRadius: '8px', padding: '0.5rem 0.8rem', whiteSpace: 'nowrap' }}>
+                ~ {roughDuration(stats.average)} per case
               </div>
             )}
           </div>
@@ -257,6 +255,14 @@ export default function FocusView({
     </div>
   );
 }
+
+// A glanceable estimate: whole minutes once it's a minute or more
+// ("3 min"), otherwise seconds to the nearest 5 ("45 sec").
+const roughDuration = (seconds) => {
+  const s = Math.max(0, Number(seconds) || 0);
+  if (s >= 60) return `${Math.max(1, Math.round(s / 60))} min`;
+  return `${Math.max(5, Math.round(s / 5) * 5)} sec`;
+};
 
 const stepBtn = (disabled) => ({
   width: '2.4rem', height: '2.4rem', borderRadius: '50%', border: '2px solid #fbbf24', background: 'transparent',

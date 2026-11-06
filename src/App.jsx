@@ -2558,7 +2558,6 @@ const ProduceProcessorApp = () => {
               onWatchVideo={setPlayingVideo}
               getDisplayName={getDisplayName}
               formatTime={formatTime}
-              formatTimeWithUnits={formatTimeWithUnits}
             />
           );
         })()}
