@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { onValue, get, set, remove, push, child, update } from 'firebase/database';
 import { ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { db, storage, dbRef, DB_ROOT } from './firebase';
-import { Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote, RefreshCw, ListOrdered, LayoutList, Maximize2 } from 'lucide-react';
+import { Play, Package, ClipboardList, Video, Timer, Eye, Pencil, Clock, AlertCircle, StickyNote, RefreshCw, ListOrdered, LayoutList, Maximize2, Settings, ChevronDown, Truck, ExternalLink } from 'lucide-react';
 import FocusView from './FocusView';
 import SetupPage from './SetupPage';
 import { sortItems } from './itemOrder';
@@ -97,6 +97,8 @@ const ProduceProcessorApp = () => {
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState({ left: 16, top: 16, width: 340 });
+  const [showOtherApps, setShowOtherApps] = useState(false);
+  const [otherAppsAnchor, setOtherAppsAnchor] = useState({ left: 16, top: 16 });
   // Redesign: the supervisor's setup page and the processor's one-item-at-a-time
   // view. 'focus' shows one big tile; 'list' is the classic two-column layout.
   const [showSetup, setShowSetup] = useState(false);
@@ -1743,18 +1745,20 @@ const ProduceProcessorApp = () => {
     setShowCasesPrompt(item.id);
   };
 
+  // Finish `count` cases of an item: the whole item when count covers it,
+  // otherwise record the partial and leave the remainder on the list.
+  const completeWithCount = async (item, count) => {
+    if (readOnlyMode || !db) return;
+    const n = Math.max(1, Math.min(item.cases, parseInt(count, 10) || item.cases));
+    if (n >= item.cases) { markComplete(item); return; }
+    const originalCases = item.originalCases ?? item.cases;
+    const prevDone = item.casesDone ?? 0;
+    await update(dbRef(`items/${item.id}`), { cases: item.cases - n, casesDone: prevDone + n, originalCases });
+  };
+
   const confirmCases = async (item) => {
     setShowCasesPrompt(null);
-    if (casesPromptValue >= item.cases) {
-      markComplete(item);
-    } else {
-      if (!db) return;
-      const originalCases = item.originalCases ?? item.cases;
-      const prevDone = item.casesDone ?? 0;
-      const nowDone = prevDone + casesPromptValue;
-      const remaining = item.cases - casesPromptValue;
-      await update(dbRef(`items/${item.id}`), { cases: remaining, casesDone: nowDone, originalCases });
-    }
+    await completeWithCount(item, casesPromptValue);
   };
 
   const finalizeCompletion = async (item, pd) => {
@@ -2219,32 +2223,34 @@ const ProduceProcessorApp = () => {
           transition: 'background 0.3s',
         }}>
 
-          {/* Hamburger Menu Button */}
+          {/* Other Apps — drops down links to the sibling apps */}
           <button
             onClick={(e) => {
-              // Anchor the menu's top-left corner just below the icon, kept inside the viewport
               const r = e.currentTarget.getBoundingClientRect();
-              const width = Math.min(340, window.innerWidth - 16);
-              setMenuAnchor({ left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), top: r.bottom + 6, width });
-              setShowMenu(true);
+              setOtherAppsAnchor({ left: Math.max(8, r.left), top: r.bottom + 6 });
+              setShowOtherApps(true);
             }}
-            aria-label="Menu"
+            aria-label="Other apps"
+            aria-haspopup="menu"
+            aria-expanded={showOtherApps}
             style={{
               position: 'absolute',
               top: '1rem',
               left: '1rem',
-              background: 'none',
-              border: 'none',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              background: 'rgba(255,255,255,0.18)',
+              border: `1.5px solid ${weekInfo.text}`,
+              color: weekInfo.text,
+              borderRadius: '999px',
+              padding: '0.4rem 0.8rem 0.4rem 0.95rem',
+              fontSize: '0.9rem', fontWeight: '700', fontFamily: 'inherit',
               cursor: 'pointer',
-              padding: '0.5rem',
-              zIndex: 10
+              zIndex: 10,
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={weekInfo.text} strokeWidth="2.5">
-              <line x1="3" y1="6" x2="21" y2="6"/>
-              <line x1="3" y1="12" x2="21" y2="12"/>
-              <line x1="3" y1="18" x2="21" y2="18"/>
-            </svg>
+            Other Apps
+            <ChevronDown size={18} strokeWidth={2.5} style={{ transition: 'transform 0.15s', transform: showOtherApps ? 'rotate(180deg)' : 'none' }} />
           </button>
 
           {/* Julian Day / Week */}
@@ -2350,19 +2356,46 @@ const ProduceProcessorApp = () => {
               Sandbox · {DB_ROOT}/
             </div>
           )}
-          <div
-            onClick={() => { setShowChangelog(true); fetchCommits(); }}
-            style={{
-              textAlign: 'right',
-              fontSize: '0.75rem',
-              color: weekInfo.text,
-              opacity: 0.5,
-              fontWeight: '600',
-              marginTop: '0',
-              cursor: 'pointer'
-            }}
-          >
-            v2.16 · {__COMMIT_HASH__}
+          {/* Settings gear sits above the version label, bottom right */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '0.25rem' }}>
+            <button
+              onClick={(e) => {
+                // Anchor the menu's top-right corner just below the gear, kept inside the viewport
+                const r = e.currentTarget.getBoundingClientRect();
+                const width = Math.min(340, window.innerWidth - 16);
+                setMenuAnchor({ left: Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8)), top: r.bottom + 6, width });
+                setShowMenu(true);
+              }}
+              aria-label="Settings menu"
+              aria-haspopup="menu"
+              aria-expanded={showMenu}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.35rem',
+                margin: '0 -0.35rem 0 0',
+                display: 'flex',
+                color: weekInfo.text,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <Settings size={30} strokeWidth={2.25} />
+            </button>
+            <div
+              onClick={() => { setShowChangelog(true); fetchCommits(); }}
+              style={{
+                textAlign: 'right',
+                fontSize: '0.75rem',
+                color: weekInfo.text,
+                opacity: 0.5,
+                fontWeight: '600',
+                marginTop: '0',
+                cursor: 'pointer'
+              }}
+            >
+              v2.16 · {__COMMIT_HASH__}
+            </div>
           </div>
 
         </div>
@@ -2507,8 +2540,10 @@ const ProduceProcessorApp = () => {
           const sku = getItemSKU(item);
           return (
             <FocusView
+              key={`${item.id}:${item.cases}`}
               item={item}
               remainingCount={sorted.length - 1}
+              nextName={sorted[1] ? getDisplayName(sorted[1].name) : null}
               sku={sku}
               stats={sku ? getStats(sku) : null}
               hasVideo={!!(sku && videos[sku])}
@@ -2516,7 +2551,7 @@ const ProduceProcessorApp = () => {
               noteText={notes[pdfDate]?.itemNotes?.[item.id]?.text || ''}
               isOos={oosItems.has(getDisplayName(item.name).toLowerCase())}
               timer={{ running: !!itemsInProcess[item.id], paused: !!itemsPaused[item.id], elapsed: elapsedTimes[item.id] || 0 }}
-              onDone={markComplete}
+              onDone={completeWithCount}
               onToggleTimer={handleBeginProcessing}
               onCancelTimer={cancelTimer}
               onWatchVideo={setPlayingVideo}
@@ -4640,7 +4675,49 @@ const ProduceProcessorApp = () => {
           </div>
         )}
 
-        {/* Hamburger Menu Modal */}
+        {/* Other Apps dropdown */}
+        {showOtherApps && (
+          <div
+            onClick={() => setShowOtherApps(false)}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.25)', zIndex: 1000 }}
+          >
+            <div
+              role="menu"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'fixed',
+                left: Math.min(otherAppsAnchor.left, window.innerWidth - 260 - 8),
+                top: otherAppsAnchor.top,
+                width: '260px',
+                boxSizing: 'border-box',
+                background: 'white',
+                borderRadius: '16px',
+                padding: '0.75rem',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+              }}
+            >
+              <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.25rem 0.5rem 0.5rem' }}>Other Apps</div>
+              <a
+                role="menuitem"
+                href="https://delivery-app-481756503401.us-east1.run.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowOtherApps(false)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.9rem 1rem',
+                  background: '#f8fafc', borderRadius: '12px', textDecoration: 'none',
+                  fontSize: '1.05rem', fontWeight: '700', color: '#1e293b',
+                }}
+              >
+                <Truck size={24} style={{ color: '#0f766e' }} />
+                <span style={{ flex: 1 }}>Delivery</span>
+                <ExternalLink size={16} style={{ color: '#94a3b8' }} />
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Menu Modal */}
         {showMenu && (
           <div
             onClick={() => { setShowMenu(false); }}
@@ -4671,7 +4748,7 @@ const ProduceProcessorApp = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#1e293b' }}>Menu</h2>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#1e293b' }}>Settings</h2>
                 <button
                   onClick={() => setShowMenu(false)}
                   style={{
