@@ -165,7 +165,7 @@ export default function FocusView({
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: 'auto', flex: 'none' }}>
             {hasVideo && (
               <button onClick={() => onWatchVideo(sku)} style={bigBtn('#059669')}>
-                <Play size={26} /> Watch video
+                <Play size={26} /> Video
               </button>
             )}
             {photo && (
