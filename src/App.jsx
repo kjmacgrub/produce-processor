@@ -2545,6 +2545,7 @@ const ProduceProcessorApp = () => {
               item={item}
               remainingCount={sorted.length - 1}
               nextName={sorted[1] ? getDisplayName(sorted[1].name) : null}
+              accent={weekInfo}
               sku={sku}
               stats={sku ? getStats(sku) : null}
               hasVideo={!!(sku && videos[sku])}

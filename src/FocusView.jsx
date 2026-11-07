@@ -11,6 +11,7 @@ export default function FocusView({
   item,
   remainingCount,   // items still on the list after this one
   nextName,         // display name of the item that follows, if any
+  accent,           // { bg, text } of the week header, used for the UP NEXT badge
   sku,
   stats,
   hasVideo,
@@ -68,7 +69,7 @@ export default function FocusView({
             <span style={{ color: '#94a3b8', fontWeight: '600', textTransform: 'none', letterSpacing: 0 }}>Last item of the day</span>
           ) : (
             <>
-              <span style={{ flex: 'none' }}>Up next</span>
+              <span style={{ flex: 'none', background: accent?.bg || '#64748b', color: accent?.text || '#fff', fontWeight: '800', fontSize: '0.8rem', padding: '0.2rem 0.6rem', borderRadius: '6px', lineHeight: 1.2 }}>Up next</span>
               <span style={{ color: '#1e293b', fontWeight: '800', textTransform: 'none', letterSpacing: 0, fontSize: '1.05rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '22rem' }}>{nextName}</span>
               {remainingCount > 1 && (
                 <span style={{ color: '#94a3b8', fontWeight: '600', textTransform: 'none', letterSpacing: 0 }}>{remainingCount - 1} more after that</span>
