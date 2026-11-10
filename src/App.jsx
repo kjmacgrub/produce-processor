@@ -2541,7 +2541,7 @@ const ProduceProcessorApp = () => {
           const sku = getItemSKU(item);
           return (
             <FocusView
-              key={`${item.id}:${item.cases}`}
+              key={item.id}
               item={item}
               remainingCount={sorted.length - 1}
               nextName={sorted[1] ? getDisplayName(sorted[1].name) : null}

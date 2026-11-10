@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Play, Pause, Timer as TimerIcon, X, Pencil, Check } from 'lucide-react';
+import { Play, Pause, Timer as TimerIcon, X } from 'lucide-react';
 
 // One item at a time. The processor sees the item at the head of the day's
-// list — name, cases, instructions, media, timer — and a single big arrow that
-// marks it done and brings up the next one. Prioritizing lives in SetupPage.
+// list — name, instructions, media, timer — and a single big arrow that marks
+// the whole item done and brings up the next one. The case count is left off
+// on purpose (it shifts during a delivery and made members wait for "all" the
+// cases); partial counts are still available in the list view. Prioritizing
+// lives in SetupPage.
 //
 // Everything here is presentational: state and Firebase writes stay in App.jsx
 // and arrive as props.
@@ -19,7 +22,7 @@ export default function FocusView({
   noteText,
   isOos,
   timer,            // { running, paused, elapsed }
-  onDone,           // (item, casesDone) — the whole item when casesDone equals item.cases, otherwise a partial
+  onDone,           // (item, casesDone) — always called with item.cases here: the arrow finishes the whole item
   onToggleTimer,
   onCancelTimer,
   onWatchVideo,
@@ -27,12 +30,6 @@ export default function FocusView({
   formatTime,
 }) {
   const [showPhoto, setShowPhoto] = useState(false);
-  // How many cases the processor says they actually did. Defaults to the
-  // item's count; tapping the cases pill opens a stepper to change it. The
-  // parent keys this component on item id + cases, so it resets per item.
-  const [casesCount, setCasesCount] = useState(item.cases);
-  const [editingCases, setEditingCases] = useState(false);
-  const partial = casesCount < item.cases;
   const timing = timer.running || timer.paused;
   const name = getDisplayName(item.name);
   const origCases = item.originalCases ?? item.cases;
@@ -59,7 +56,7 @@ export default function FocusView({
     >
       <style>{`@keyframes focusTileIn { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }`}</style>
 
-      {/* Top strip: position in the day + cases */}
+      {/* Top strip: position in the day + status badges */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 'none',
         padding: '0.9rem 1.5rem', borderBottom: '1px solid #e2e8f0', gap: '1rem', flexWrap: 'wrap',
@@ -83,38 +80,6 @@ export default function FocusView({
           )}
           {item.casesDone > 0 && (
             <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#065f46', background: '#d1fae5', border: '1px solid #10b981', borderRadius: '6px', padding: '0.25rem 0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.casesDone} of {origCases} done</span>
-          )}
-          {editingCases ? (
-            /* Cases stepper: only the number changes here; OK returns to the
-               tile, and the Done arrow then records this count. */
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: '#1e293b', color: 'white', borderRadius: '12px', padding: '0.35rem 0.6rem 0.35rem 1rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8', lineHeight: 1.1 }}>Cases<br />done</span>
-              <button onClick={() => setCasesCount(v => Math.max(1, v - 1))} aria-label="One fewer case" disabled={casesCount <= 1} style={stepBtn(casesCount <= 1)}>−</button>
-              <span style={{ fontSize: '2rem', fontWeight: '800', lineHeight: 1, fontVariantNumeric: 'tabular-nums', minWidth: '2.2rem', textAlign: 'center' }}>{casesCount}</span>
-              <button onClick={() => setCasesCount(v => Math.min(item.cases, v + 1))} aria-label="One more case" disabled={casesCount >= item.cases} style={stepBtn(casesCount >= item.cases)}>+</button>
-              <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#94a3b8', whiteSpace: 'nowrap' }}>of {item.cases}</span>
-              <button onClick={() => setEditingCases(false)} aria-label="Accept case count" style={{
-                background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', padding: '0.5rem 0.8rem', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '800', fontSize: '1rem', WebkitTapHighlightColor: 'transparent',
-              }}>
-                <Check size={20} strokeWidth={3} /> OK
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setEditingCases(true)}
-              aria-label="Change how many cases were done"
-              title="Tap to change how many cases you did"
-              style={{
-                display: 'flex', alignItems: 'baseline', gap: '0.4rem', background: '#0f766e', color: 'white', borderRadius: '12px', padding: '0.35rem 0.75rem 0.35rem 1rem',
-                border: partial ? '2px solid #fbbf24' : '2px solid transparent', cursor: 'pointer', WebkitTapHighlightColor: 'transparent', fontFamily: 'inherit',
-              }}
-            >
-              <span style={{ fontSize: '2rem', fontWeight: '800', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{casesCount}</span>
-              {partial && <span style={{ fontSize: '0.95rem', fontWeight: '700', opacity: 0.85, fontVariantNumeric: 'tabular-nums' }}>of {item.cases}</span>}
-              <span style={{ fontSize: '0.9rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.85 }}>{casesCount === 1 ? 'case' : 'cases'}</span>
-              <Pencil size={14} style={{ alignSelf: 'center', opacity: 0.7, marginLeft: '0.15rem' }} />
-            </button>
           )}
         </div>
       </div>
@@ -218,8 +183,8 @@ export default function FocusView({
 
         {/* The arrow: mark done, move on */}
         <button
-          onClick={() => { setEditingCases(false); onDone(item, casesCount); }}
-          aria-label={partial ? `Done — ${casesCount} of ${item.cases} cases` : 'Done — next item'}
+          onClick={() => onDone(item, item.cases)}
+          aria-label="Done — next item"
           style={{
             flex: '0 0 clamp(120px, 18vw, 200px)',
             border: 'none',
@@ -237,9 +202,6 @@ export default function FocusView({
             <path d="M8 8 L48 40 L8 72" stroke="currentColor" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span style={{ fontSize: '1.3rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Done</span>
-          {partial && (
-            <span style={{ fontSize: '0.85rem', fontWeight: '700', opacity: 0.85, fontVariantNumeric: 'tabular-nums' }}>{casesCount} of {item.cases}</span>
-          )}
         </button>
       </div>
 
@@ -264,12 +226,6 @@ const roughDuration = (seconds) => {
   if (s >= 60) return `${Math.max(1, Math.round(s / 60))} min`;
   return `${Math.max(5, Math.round(s / 5) * 5)} sec`;
 };
-
-const stepBtn = (disabled) => ({
-  width: '2.4rem', height: '2.4rem', borderRadius: '50%', border: '2px solid #fbbf24', background: 'transparent',
-  color: '#fbbf24', fontSize: '1.4rem', fontWeight: '800', lineHeight: 1, cursor: disabled ? 'default' : 'pointer',
-  opacity: disabled ? 0.35 : 1, WebkitTapHighlightColor: 'transparent', padding: 0,
-});
 
 const bigBtn = (bg) => ({
   background: bg, color: 'white', border: 'none', borderRadius: '14px',
